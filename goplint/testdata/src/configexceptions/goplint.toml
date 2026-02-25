@@ -1,0 +1,27 @@
+# Test exception config for configexceptions analysistest fixture.
+
+[settings]
+skip_types = ["bool", "error", "int64"]
+exclude_paths = []
+
+[[exceptions]]
+pattern = "configexceptions.ExceptedByConfig.Name"
+reason = "test: exact 3-segment match"
+
+[[exceptions]]
+pattern = "*.Label"
+reason = "test: 2-segment wildcard match"
+
+[[exceptions]]
+pattern = "configexceptions.ExceptedFunc.name"
+reason = "test: function param exception"
+
+# New patterns exercised by the updated fixture:
+
+[[exceptions]]
+pattern = "*.Reason"
+reason = "test: error detail field wildcard"
+
+[[exceptions]]
+pattern = "*.View.return.0"
+reason = "test: interface contract return value wildcard"

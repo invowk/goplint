@@ -1,0 +1,13 @@
+# Test config for audit-exceptions: one matching, one stale.
+
+[settings]
+skip_types = ["bool", "error"]
+exclude_paths = []
+
+[[exceptions]]
+pattern = "Server.Name"
+reason = "test: this matches Server.Name and should not be flagged as stale"
+
+[[exceptions]]
+pattern = "NonExistent.Field"
+reason = "test: this matches nothing and should be flagged as stale"

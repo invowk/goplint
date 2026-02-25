@@ -1,0 +1,7 @@
+# Test baseline — suppresses specific known findings.
+
+[primitive]
+messages = [
+    "struct field baseline.BaselinedStruct.Known uses primitive type string",
+    "parameter \"known\" of baseline.BaselinedFunc uses primitive type string",
+]

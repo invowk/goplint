@@ -1,0 +1,10 @@
+# Test config for --check-all integration test.
+# Contains one matching and one stale exception.
+
+[settings]
+skip_types = ["bool", "error"]
+exclude_paths = []
+
+[[exceptions]]
+pattern = "StalePattern.Field"
+reason = "test: stale exception for --check-all"

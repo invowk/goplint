@@ -1,0 +1,19 @@
+# Baseline for baseline_supplementary test fixture.
+# Some findings are suppressed; others are new and should be reported.
+
+[missing-isvalid]
+messages = [
+    "named type baseline_supplementary.BaselinedType has no IsValid() method",
+    "named type baseline_supplementary.BaselinedStringer has no IsValid() method",
+]
+
+[missing-stringer]
+messages = [
+    "named type baseline_supplementary.BaselinedType has no String() method",
+    "named type baseline_supplementary.BaselinedStringer has no String() method",
+]
+
+[missing-constructor]
+messages = [
+    "exported struct baseline_supplementary.BaselinedStruct has no NewBaselinedStruct() constructor",
+]
