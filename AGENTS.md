@@ -28,6 +28,12 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | Check immutability | `make build-goplint && ./bin/goplint -check-immutability -config=tools/goplint/exceptions.toml ./...` |
 | Check struct IsValid | `make build-goplint && ./bin/goplint -check-struct-isvalid -config=tools/goplint/exceptions.toml ./...` |
 
+## Scoped Rule Exception (Testing Parallelism)
+
+`tools/goplint` integration tests mutate the shared `Analyzer.Flags` `FlagSet`, which is process-wide state. Because of this, tests in this package intentionally run sequentially and must not call `t.Parallel()` in those suites.
+
+This is an explicit scoped exception to the default parallelism rule in `.agents/rules/testing.md`, not a general exception for the rest of the repository.
+
 ## Diagnostic Categories
 
 Each diagnostic emitted by the analyzer carries a `category` field (visible in `-json` output). Agents should use this for programmatic filtering:
