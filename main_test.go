@@ -121,7 +121,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			"example.com/pkg": {
 				"goplint": {
 					{Category: "primitive", Message: "struct field pkg.Foo.Bar uses primitive type string"},
-					{Category: "missing-isvalid", Message: "named type pkg.MyType has no IsValid() method"},
+					{Category: "missing-validate", Message: "named type pkg.MyType has no Validate() method"},
 				},
 			},
 		})
@@ -134,8 +134,8 @@ func TestParseAnalysisJSON(t *testing.T) {
 		if len(findings["primitive"]) != 1 {
 			t.Errorf("expected 1 primitive finding, got %d", len(findings["primitive"]))
 		}
-		if len(findings["missing-isvalid"]) != 1 {
-			t.Errorf("expected 1 missing-isvalid finding, got %d", len(findings["missing-isvalid"]))
+		if len(findings["missing-validate"]) != 1 {
+			t.Errorf("expected 1 missing-validate finding, got %d", len(findings["missing-validate"]))
 		}
 	})
 

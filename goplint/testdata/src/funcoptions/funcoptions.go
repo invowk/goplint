@@ -2,6 +2,11 @@
 
 package funcoptions
 
+import (
+	"context"
+	"fmt"
+)
+
 // --- Detection: too many non-option parameters ---
 
 // TooManyParams has a constructor with 4 params — should suggest functional options.
@@ -155,6 +160,21 @@ type VariantOnlyOption func(*VariantOnly)
 
 func NewVariantOnlyFromConfig(cfg string) *VariantOnly { return &VariantOnly{host: cfg} } // want `constructor NewVariantOnly\(\) for funcoptions\.VariantOnly does not accept variadic \.\.\.VariantOnlyOption` `parameter "cfg" of funcoptions\.NewVariantOnlyFromConfig uses primitive type string`
 
+// --- Detection: context.Context counted in param threshold ---
+
+// HasContext has 4 params including context.Context — context.Context IS
+// counted in the param threshold (documents current behavior).
+type HasContext struct {
+	a int // want `struct field funcoptions\.HasContext\.a uses primitive type int`
+	b int // want `struct field funcoptions\.HasContext\.b uses primitive type int`
+	c int // want `struct field funcoptions\.HasContext\.c uses primitive type int`
+}
+
+func NewHasContext(ctx context.Context, a, b, c int) *HasContext { // want `constructor NewHasContext\(\) for funcoptions\.HasContext has 4 non-option parameters; consider using functional options` `parameter "a" of funcoptions\.NewHasContext uses primitive type int` `parameter "b" of funcoptions\.NewHasContext uses primitive type int` `parameter "c" of funcoptions\.NewHasContext uses primitive type int`
+	_ = ctx
+	return &HasContext{a: a, b: b, c: c}
+}
+
 // --- Completeness: variadic option targets a different struct ---
 
 // WrongTarget has an option type, but NewWrongTarget accepts options for OtherTarget.
@@ -183,4 +203,64 @@ func NewWrongTarget(opts ...OtherTargetOption) *WrongTarget { // want `construct
 		_ = opt
 	}
 	return w
+}
+
+// --- Type verification: WithXxx param type vs field type ---
+
+// HostName is a named string type for type-mismatch testing.
+type HostName string
+
+func (h HostName) Validate() error {
+	if h == "" {
+		return fmt.Errorf("empty host")
+	}
+	return nil
+}
+
+func (h HostName) String() string { return string(h) }
+
+// TypeMismatch has a typed field but WithMismatchAddr accepts the wrong type.
+type TypeMismatch struct {
+	mismatchAddr HostName // want `WithMismatchAddr\(\) parameter type string does not match field TypeMismatch.mismatchAddr type funcoptions.HostName`
+}
+
+// TypeMismatchOption is the functional option type for TypeMismatch.
+type TypeMismatchOption func(*TypeMismatch)
+
+// WithMismatchAddr accepts a raw string instead of HostName — type mismatch.
+func WithMismatchAddr(h string) TypeMismatchOption { // want `parameter "h" of funcoptions\.WithMismatchAddr uses primitive type string`
+	return func(t *TypeMismatch) { t.mismatchAddr = HostName(h) }
+}
+
+// NewTypeMismatch creates a TypeMismatch with options.
+func NewTypeMismatch(opts ...TypeMismatchOption) *TypeMismatch {
+	t := &TypeMismatch{}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
+}
+
+// --- Type verification: matching types — no mismatch diagnostic ---
+
+// TypeMatch has a typed field with a correctly typed WithXxx.
+type TypeMatch struct {
+	matchAddr HostName
+}
+
+// TypeMatchOption is the functional option type for TypeMatch.
+type TypeMatchOption func(*TypeMatch)
+
+// WithMatchAddr accepts HostName — matches the field type.
+func WithMatchAddr(h HostName) TypeMatchOption {
+	return func(t *TypeMatch) { t.matchAddr = h }
+}
+
+// NewTypeMatch creates a TypeMatch with options.
+func NewTypeMatch(opts ...TypeMatchOption) *TypeMatch {
+	t := &TypeMatch{}
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t
 }

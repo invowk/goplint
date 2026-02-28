@@ -1,10 +1,10 @@
 # Baseline for baseline_supplementary test fixture.
 # Some findings are suppressed; others are new and should be reported.
 
-[missing-isvalid]
+[missing-validate]
 messages = [
-    "named type baseline_supplementary.BaselinedType has no IsValid() method",
-    "named type baseline_supplementary.BaselinedStringer has no IsValid() method",
+    "named type baseline_supplementary.BaselinedType has no Validate() method",
+    "named type baseline_supplementary.BaselinedStringer has no Validate() method",
 ]
 
 [missing-stringer]

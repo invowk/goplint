@@ -60,7 +60,7 @@ make update-baseline
 
 | Check | Flag | Diagnostic |
 |-------|------|------------|
-| Missing `IsValid()` | `--check-isvalid` | `named type pkg.Foo has no IsValid() method` |
+| Missing `Validate()` | `--check-validate` | `named type pkg.Foo has no Validate() method` |
 | Missing `String()` | `--check-stringer` | `named type pkg.Foo has no String() method` |
 | Missing constructor | `--check-constructors` | `exported struct pkg.Foo has no NewFoo() constructor` |
 
@@ -69,12 +69,12 @@ make update-baseline
 | Check | Flag | Category |
 |-------|------|----------|
 | Constructor return mismatch | `--check-constructor-sig` | `wrong-constructor-sig` |
-| Wrong `IsValid()` signature (named types) | `--check-isvalid` | `wrong-isvalid-sig` |
+| Wrong `Validate()` signature (named types) | `--check-validate` | `wrong-validate-sig` |
 | Wrong `String()` signature (named types) | `--check-stringer` | `wrong-stringer-sig` |
 | Missing/partial functional options | `--check-func-options` | `missing-func-options` |
 | Constructor + exported mutable fields | `--check-immutability` | `missing-immutability` |
-| Struct constructor without `IsValid()` | `--check-struct-isvalid` | `missing-struct-isvalid` |
-| Wrong struct `IsValid()` signature | `--check-struct-isvalid` | `wrong-struct-isvalid-sig` |
+| Struct constructor without `Validate()` | `--check-struct-validate` | `missing-struct-validate` |
+| Wrong struct `Validate()` signature | `--check-struct-validate` | `wrong-struct-validate-sig` |
 | Unknown directive key typo | always on | `unknown-directive` |
 | Stale exception pattern | `--audit-exceptions` | `stale-exception` |
 
@@ -118,7 +118,7 @@ reason = "display-only labels in 12+ unexported structs"
 | `pkg.*.*` | All fields/params in `pkg` |
 | `Func.param` | Function parameter by name |
 | `Func.return.0` | Unnamed return by position (0-indexed) |
-| `Type.IsValid` | Suppress missing-isvalid check |
+| `Type.Validate` | Suppress missing-validate check |
 | `Type.String` | Suppress missing-stringer check |
 | `Type.constructor` | Suppress missing-constructor check |
 
@@ -229,7 +229,7 @@ Each diagnostic includes a `category` field for filtering:
 
 `url` encodes the stable finding ID used by baseline v2.
 
-Categories: `primitive`, `missing-isvalid`, `missing-stringer`, `missing-constructor`, `wrong-constructor-sig`, `wrong-isvalid-sig`, `wrong-stringer-sig`, `missing-func-options`, `missing-immutability`, `missing-struct-isvalid`, `wrong-struct-isvalid-sig`, `stale-exception`, `unknown-directive`.
+Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constructor`, `wrong-constructor-sig`, `wrong-validate-sig`, `wrong-stringer-sig`, `missing-func-options`, `missing-immutability`, `missing-struct-validate`, `wrong-struct-validate-sig`, `unvalidated-cast`, `unused-validate-result`, `unused-constructor-error`, `missing-constructor-validate`, `incomplete-validate-delegation`, `nonzero-value-field`, `stale-exception`, `unknown-directive`.
 
 ## CLI Flags
 
@@ -237,14 +237,14 @@ Categories: `primitive`, `missing-isvalid`, `missing-stringer`, `missing-constru
 |------|------|---------|-------------|
 | `-config` | string | `""` | Path to exceptions TOML config |
 | `-baseline` | string | `""` | Path to baseline TOML (suppress known findings) |
-| `-check-all` | bool | `false` | Enable all DDD checks (isvalid + stringer + constructors + structural checks) |
-| `-check-isvalid` | bool | `false` | Report types missing `IsValid()` |
+| `-check-all` | bool | `false` | Enable all DDD checks (validate + stringer + constructors + structural checks) |
+| `-check-validate` | bool | `false` | Report types missing `Validate()` |
 | `-check-stringer` | bool | `false` | Report types missing `String()` |
 | `-check-constructors` | bool | `false` | Report structs missing `NewXxx()` |
 | `-check-constructor-sig` | bool | `false` | Report constructors returning wrong type |
 | `-check-func-options` | bool | `false` | Report missing/incomplete functional options pattern |
 | `-check-immutability` | bool | `false` | Report constructor-backed structs with exported mutable fields |
-| `-check-struct-isvalid` | bool | `false` | Report constructor-backed structs missing `IsValid()` |
+| `-check-struct-validate` | bool | `false` | Report constructor-backed structs missing `Validate()` |
 | `-audit-exceptions` | bool | `false` | Report stale exception patterns |
 | `-update-baseline` | string | `""` | Generate baseline TOML at the given path |
 | `-json` | bool | `false` | JSON output (built-in from `go/analysis`) |

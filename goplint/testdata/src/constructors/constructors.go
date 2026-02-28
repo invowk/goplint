@@ -73,3 +73,19 @@ type Result struct {
 }
 
 func NewResultFromData(data string) *Result { return &Result{data: data} } // want `parameter "data" of constructors\.NewResultFromData uses primitive type string`
+
+// --- Embedded error struct (Error() via promotion) ---
+
+type baseError struct{}
+
+func (baseError) Error() string { return "base" }
+
+// EmbeddedErrImpl embeds baseError which provides Error() via promotion.
+// Currently flagged as missing constructor because trackMethods only sees
+// explicitly declared methods, not promoted ones. This documents the gap:
+// structs implementing error via embedding are NOT detected as error types
+// unless their name ends with "Error".
+type EmbeddedErrImpl struct { // want `exported struct constructors\.EmbeddedErrImpl has no NewEmbeddedErrImpl\(\) constructor`
+	baseError
+	Detail string // want `struct field constructors\.EmbeddedErrImpl\.Detail uses primitive type string`
+}

@@ -35,3 +35,23 @@ type InvalidFooError struct {
 type fakeModel struct{}
 
 func (f fakeModel) View() string { return "" } // no diagnostic — excepted via return wildcard
+
+// --- Constructor-validates exception ---
+
+// ServiceConfig has Validate() but its constructor is excepted.
+type ServiceConfig struct {
+	port int // want `struct field configexceptions\.ServiceConfig\.port uses primitive type int`
+}
+
+func (s *ServiceConfig) Validate() error {
+	if s.port <= 0 {
+		return nil
+	}
+	return nil
+}
+
+// NewServiceConfig does NOT call Validate() — excepted via TOML config.
+// Without the exception, --check-constructor-validates would flag this.
+func NewServiceConfig(port int) (*ServiceConfig, error) { // want `parameter "port" of configexceptions\.NewServiceConfig uses primitive type int`
+	return &ServiceConfig{port: port}, nil
+}

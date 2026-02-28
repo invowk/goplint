@@ -47,9 +47,9 @@ messages = [
     "parameter \"name\" of pkg.Func uses primitive type string",
 ]
 
-[missing-isvalid]
+[missing-validate]
 messages = [
-    "named type pkg.MyType has no IsValid() method",
+    "named type pkg.MyType has no Validate() method",
 ]
 
 [missing-constructor]
@@ -109,9 +109,9 @@ messages = [
     "return value of pkg.Func uses primitive type int",
 ]
 
-[missing-isvalid]
+[missing-validate]
 messages = [
-    "named type pkg.MyType has no IsValid() method",
+    "named type pkg.MyType has no Validate() method",
 ]
 
 [missing-stringer]
@@ -129,9 +129,9 @@ messages = [
     "constructor NewFoo() for pkg.Foo returns Bar, expected Foo",
 ]
 
-[wrong-isvalid-sig]
+[wrong-validate-sig]
 messages = [
-    "named type pkg.BadValid has IsValid() but wrong signature (want func() (bool, []error))",
+    "named type pkg.BadValid has Validate() but wrong signature (want func() error)",
 ]
 
 [wrong-stringer-sig]
@@ -149,14 +149,14 @@ messages = [
     "struct pkg.Svc has NewSvc() constructor but field Addr is exported",
 ]
 
-[missing-struct-isvalid]
+[missing-struct-validate]
 messages = [
-    "struct pkg.Svc has constructor but no IsValid() method",
+    "struct pkg.Svc has constructor but no Validate() method",
 ]
 
-[wrong-struct-isvalid-sig]
+[wrong-struct-validate-sig]
 messages = [
-    "struct pkg.BadSvc has IsValid() but wrong signature (want func() (bool, []error))",
+    "struct pkg.BadSvc has Validate() but wrong signature (want func() error)",
 ]
 `
 	path := writeTempFile(t, "baseline.toml", content)
@@ -185,14 +185,14 @@ messages = [
 		},
 		{
 			name:     "wrong category",
-			category: CategoryMissingIsValid,
+			category: CategoryMissingValidate,
 			message:  "struct field pkg.Foo.Bar uses primitive type string",
 			want:     false,
 		},
 		{
-			name:     "missing-isvalid match",
-			category: CategoryMissingIsValid,
-			message:  "named type pkg.MyType has no IsValid() method",
+			name:     "missing-validate match",
+			category: CategoryMissingValidate,
+			message:  "named type pkg.MyType has no Validate() method",
 			want:     true,
 		},
 		{
@@ -214,9 +214,9 @@ messages = [
 			want:     true,
 		},
 		{
-			name:     "wrong-isvalid-sig match",
-			category: CategoryWrongIsValidSig,
-			message:  "named type pkg.BadValid has IsValid() but wrong signature (want func() (bool, []error))",
+			name:     "wrong-validate-sig match",
+			category: CategoryWrongValidateSig,
+			message:  "named type pkg.BadValid has Validate() but wrong signature (want func() error)",
 			want:     true,
 		},
 		{
@@ -238,15 +238,15 @@ messages = [
 			want:     true,
 		},
 		{
-			name:     "missing-struct-isvalid match",
-			category: CategoryMissingStructIsValid,
-			message:  "struct pkg.Svc has constructor but no IsValid() method",
+			name:     "missing-struct-validate match",
+			category: CategoryMissingStructValidate,
+			message:  "struct pkg.Svc has constructor but no Validate() method",
 			want:     true,
 		},
 		{
-			name:     "wrong-struct-isvalid-sig match",
-			category: CategoryWrongStructIsValidSig,
-			message:  "struct pkg.BadSvc has IsValid() but wrong signature (want func() (bool, []error))",
+			name:     "wrong-struct-validate-sig match",
+			category: CategoryWrongStructValidateSig,
+			message:  "struct pkg.BadSvc has Validate() but wrong signature (want func() error)",
 			want:     true,
 		},
 		{
@@ -325,8 +325,8 @@ func TestWriteBaseline(t *testing.T) {
 		t.Parallel()
 		outPath := filepath.Join(t.TempDir(), "baseline.toml")
 		findings := map[string][]BaselineFinding{
-			CategoryMissingIsValid: {
-				{Message: "named type pkg.MyType has no IsValid() method"},
+			CategoryMissingValidate: {
+				{Message: "named type pkg.MyType has no Validate() method"},
 			},
 		}
 
@@ -343,8 +343,8 @@ func TestWriteBaseline(t *testing.T) {
 		if containsStr(content, "[primitive]") {
 			t.Error("empty [primitive] section should be omitted")
 		}
-		if !containsStr(content, "[missing-isvalid]") {
-			t.Error("non-empty [missing-isvalid] section should be present")
+		if !containsStr(content, "[missing-validate]") {
+			t.Error("non-empty [missing-validate] section should be present")
 		}
 	})
 }
@@ -357,8 +357,8 @@ func TestBaselineRoundTrip(t *testing.T) {
 			{Message: "struct field pkg.Foo.Bar uses primitive type string"},
 			{Message: `parameter "name" of pkg.Func uses primitive type string`},
 		},
-		CategoryMissingIsValid: {
-			{Message: "named type pkg.MyType has no IsValid() method"},
+		CategoryMissingValidate: {
+			{Message: "named type pkg.MyType has no Validate() method"},
 		},
 		CategoryMissingStringer: {
 			{Message: "named type pkg.MyType has no String() method"},
@@ -369,8 +369,8 @@ func TestBaselineRoundTrip(t *testing.T) {
 		CategoryWrongConstructorSig: {
 			{Message: "constructor NewFoo() for pkg.Foo returns Bar, expected Foo"},
 		},
-		CategoryWrongIsValidSig: {
-			{Message: "named type pkg.BadValid has IsValid() but wrong signature (want func() (bool, []error))"},
+		CategoryWrongValidateSig: {
+			{Message: "named type pkg.BadValid has Validate() but wrong signature (want func() error)"},
 		},
 		CategoryWrongStringerSig: {
 			{Message: "named type pkg.BadStr has String() but wrong signature (want func() string)"},
@@ -381,11 +381,14 @@ func TestBaselineRoundTrip(t *testing.T) {
 		CategoryMissingImmutability: {
 			{Message: "struct pkg.Svc has NewSvc() constructor but field Addr is exported"},
 		},
-		CategoryMissingStructIsValid: {
-			{Message: "struct pkg.Svc has constructor but no IsValid() method"},
+		CategoryMissingStructValidate: {
+			{Message: "struct pkg.Svc has constructor but no Validate() method"},
 		},
-		CategoryWrongStructIsValidSig: {
-			{Message: "struct pkg.BadSvc has IsValid() but wrong signature (want func() (bool, []error))"},
+		CategoryWrongStructValidateSig: {
+			{Message: "struct pkg.BadSvc has Validate() but wrong signature (want func() error)"},
+		},
+		CategoryNonZeroValueField: {
+			{Message: "struct field pkg.Foo.Bar uses nonzero type X as value; use *X for optional fields"},
 		},
 	}
 
@@ -461,16 +464,24 @@ func TestBaselineCategoryCompleteness(t *testing.T) {
 	// excluded — they are never baselined.
 	baselinedCategories := []string{
 		CategoryPrimitive,
-		CategoryMissingIsValid,
+		CategoryMissingValidate,
 		CategoryMissingStringer,
 		CategoryMissingConstructor,
 		CategoryWrongConstructorSig,
-		CategoryWrongIsValidSig,
+		CategoryWrongValidateSig,
 		CategoryWrongStringerSig,
 		CategoryMissingFuncOptions,
 		CategoryMissingImmutability,
-		CategoryMissingStructIsValid,
-		CategoryWrongStructIsValidSig,
+		CategoryMissingStructValidate,
+		CategoryWrongStructValidateSig,
+		CategoryUnvalidatedCast,
+		CategoryUnusedValidateResult,
+		CategoryUnusedConstructorError,
+		CategoryMissingConstructorValidate,
+		CategoryIncompleteValidateDelegation,
+		CategoryNonZeroValueField,
+		CategoryEnumCueMissingGo,
+		CategoryEnumCueExtraGo,
 	}
 
 	// Verify buildLookup() initializes an entry for each category.

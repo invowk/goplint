@@ -27,13 +27,23 @@ func resetFlags(t *testing.T) {
 	setFlag(t, "baseline", "")
 	setFlag(t, "audit-exceptions", "false")
 	setFlag(t, "check-all", "false")
-	setFlag(t, "check-isvalid", "false")
+	setFlag(t, "check-validate", "false")
 	setFlag(t, "check-stringer", "false")
 	setFlag(t, "check-constructors", "false")
 	setFlag(t, "check-constructor-sig", "false")
 	setFlag(t, "check-func-options", "false")
 	setFlag(t, "check-immutability", "false")
-	setFlag(t, "check-struct-isvalid", "false")
+	setFlag(t, "check-struct-validate", "false")
+	setFlag(t, "check-cast-validation", "false")
+	setFlag(t, "check-validate-usage", "false")
+	setFlag(t, "check-constructor-error-usage", "false")
+	setFlag(t, "check-constructor-validates", "false")
+	setFlag(t, "check-validate-delegation", "false")
+	setFlag(t, "check-nonzero", "false")
+	setFlag(t, "no-cfa", "false")
+	setFlag(t, "audit-review-dates", "false")
+	setFlag(t, "check-enum-sync", "false")
+	setFlag(t, "suggest-validate-all", "false")
 }
 
 // TestNewRunConfig verifies the --check-all expansion logic and the
@@ -49,8 +59,8 @@ func TestNewRunConfig(t *testing.T) {
 
 		rc := newRunConfig()
 
-		if !rc.checkIsValid {
-			t.Error("expected checkIsValid = true")
+		if !rc.checkValidate {
+			t.Error("expected checkValidate = true")
 		}
 		if !rc.checkStringer {
 			t.Error("expected checkStringer = true")
@@ -67,8 +77,26 @@ func TestNewRunConfig(t *testing.T) {
 		if !rc.checkImmutability {
 			t.Error("expected checkImmutability = true")
 		}
-		if !rc.checkStructIsValid {
-			t.Error("expected checkStructIsValid = true")
+		if !rc.checkStructValidate {
+			t.Error("expected checkStructValidate = true")
+		}
+		if !rc.checkCastValidation {
+			t.Error("expected checkCastValidation = true")
+		}
+		if !rc.checkValidateUsage {
+			t.Error("expected checkValidateUsage = true")
+		}
+		if !rc.checkConstructorErrUsage {
+			t.Error("expected checkConstructorErrUsage = true")
+		}
+		if !rc.checkConstructorValidates {
+			t.Error("expected checkConstructorValidates = true")
+		}
+		if !rc.checkValidateDelegation {
+			t.Error("expected checkValidateDelegation = true")
+		}
+		if !rc.checkNonZero {
+			t.Error("expected checkNonZero = true")
 		}
 	})
 
@@ -93,19 +121,19 @@ func TestNewRunConfig(t *testing.T) {
 		if !rc.auditExceptions {
 			t.Error("expected auditExceptions = true (explicitly set)")
 		}
-		if !rc.checkIsValid {
-			t.Error("expected checkIsValid = true (from check-all)")
+		if !rc.checkValidate {
+			t.Error("expected checkValidate = true (from check-all)")
 		}
 	})
 
 	t.Run("individual flags work independently", func(t *testing.T) {
 		resetFlags(t)
-		setFlag(t, "check-isvalid", "true")
+		setFlag(t, "check-validate", "true")
 
 		rc := newRunConfig()
 
-		if !rc.checkIsValid {
-			t.Error("expected checkIsValid = true")
+		if !rc.checkValidate {
+			t.Error("expected checkValidate = true")
 		}
 		if rc.checkStringer {
 			t.Error("expected checkStringer = false (not set)")
@@ -144,16 +172,16 @@ func TestAnalyzerWithRealExceptionsToml(t *testing.T) {
 	analysistest.Run(t, testdata, Analyzer, "basic")
 }
 
-// TestCheckIsValid exercises the --check-isvalid mode against the isvalid
-// fixture, verifying named types without IsValid() are flagged.
+// TestCheckValidate exercises the --check-validate mode against the validate
+// fixture, verifying named types without Validate() are flagged.
 //
 // NOT parallel: shares Analyzer.Flags state.
-func TestCheckIsValid(t *testing.T) {
+func TestCheckValidate(t *testing.T) {
 	testdata := analysistest.TestData()
 	t.Cleanup(func() { resetFlags(t) })
-	setFlag(t, "check-isvalid", "true")
+	setFlag(t, "check-validate", "true")
 
-	analysistest.Run(t, testdata, Analyzer, "isvalid")
+	analysistest.Run(t, testdata, Analyzer, "validate")
 }
 
 // TestCheckStringer exercises the --check-stringer mode against the stringer
@@ -193,10 +221,28 @@ func TestAuditExceptions(t *testing.T) {
 	analysistest.Run(t, testdata, Analyzer, "auditexceptions")
 }
 
+// TestAuditExceptionsMultiPackage verifies per-package stale detection across
+// two packages sharing the same exception config. An exception matching in
+// package A is reported as stale in package B. This documents the per-package
+// limitation of go/analysis.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestAuditExceptionsMultiPackage(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	setFlag(t, "config", filepath.Join(testdata, "src", "auditexceptions_pkga", "goplint.toml"))
+	setFlag(t, "audit-exceptions", "true")
+
+	analysistest.Run(t, testdata, Analyzer,
+		"auditexceptions_pkga", "auditexceptions_pkgb")
+}
+
 // TestCheckAll exercises the --check-all flag, confirming it enables all
-// DDD compliance checks (isvalid, stringer, constructors, constructor-sig,
-// func-options, immutability) in a single run. Also explicitly enables
-// --audit-exceptions to verify all 8 diagnostic categories fire together.
+// 14 DDD compliance checks in a single run: primitive, validate, stringer,
+// constructors, constructor-sig, func-options, immutability, struct-validate,
+// cast-validation, validate-usage, constructor-error-usage,
+// constructor-validates, validate-delegation, and nonzero. Also explicitly
+// enables --audit-exceptions to verify all diagnostic categories fire together.
 //
 // NOT parallel: shares Analyzer.Flags state.
 func TestCheckAll(t *testing.T) {
@@ -261,17 +307,33 @@ func TestCheckImmutability(t *testing.T) {
 	analysistest.Run(t, testdata, Analyzer, "immutability")
 }
 
-// TestCheckStructIsValid exercises the --check-struct-isvalid mode against
-// the structisvalid fixture, verifying exported structs with constructors
-// but missing IsValid() are flagged.
+// TestCheckStructValidate exercises the --check-struct-validate mode against
+// the structvalidate fixture, verifying exported structs with constructors
+// but missing Validate() are flagged.
 //
 // NOT parallel: shares Analyzer.Flags state.
-func TestCheckStructIsValid(t *testing.T) {
+func TestCheckStructValidate(t *testing.T) {
 	testdata := analysistest.TestData()
 	t.Cleanup(func() { resetFlags(t) })
-	setFlag(t, "check-struct-isvalid", "true")
+	setFlag(t, "check-struct-validate", "true")
 
-	analysistest.Run(t, testdata, Analyzer, "structisvalid")
+	analysistest.Run(t, testdata, Analyzer, "structvalidate")
+}
+
+// TestCheckCastValidation exercises the --check-cast-validation mode with
+// --no-cfa against the castvalidation fixture, verifying type conversions
+// from raw primitives to DDD Value Types without Validate() are flagged
+// using the AST name-based heuristic.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestCheckCastValidation(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "check-cast-validation", "true")
+	setFlag(t, "no-cfa", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "castvalidation")
 }
 
 // TestBaselineSuppression verifies that the --baseline flag correctly
@@ -289,7 +351,7 @@ func TestBaselineSuppression(t *testing.T) {
 }
 
 // TestBaselineSupplementaryCategories verifies that baseline suppression
-// works for supplementary modes (missing-isvalid, missing-stringer,
+// works for supplementary modes (missing-validate, missing-stringer,
 // missing-constructor). Some findings are baselined and suppressed; others
 // are new and reported.
 //
@@ -297,10 +359,166 @@ func TestBaselineSuppression(t *testing.T) {
 func TestBaselineSupplementaryCategories(t *testing.T) {
 	testdata := analysistest.TestData()
 	t.Cleanup(func() { resetFlags(t) })
-	setFlag(t, "check-isvalid", "true")
+	setFlag(t, "check-validate", "true")
 	setFlag(t, "check-stringer", "true")
 	setFlag(t, "check-constructors", "true")
 	setFlag(t, "baseline", filepath.Join(testdata, "src", "baseline_supplementary", "goplint-baseline.toml"))
 
 	analysistest.Run(t, testdata, Analyzer, "baseline_supplementary")
+}
+
+// TestCheckValidateUsage exercises the --check-validate-usage mode against
+// the validateusage fixture, verifying that discarded Validate() results
+// are flagged.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestCheckValidateUsage(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "check-validate-usage", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "validateusage")
+}
+
+// TestCheckConstructorErrorUsage exercises the --check-constructor-error-usage
+// mode against the constructorusage fixture, verifying that constructor calls
+// with error returns assigned to blank identifiers are flagged.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestCheckConstructorErrorUsage(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "check-constructor-error-usage", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "constructorusage")
+}
+
+// TestCheckValidateDelegation exercises the --check-validate-delegation mode
+// against the validatedelegation fixture, verifying that structs with
+// //goplint:validate-all are checked for complete field delegation.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestCheckValidateDelegation(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "check-validate-delegation", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "validatedelegation")
+}
+
+// TestCheckValidateDelegationMultiFile exercises --check-validate-delegation
+// with a multi-file package where the struct is defined in one file and its
+// Validate() method in another. Verifies cross-file delegation detection.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestCheckValidateDelegationMultiFile(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "check-validate-delegation", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "validatedelegation_multifile")
+}
+
+// TestCheckConstructorValidates exercises the --check-constructor-validates
+// mode against the constructorvalidates fixture, verifying that constructors
+// returning types with Validate() but not calling it are flagged.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestCheckConstructorValidates(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "check-constructor-validates", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "constructorvalidates")
+}
+
+// TestConstructorValidatesException exercises that --check-constructor-validates
+// respects TOML exception patterns (e.g., "pkg.NewFoo.constructor-validate").
+// The configexceptions fixture has NewServiceConfig which does not call
+// Validate() but is excepted via TOML — no constructor-validates finding.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestConstructorValidatesException(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	setFlag(t, "config", filepath.Join(testdata, "src", "configexceptions", "goplint.toml"))
+	setFlag(t, "check-constructor-validates", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "configexceptions")
+}
+
+// TestSuggestValidateAll exercises the --suggest-validate-all advisory mode
+// against the suggestvalidateall fixture, verifying that structs with Validate()
+// and validatable fields but no //goplint:validate-all directive are reported.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestSuggestValidateAll(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "suggest-validate-all", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "suggestvalidateall")
+}
+
+// TestCheckNonZero exercises the --check-nonzero mode against the nonzero
+// fixture (same-package) and nonzero_consumer fixture (cross-package fact
+// propagation), verifying that struct fields using nonzero-annotated types
+// as value (non-pointer) fields are flagged both within and across packages.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestCheckNonZero(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "check-nonzero", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "nonzero", "nonzero_consumer")
+}
+
+// TestAuditReviewDates exercises the --audit-review-dates mode against
+// a dedicated fixture with overdue, future, invalid, and blocked_by entries.
+// Verifies that:
+//   - Past review_after dates produce overdue-review diagnostics
+//   - Future review_after dates do NOT produce diagnostics
+//   - Invalid review_after dates produce invalid-date diagnostics
+//   - blocked_by text is included in the diagnostic message
+//   - Entries without review_after are ignored
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestAuditReviewDates(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	setFlag(t, "config", filepath.Join(testdata, "src", "auditreviewdates", "config.toml"))
+	setFlag(t, "audit-review-dates", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "auditreviewdates")
+}
+
+// TestCheckEnumSync exercises the --check-enum-sync mode against the
+// enumsync fixture, verifying that CUE disjunction members missing from
+// Go Validate() switch cases and extra Go cases not in CUE are flagged.
+//
+// NOT parallel: shares Analyzer.Flags state.
+func TestCheckEnumSync(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "check-enum-sync", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "enumsync")
+}
+
+func TestCheckEnumSyncNoSchema(t *testing.T) {
+	testdata := analysistest.TestData()
+	t.Cleanup(func() { resetFlags(t) })
+	resetFlags(t)
+	setFlag(t, "check-enum-sync", "true")
+
+	analysistest.Run(t, testdata, Analyzer, "enumsync_noschema")
 }

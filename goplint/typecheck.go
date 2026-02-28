@@ -67,9 +67,9 @@ func isPrimitiveBasic(t *types.Basic) bool {
 }
 
 // isPrimitiveUnderlying reports whether t resolves to a basic primitive type.
-// Used by --check-isvalid and --check-stringer to restrict checks to types
+// Used by --check-validate and --check-stringer to restrict checks to types
 // backed by string, int, etc. — skipping func types, channels, and other
-// non-primitive underlying types that don't need IsValid/String methods.
+// non-primitive underlying types that don't need Validate/String methods.
 func isPrimitiveUnderlying(t types.Type) bool {
 	switch t := t.(type) {
 	case *types.Basic:
@@ -205,6 +205,65 @@ func primitiveMapDetail(t types.Type) (string, bool) {
 		return primitiveTypeName(m.Key()) + " (in map key)", true
 	default:
 		return primitiveTypeName(m.Elem()) + " (in map value)", true
+	}
+}
+
+// hasValidateMethod reports whether t is a named type with a
+// Validate() error method, indicating it is a DDD Value Type
+// that should be validated after construction from raw primitives.
+// Checks both value and pointer receiver method sets.
+func hasValidateMethod(t types.Type) bool {
+	t = types.Unalias(t)
+	named, ok := t.(*types.Named)
+	if !ok {
+		return false
+	}
+
+	// Check both value and pointer receiver method sets.
+	for _, mset := range []*types.MethodSet{
+		types.NewMethodSet(named),
+		types.NewMethodSet(types.NewPointer(named)),
+	} {
+		for method := range mset.Methods() {
+			if method.Obj().Name() != "Validate" {
+				continue
+			}
+			sig, ok := method.Obj().Type().(*types.Signature)
+			if !ok {
+				continue
+			}
+			// Must have 0 params and 1 result: error.
+			if sig.Params().Len() != 0 || sig.Results().Len() != 1 {
+				continue
+			}
+			if isErrorType(sig.Results().At(0).Type()) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// hasValidatableElements reports whether t is a slice, array, or map type
+// whose element type has a Validate() error method. Used by validate-delegation
+// to recognize range-loop delegation patterns like:
+//
+//	for _, r := range c.Requires { r.Validate() }
+//	for _, v := range c.Items { v.Validate() }
+//
+// For maps, only the value type is checked — map keys are typically lookup
+// identifiers rather than validatable domain values.
+func hasValidatableElements(t types.Type) bool {
+	t = types.Unalias(t)
+	switch ct := t.(type) {
+	case *types.Slice:
+		return hasValidateMethod(ct.Elem())
+	case *types.Array:
+		return hasValidateMethod(ct.Elem())
+	case *types.Map:
+		return hasValidateMethod(ct.Elem())
+	default:
+		return false
 	}
 }
 

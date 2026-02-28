@@ -98,10 +98,6 @@ pattern = "ShebangInfo.Interpreter"
 reason = "full paths like /bin/bash; BinaryName rejects paths"
 
 [[exceptions]]
-pattern = "Engine.BinaryPath.return.0"
-reason = "7+ call sites pass to exec.CommandContext; would add casts"
-
-[[exceptions]]
 pattern = "ResolveDockerfilePath.*"
 reason = "exec boundary — params/return passed to filepath operations"
 
@@ -125,10 +121,6 @@ reason = "display-only field path label"
 
 [[exceptions]]
 pattern = "InitDiagnostic.Message"
-reason = "display-only diagnostic message"
-
-[[exceptions]]
-pattern = "Diagnostic.Message"
 reason = "display-only diagnostic message"
 
 [[exceptions]]
@@ -163,10 +155,6 @@ reason = "composite display string"
 pattern = "ModuleCollisionError.SecondSource"
 reason = "composite display string"
 
-[[exceptions]]
-pattern = "StyledMessage"
-reason = "rendering output"
-
 # =============================================================================
 # Import Cycle Prevention
 # =============================================================================
@@ -184,10 +172,6 @@ reason = "import cycle: tui->tuiserver; method params"
 [[exceptions]]
 pattern = "tuiserver.*.*.*.*"
 reason = "import cycle: tui->tuiserver; method returns"
-
-[[exceptions]]
-pattern = "URLWithHost.host"
-reason = "only 2 possible values, import cycle concern"
 
 # =============================================================================
 # Free-Form User Input
@@ -246,10 +230,6 @@ reason = "go-git pass-through"
 [[exceptions]]
 pattern = "UnpackOptions.Source"
 reason = "mixed path/URL"
-
-[[exceptions]]
-pattern = "ListCommands.return.*"
-reason = "interface contract"
 
 [[exceptions]]
 pattern = "FieldPath.EnvVar.key"
@@ -388,10 +368,6 @@ pattern = "uroot.FlagInfo.ShortName"
 reason = "constant string literals across 25 files"
 
 [[exceptions]]
-pattern = "uroot.FlagInfo.Description"
-reason = "constant string literals across 25 files"
-
-[[exceptions]]
 pattern = "uroot.*.name"
 reason = "display-only labels in 12+ unexported structs"
 
@@ -413,10 +389,6 @@ pattern = "uroot.*.Name.return.0"
 reason = "uroot Command interface contract: Name() string"
 
 [[exceptions]]
-pattern = "*.View.return.0"
-reason = "bubbletea tea.Model interface: View() string"
-
-[[exceptions]]
 pattern = "*.FilterValue.return.0"
 reason = "bubbles list.Item interface: FilterValue() string"
 
@@ -433,6 +405,11 @@ reason = "bubbles list.ItemDelegate interface: Spacing() int"
 # =============================================================================
 # Display-only reason/message fields in InvalidXxxError structs, same semantic
 # category as already-excepted CapabilityError.Message.
+# Scope: 10 error structs (InvalidSubdirectoryPathError, InvalidGlobPatternError,
+# InvalidVolumeMountSpecError, InvalidRegexPatternError, InvalidPortMappingSpecError,
+# InvalidFlagNameError, InvalidDurationStringError, InvalidBinaryNameError,
+# InvalidArgumentNameError, EngineNotAvailableError). If a non-error struct
+# adds a Reason field with domain semantics, add it as a DDD type instead.
 
 [[exceptions]]
 pattern = "*.Reason"
@@ -447,14 +424,6 @@ reason = "display-only error detail in InvalidXxxError structs"
 [[exceptions]]
 pattern = "*.selected"
 reason = "map[int]bool selection set (bool value carries no domain meaning)"
-
-[[exceptions]]
-pattern = "*.seenNames"
-reason = "map[string]bool deduplication set (internal validation)"
-
-[[exceptions]]
-pattern = "*.seenShorts"
-reason = "map[string]bool deduplication set"
 
 [[exceptions]]
 pattern = "*.expectedDirs"
@@ -488,10 +457,6 @@ reason = "exec/OS boundary (env var name lists for filtering)"
 [[exceptions]]
 pattern = "*.FlagValues"
 reason = "map value is free-form user input; key is already typed FlagName"
-
-[[exceptions]]
-pattern = "*.commandID"
-reason = "composite string (sshserver Token.CommandID)"
 
 [[exceptions]]
 pattern = "*.message"
@@ -530,10 +495,6 @@ reason = "rendering output composition"
 # =============================================================================
 # Remaining Intentional int Exceptions
 # =============================================================================
-
-[[exceptions]]
-pattern = "TableOptions.SelectedIndex"
-reason = "array index"
 
 [[exceptions]]
 pattern = "TableSelectionResult.SelectedIndex"
@@ -583,144 +544,122 @@ reason = "lipgloss CSS-shorthand passthrough; import cycle with tuiserver"
 # Mutable-by-Design Structs (DDD Entities / Post-Construction Mutation)
 # =============================================================================
 # These structs have constructors but are NOT Value Types — they are Entities
-# or DTOs with intentional post-construction mutation. Immutability enforcement
-# is not appropriate.
-
-[[exceptions]]
-pattern = "discovery.DiscoveredCommandSet.immutability"
-reason = "maps populated post-construction in processDiscoveredFiles()"
-
-[[exceptions]]
-pattern = "runtime.ExecutionContext.immutability"
-reason = "13 fields set post-construction in BuildExecutionContext(); DDD Entity"
-
-[[exceptions]]
-pattern = "runtime.DefaultEnvBuilder.immutability"
-reason = "Environ is intentionally public for composition"
-
-[[exceptions]]
-pattern = "invowk.App.immutability"
-reason = "fields set in NewApp() but accessed broadly; DDD Entity"
-
-[[exceptions]]
-pattern = "invowkmod.CommandScope.immutability"
-reason = "has AddDirectDep() mutation method; DDD Entity"
-
-[[exceptions]]
-pattern = "invowkmod.LockFile.immutability"
-reason = "Modules map mutated in resolver.go (Add/Remove/Update); DDD Entity"
+# or DTOs with intentional post-construction mutation. Six structs now have
+# //goplint:mutable directives on their type declarations:
+#   DiscoveredCommandSet, ExecutionContext, DefaultEnvBuilder,
+#   App, CommandScope, LockFile.
 
 [[exceptions]]
 pattern = "invowkfile.ValidationError.immutability"
 reason = "70+ struct literal sites across validation_structure_*.go; separate PR"
 
-# --- Service Objects: struct-isvalid exceptions ---
+# --- Service Objects: struct-validate exceptions ---
 # Service objects, registries, builders, and state machines have runtime-dynamic
 # validity (engine availability, post-construction population, lifecycle state).
-# IsValid() is not meaningful for these — construction guarantees internal consistency.
+# Validate() is not meaningful for these — construction guarantees internal consistency.
 
 # Service objects — container engines
 [[exceptions]]
-pattern = "container.BaseCLIEngine.struct-isvalid"
+pattern = "container.BaseCLIEngine.struct-validate"
 reason = "service object; binaryPath='' valid for 'not found' sentinel"
 
 [[exceptions]]
-pattern = "container.DockerEngine.struct-isvalid"
+pattern = "container.DockerEngine.struct-validate"
 reason = "service object; wraps BaseCLIEngine"
 
 [[exceptions]]
-pattern = "container.PodmanEngine.struct-isvalid"
+pattern = "container.PodmanEngine.struct-validate"
 reason = "service object; wraps BaseCLIEngine"
 
 [[exceptions]]
-pattern = "container.SandboxAwareEngine.struct-isvalid"
+pattern = "container.SandboxAwareEngine.struct-validate"
 reason = "service decorator; used via Engine interface"
 
 # Service objects — servers, provisioners, runtimes
 [[exceptions]]
-pattern = "serverbase.Base.struct-isvalid"
+pattern = "serverbase.Base.struct-validate"
 reason = "lifecycle state machine; validity is runtime state"
 
 [[exceptions]]
-pattern = "provision.LayerProvisioner.struct-isvalid"
+pattern = "provision.LayerProvisioner.struct-validate"
 reason = "service object; fields always non-nil from constructor"
 
 [[exceptions]]
-pattern = "runtime.ContainerRuntime.struct-isvalid"
+pattern = "runtime.ContainerRuntime.struct-validate"
 reason = "stateful service with mutex/atomic; single-instance"
 
 [[exceptions]]
-pattern = "runtime.NativeRuntime.struct-isvalid"
+pattern = "runtime.NativeRuntime.struct-validate"
 reason = "service object; shell='' valid for auto-detect"
 
 [[exceptions]]
-pattern = "runtime.VirtualRuntime.struct-isvalid"
+pattern = "runtime.VirtualRuntime.struct-validate"
 reason = "service object; invariants enforced by constructor"
 
 # Service objects — module resolution
 [[exceptions]]
-pattern = "invowkmod.Resolver.struct-isvalid"
+pattern = "invowkmod.Resolver.struct-validate"
 reason = "stateful service with mutex; constructor returns error"
 
 [[exceptions]]
-pattern = "invowkmod.GitFetcher.struct-isvalid"
+pattern = "invowkmod.GitFetcher.struct-validate"
 reason = "service object; empty cacheDir valid for default"
 
 # Zero-field stateless services
 [[exceptions]]
-pattern = "invowkfile.StructureValidator.struct-isvalid"
+pattern = "invowkfile.StructureValidator.struct-validate"
 reason = "zero-field struct; no invariants"
 
 [[exceptions]]
-pattern = "invowkmod.SemverResolver.struct-isvalid"
+pattern = "invowkmod.SemverResolver.struct-validate"
 reason = "zero-field struct; no invariants"
 
 # Mutable entities (already have .immutability exceptions)
 [[exceptions]]
-pattern = "invowk.App.struct-isvalid"
+pattern = "invowk.App.struct-validate"
 reason = "composition root; validity is runtime-dynamic"
 
 [[exceptions]]
-pattern = "discovery.DiscoveredCommandSet.struct-isvalid"
+pattern = "discovery.DiscoveredCommandSet.struct-validate"
 reason = "maps populated post-construction"
 
 [[exceptions]]
-pattern = "runtime.ExecutionContext.struct-isvalid"
+pattern = "runtime.ExecutionContext.struct-validate"
 reason = "13 fields set post-construction; DDD Entity"
 
 [[exceptions]]
-pattern = "runtime.DefaultEnvBuilder.struct-isvalid"
+pattern = "runtime.DefaultEnvBuilder.struct-validate"
 reason = "strategy; nil Environ valid (os.Environ fallback)"
 
 [[exceptions]]
-pattern = "invowkmod.CommandScope.struct-isvalid"
+pattern = "invowkmod.CommandScope.struct-validate"
 reason = "has AddDirectDep() mutation; DDD Entity"
 
 [[exceptions]]
-pattern = "invowkmod.LockFile.struct-isvalid"
+pattern = "invowkmod.LockFile.struct-validate"
 reason = "Modules map mutated by resolver; DDD Entity"
 
 # Registries (post-construction population)
 [[exceptions]]
-pattern = "runtime.Registry.struct-isvalid"
+pattern = "runtime.Registry.struct-validate"
 reason = "runtime registration container; populated via Register()"
 
 [[exceptions]]
-pattern = "uroot.Registry.struct-isvalid"
+pattern = "uroot.Registry.struct-validate"
 reason = "command registration container; populated via Register()"
 
 # Fluent builders (mutable by design)
 [[exceptions]]
-pattern = "issue.ErrorContext.struct-isvalid"
+pattern = "issue.ErrorContext.struct-validate"
 reason = "fluent builder; accumulates state before BuildError()"
 
 [[exceptions]]
-pattern = "invowkfile.FieldPath.struct-isvalid"
+pattern = "invowkfile.FieldPath.struct-validate"
 reason = "fluent builder; mutated by Root()/Command()/Flag()"
 
 # Composite pattern
 [[exceptions]]
-pattern = "invowkfile.CompositeValidator.struct-isvalid"
+pattern = "invowkfile.CompositeValidator.struct-validate"
 reason = "composite pattern; has Add() mutation method"
 
 # =============================================================================
@@ -818,10 +757,6 @@ reason = "cfg is a required param, not optional"
 # Unexported TUI model structs hold transient UI state (cursor position,
 # selection indices, viewport offsets). No domain semantics.
 
-[[exceptions]]
-pattern = "tui.*model.*"
-reason = "unexported TUI model internal state"
-
 # =============================================================================
 # Primitive Bulk Exceptions — TUI Builder Method Params
 # =============================================================================
@@ -841,10 +776,6 @@ reason = "fluent builder display label / config param"
 [[exceptions]]
 pattern = "tui.ChooseStrings.*"
 reason = "TUI convenience wrapper — display data params"
-
-[[exceptions]]
-pattern = "tui.ChooseStringsWithModel.*"
-reason = "TUI convenience wrapper"
 
 [[exceptions]]
 pattern = "tui.MultiChooseStrings.*"
@@ -981,8 +912,9 @@ reason = "bubbles list.Item interface"
 # =============================================================================
 # u-root commands implement POSIX utilities operating on raw text/byte
 # streams. All params/returns/fields are POSIX domain, not Invowk domain.
-# These 3 patterns at different segment depths replace the 6 individual
-# uroot exceptions above (which are kept for backward compat).
+# These 3 patterns at different segment depths cover all findings in the
+# package. The individual uroot entries above (Name, Description, Run.args,
+# etc.) are subsumed by these broad patterns but kept for documentation.
 
 [[exceptions]]
 pattern = "uroot.*.*"
@@ -1134,10 +1066,6 @@ pattern = "invowkmod.parseModuleKey.*"
 reason = "CUE text key-parsing internal"
 
 [[exceptions]]
-pattern = "invowkmod.parseModuleKey.return.*"
-reason = "CUE text key-parsing return"
-
-[[exceptions]]
 pattern = "invowkmod.parseLockFileCUE.content"
 reason = "raw CUE source text input"
 
@@ -1200,10 +1128,6 @@ pattern = "invowk.isArgEnvVar.*"
 reason = "env var name pattern detection — raw text"
 
 [[exceptions]]
-pattern = "invowk.isArgEnvVar.return.*"
-reason = "env var name pattern detection return"
-
-[[exceptions]]
 pattern = "invowk.ParseSourceFilter.*"
 reason = "source filter display name parsing"
 
@@ -1214,10 +1138,6 @@ reason = "source filter parsing return"
 [[exceptions]]
 pattern = "invowk.normalizeSourceName.*"
 reason = "source name display normalization"
-
-[[exceptions]]
-pattern = "invowk.normalizeSourceName.return.*"
-reason = "source name display normalization return"
 
 [[exceptions]]
 pattern = "invowk.newServiceError.styledMessage"
@@ -1247,10 +1167,6 @@ reason = "raw command stdout capture"
 [[exceptions]]
 pattern = "BaseCLIEngine.InspectImage.return.*"
 reason = "raw docker inspect JSON output"
-
-[[exceptions]]
-pattern = "container.engineCandidate.*"
-reason = "engine candidate struct — display/exec boundary"
 
 [[exceptions]]
 pattern = "runtime.parseEnvValue.*"
@@ -1347,10 +1263,6 @@ pattern = "provision.LayerProvisioner.buildProvisionedTag.hash"
 reason = "hash string for image tag construction"
 
 [[exceptions]]
-pattern = "provision.containerNameFromPath.path"
-reason = "filesystem path for container name derivation"
-
-[[exceptions]]
 pattern = "provision.LayerProvisioner.generateDockerfile.baseImage"
 reason = "container image name — display/exec boundary"
 
@@ -1361,10 +1273,6 @@ reason = "container image name — display/exec boundary"
 [[exceptions]]
 pattern = "cueutil.formatPath.*"
 reason = "CUE path formatting — display text"
-
-[[exceptions]]
-pattern = "cueutil.parseCUEError.*"
-reason = "CUE error parsing — raw text manipulation"
 
 [[exceptions]]
 pattern = "cueutil.ParseAndDecodeString.schema"
@@ -1459,18 +1367,6 @@ pattern = "invowkmod.downloadFile.return.*"
 reason = "filesystem path return — exec boundary"
 
 [[exceptions]]
-pattern = "invowkmod.CommandScope.Includes.return.*"
-reason = "display text return — module list"
-
-[[exceptions]]
-pattern = "invowkmod.ValidationResult.ErrorMessages.return.*"
-reason = "display text return — error messages"
-
-[[exceptions]]
-pattern = "invowkmod.ValidationResult.WarningMessages.return.*"
-reason = "display text return — warning messages"
-
-[[exceptions]]
 pattern = "platform.IsWindowsReservedName.name"
 reason = "OS-specific name checking — platform boundary"
 
@@ -1506,14 +1402,6 @@ reason = "relative path — filesystem boundary"
 pattern = "invowkmod.resolveIdentifier.*"
 reason = "identifier resolution — composite string parsing"
 
-[[exceptions]]
-pattern = "invowkmod.ParseVersion.versionStr"
-reason = "raw version string input"
-
-[[exceptions]]
-pattern = "invowkmod.SemverResolver.Resolve.return.*"
-reason = "display text return (filtered version list)"
-
 # =============================================================================
 # Filesystem / filepath.Join Boundary (DDD Cost-Benefit Deferred)
 # =============================================================================
@@ -1521,36 +1409,53 @@ reason = "display text return (filtered version list)"
 # filepath.Join(), os.Stat(), t.TempDir() etc. produce raw string values.
 # Typing would ADD more casts than it removes — documented via cost-benefit
 # analysis. See MEMORY.md "DDD type change cost-benefit" for the principle.
+#
+# Review cadence: re-evaluate when types.FilesystemPath adoption reaches
+# critical mass and stdlib wrappers become cost-effective.
 
 # config internal helpers — callers use filepath.Join results
 [[exceptions]]
 pattern = "config.fileExists.*"
 reason = "filepath.Join boundary — 3 callers pass raw string"
+review_after = "2027-03-01"
+blocked_by = "types.FilesystemPath adoption in config package"
 
 [[exceptions]]
 pattern = "config.loadCUEIntoViper.*"
 reason = "filepath.Join boundary — 3 callers pass raw string"
+review_after = "2027-03-01"
+blocked_by = "types.FilesystemPath adoption in config package"
 
 [[exceptions]]
 pattern = "config.cueLoadError.*"
 reason = "filepath.Join boundary — 3 callers pass raw string"
+review_after = "2027-03-01"
+blocked_by = "types.FilesystemPath adoption in config package"
 
 # provision helpers — DiscoverModules returns []string, filepath.Dir returns string
 [[exceptions]]
 pattern = "provision.CalculateDirHash.*"
 reason = "filepath boundary — DiscoverModules returns []string; filepath.Dir"
+review_after = "2027-06-01"
+blocked_by = "provision package typed path migration"
 
 [[exceptions]]
 pattern = "provision.CalculateFileHash.*"
 reason = "filepath boundary — callers use string(FilesystemPath)"
+review_after = "2027-06-01"
+blocked_by = "provision package typed path migration"
 
 [[exceptions]]
 pattern = "provision.CopyDir.*"
 reason = "filepath.Join recursive boundary — internal calls use filepath.Join"
+review_after = "2027-06-01"
+blocked_by = "provision package typed path migration"
 
 [[exceptions]]
 pattern = "provision.CopyFile.*"
 reason = "filepath.Join recursive boundary"
+review_after = "2027-06-01"
+blocked_by = "provision package typed path migration"
 
 # invowkmod — CUE text manipulation and resolver internals
 [[exceptions]]
@@ -1566,19 +1471,11 @@ pattern = "invowkmod.atomicWriteFile.*"
 reason = "filepath boundary"
 
 [[exceptions]]
-pattern = "invowkmod.cacheModule.*"
-reason = "filepath boundary — cache directory operations"
-
-[[exceptions]]
 pattern = "invowkmod.copyDir.*"
 reason = "filepath boundary"
 
 [[exceptions]]
 pattern = "invowkmod.copyFile.*"
-reason = "filepath boundary"
-
-[[exceptions]]
-pattern = "invowkmod.checkSymlinkSafety.*"
 reason = "filepath boundary"
 
 [[exceptions]]
@@ -1634,14 +1531,6 @@ reason = "result used as map[string]string key — exec/OS boundary"
 pattern = "invowkfile.validateRuntimeConfig.cmdName"
 reason = "only called from tests with string literals"
 
-[[exceptions]]
-pattern = "invowkfile.generate*.*"
-reason = "CUE code generation internals — raw text construction"
-
-[[exceptions]]
-pattern = "invowkfile.generate*.return.*"
-reason = "CUE code generation return"
-
 # runtime — dotenv parsing and exec boundaries
 [[exceptions]]
 pattern = "runtime.LoadEnvFile.*"
@@ -1654,22 +1543,6 @@ reason = "callers mix WorkDir->string and DotenvFilePath->string casts"
 [[exceptions]]
 pattern = "runtime.validateWorkDir.*"
 reason = "filepath boundary"
-
-[[exceptions]]
-pattern = "runtime.createTempScript.*"
-reason = "filepath/exec boundary — creates temp file, returns path"
-
-[[exceptions]]
-pattern = "runtime.createTempScript.return.*"
-reason = "filepath boundary return"
-
-[[exceptions]]
-pattern = "runtime.getShell.return.*"
-reason = "exec.LookPath boundary"
-
-[[exceptions]]
-pattern = "runtime.getShellArgs.*"
-reason = "exec boundary — shell args"
 
 [[exceptions]]
 pattern = "runtime.lockFilePath.return.*"
@@ -1721,35 +1594,41 @@ reason = "container name — display/exec boundary"
 pattern = "discovery.Discovery.GetCommand.name"
 reason = "Cobra CLI boundary — callers pass args[0] or ExecuteRequest.Name"
 
-[[exceptions]]
-pattern = "discovery.Discovery.getAliasForModulePath.*"
-reason = "filepath boundary"
-
-[[exceptions]]
-pattern = "discovery.getModuleShortName.*"
-reason = "filepath boundary"
+# discovery.Discovery.getAliasForModulePath — typed as (types.FilesystemPath) invowkmod.ModuleAlias
+# discovery.getModuleShortName — typed as (types.FilesystemPath) ModuleShortName
 
 # =============================================================================
 # cmd/invowk — Cobra / Config / Path Boundary (DDD Cost-Benefit Deferred)
 # =============================================================================
 # CLI entry point functions that receive values from Cobra, Viper, or
 # os.Args. Typing would require casts at every Cobra callback boundary.
+#
+# Review cadence: re-evaluate if Cobra adds typed flag support or when
+# the CLI layer is refactored to use a typed request pattern.
 
 [[exceptions]]
 pattern = "invowk.contextWithConfigPath.*"
 reason = "Cobra flag binding → FilesystemPath deferred"
+review_after = "2027-09-01"
+blocked_by = "CLI typed request pattern or Cobra typed flags"
 
 [[exceptions]]
 pattern = "invowk.configPathFromContext.return.*"
 reason = "Cobra flag binding return"
+review_after = "2027-09-01"
+blocked_by = "CLI typed request pattern or Cobra typed flags"
 
 [[exceptions]]
 pattern = "invowk.loadConfigWithFallback.*"
 reason = "Cobra flag binding path"
+review_after = "2027-09-01"
+blocked_by = "CLI typed request pattern or Cobra typed flags"
 
 [[exceptions]]
 pattern = "invowk.commandService.loadConfig.*"
 reason = "Cobra flag binding path"
+review_after = "2027-09-01"
+blocked_by = "CLI typed request pattern or Cobra typed flags"
 
 [[exceptions]]
 pattern = "invowk.isExecutable.*"
@@ -1813,25 +1692,162 @@ reason = "Cobra args boundary — import path"
 # =============================================================================
 
 [[exceptions]]
-pattern = "cueutil.FormatError.filePath"
-reason = "filepath boundary — display error formatting"
-
-[[exceptions]]
-pattern = "platform.statFile.*"
-reason = "filepath/OS boundary — os.Stat wrapper"
-
-[[exceptions]]
 pattern = "watch.Watcher.maybeAddDir.*"
 reason = "filepath boundary — fsnotify watcher"
+review_after = "2027-06-01"
+blocked_by = "fsnotify returns raw string paths"
 
 [[exceptions]]
 pattern = "invowkfile.ValidateContainerfilePath.*"
 reason = "filepath boundary — os.Stat/filepath.Rel callers"
+review_after = "2027-06-01"
+blocked_by = "pkg/fspath typed path wrapper adoption"
+
+# =============================================================================
+# Constructor Validate() Delegation Exceptions
+# =============================================================================
+# Constructors where Validate() is intentionally NOT called because:
+#   - The constructor IS a non-validating factory (CUE parsing path)
+#   - The constructor validates individual parameters inline (redundant)
 
 [[exceptions]]
-pattern = "invowkfile.isLiteralChar.c"
-reason = "byte-level parse primitive"
+pattern = "invowkfile.NewModuleMetadataFromInvowkmod.constructor-validate"
+reason = "non-validating factory for CUE parsing — validation deferred to caller"
 
 [[exceptions]]
-pattern = "invowkfile.isWindowsDriveLetter.c"
-reason = "byte-level parse primitive"
+pattern = "discovery.NewDiagnostic.constructor-validate"
+reason = "constructor validates parameters inline via typed Validate() calls"
+
+[[exceptions]]
+pattern = "discovery.NewDiagnosticWithPath.constructor-validate"
+reason = "constructor validates parameters inline via typed Validate() calls"
+
+[[exceptions]]
+pattern = "discovery.NewDiagnosticWithCause.constructor-validate"
+reason = "constructor validates parameters inline via typed Validate() calls"
+
+[[exceptions]]
+pattern = "execute.NewRuntimeSelection.constructor-validate"
+reason = "constructor validates parameters inline — mode.Validate() + nil check match Validate() body"
+
+# =============================================================================
+# Cast Validation Exceptions (CFA unvalidated-cast)
+# =============================================================================
+# Type conversions at established trust boundaries where Validate() is
+# unnecessary because the source value is already validated upstream
+# (CUE schema, Cobra flags, bubbletea framework, etc.).
+
+# --- TUI framework boundary: bubbletea tea.WindowSizeMsg and huh form values ---
+# TerminalDimension/SelectionIndex/DescriptionText from framework-provided ints/strings.
+# 3-segment patterns for package-level functions, 4-segment for methods.
+[[exceptions]]
+pattern = "tui.*.cast-validation"
+reason = "TUI framework boundary — bubbletea/huh provides validated values"
+
+[[exceptions]]
+pattern = "tui.*.*.cast-validation"
+reason = "TUI method boundary — bubbletea/huh provides validated values"
+
+# --- Server state: atomic int32 loads with known enum constants ---
+
+[[exceptions]]
+pattern = "serverbase.*.*.cast-validation"
+reason = "atomic int32 state loads — method-level state reads via CAS"
+
+# --- Container parsing: string-split results already format-validated upstream ---
+[[exceptions]]
+pattern = "container.*.cast-validation"
+reason = "container package — internal path/port/label parsing from validated upstream"
+
+[[exceptions]]
+pattern = "container.*.*.cast-validation"
+reason = "container method boundary — internal parsing from validated upstream"
+
+# --- CUE-parsed values: validated by CUE schema at parse time ---
+[[exceptions]]
+pattern = "invowkmod.*.cast-validation"
+reason = "invowkmod package — CUE-parsed or filesystem boundary"
+
+[[exceptions]]
+pattern = "invowkmod.*.*.cast-validation"
+reason = "invowkmod method boundary — CUE-parsed or filesystem boundary"
+
+# --- invowkfile CUE-parsed values ---
+[[exceptions]]
+pattern = "invowkfile.*.cast-validation"
+reason = "invowkfile package — CUE-parsed values validated at schema level"
+
+[[exceptions]]
+pattern = "invowkfile.*.*.cast-validation"
+reason = "invowkfile method boundary — CUE-parsed values validated at schema level"
+
+# --- discovery package: specific filesystem path and identifier cast sites ---
+[[exceptions]]
+pattern = "discovery.Discovery.New.cast-validation"
+reason = "os.Getwd returns valid path or error"
+
+[[exceptions]]
+pattern = "discovery.discoverInDir.cast-validation"
+reason = "os.Stat confirmed path exists"
+
+[[exceptions]]
+pattern = "discovery.Discovery.discoverModulesInDirWithDiagnostics.cast-validation"
+reason = "filepath.Abs + os.ReadDir confirmed paths"
+
+[[exceptions]]
+pattern = "discovery.Discovery.loadIncludesWithDiagnostics.cast-validation"
+reason = "round-trip from config entry.Path"
+
+[[exceptions]]
+pattern = "discovery.Discovery.discoverVendoredModulesWithDiagnostics.cast-validation"
+reason = "filepath.Join from OS-listed entry"
+
+[[exceptions]]
+pattern = "discovery.ValidateCommandTree.cast-validation"
+reason = "derived from valid command name parts"
+
+# --- provision package: filesystem paths ---
+[[exceptions]]
+pattern = "provision.*.cast-validation"
+reason = "provision package — filesystem path operations (filepath.Join boundary)"
+
+[[exceptions]]
+pattern = "provision.*.*.cast-validation"
+reason = "provision method boundary — filesystem path operations"
+
+# --- cmd/invowk: Cobra args and config path boundary ---
+[[exceptions]]
+pattern = "invowk.*.cast-validation"
+reason = "cmd/invowk package — Cobra/CLI boundary casts"
+
+[[exceptions]]
+pattern = "invowk.*.*.cast-validation"
+reason = "cmd/invowk method boundary — Cobra/CLI boundary casts"
+
+# =============================================================================
+# Nonzero Error Type Fields
+# =============================================================================
+# Error structs carry the offending value for diagnostic messages.
+# These must be value types (not pointers) even though the underlying
+# type has //goplint:nonzero, because the error always contains a
+# concrete invalid value to report.
+
+[[exceptions]]
+pattern = "invowkfile.InvalidCapabilityNameError.Value.nonzero"
+reason = "error struct carries offending value for diagnostic output"
+
+[[exceptions]]
+pattern = "invowkfile.CapabilityError.Capability.nonzero"
+reason = "error struct carries offending capability for diagnostic output"
+
+# =============================================================================
+# Orphaned Validator Audit — Constant-Only Types
+# =============================================================================
+# All 8 constant-only types now have //goplint:constant-only directives on
+# their type declarations, making them self-documenting and exempt from
+# --check-constructor-validates without needing TOML entries.
+#
+# Annotated types: platform.SandboxType, runtime.InitDiagnosticCode,
+# issue.Id, issue.MarkdownMsg, issue.HttpLink, invowk.ArgErrType,
+# invowkfile.ValidationSeverity, invowkfile.ValidatorName.
+# =============================================================================

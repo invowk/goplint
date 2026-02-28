@@ -131,9 +131,16 @@ func countParams(fields *ast.FieldList) int {
 	return count
 }
 
+// withFuncInfo records a WithXxx option function with its resolved
+// parameter type for type verification.
+type withFuncInfo struct {
+	name      string     // function name (e.g., "WithHost")
+	paramType types.Type // resolved type of the first non-option parameter, nil if none
+}
+
 // trackWithFunctions records free functions named WithXxx that return a
 // known option type, mapping them to their target struct.
-func trackWithFunctions(pass *analysis.Pass, fn *ast.FuncDecl, optionTypes map[string]string, out map[string][]string) {
+func trackWithFunctions(pass *analysis.Pass, fn *ast.FuncDecl, optionTypes map[string]string, out map[string][]withFuncInfo) {
 	if fn.Recv != nil {
 		return // methods are not option functions
 	}
@@ -170,7 +177,16 @@ func trackWithFunctions(pass *analysis.Pass, fn *ast.FuncDecl, optionTypes map[s
 		return
 	}
 
-	out[targetStruct] = append(out[targetStruct], name)
+	// Resolve the first parameter type for type verification.
+	var paramType types.Type
+	if fn.Type.Params != nil && len(fn.Type.Params.List) > 0 {
+		paramType = pass.TypesInfo.TypeOf(fn.Type.Params.List[0].Type)
+	}
+
+	out[targetStruct] = append(out[targetStruct], withFuncInfo{
+		name:      name,
+		paramType: paramType,
+	})
 }
 
 // collectExportedStructsWithFields extends the basic struct collection to
@@ -198,8 +214,9 @@ func collectExportedStructsWithFields(pass *analysis.Pass, node *ast.GenDecl, ou
 		}
 
 		info := exportedStructInfo{
-			name: ts.Name.Name,
-			pos:  ts.Name.Pos(),
+			name:    ts.Name.Name,
+			pos:     ts.Name.Pos(),
+			mutable: hasMutableDirective(node.Doc, ts.Doc),
 		}
 
 		// Collect field metadata for structural checks.
@@ -288,7 +305,7 @@ func reportMissingFuncOptions(
 	structs []exportedStructInfo,
 	ctors map[string]*constructorFuncInfo,
 	optionTypes map[string]string,
-	withFuncs map[string][]string,
+	withFuncs map[string][]withFuncInfo,
 	cfg *ExceptionConfig,
 	bl *BaselineConfig,
 ) {
@@ -362,9 +379,9 @@ func reportMissingFuncOptions(
 		}
 
 		// B2: Each unexported field should have a WithFieldName() function.
-		withSet := make(map[string]bool, len(withFuncs[s.name]))
+		withMap := make(map[string]withFuncInfo, len(withFuncs[s.name]))
 		for _, w := range withFuncs[s.name] {
-			withSet[w] = true
+			withMap[w.name] = w
 		}
 
 		for _, f := range s.fields {
@@ -376,15 +393,31 @@ func reportMissingFuncOptions(
 			}
 
 			expectedWith := "With" + capitalizeFirst(f.name)
-			if withSet[expectedWith] {
+			wfi, found := withMap[expectedWith]
+			if !found {
+				msg := fmt.Sprintf("struct %s has %s type but field %q has no %s() function",
+					qualName, optTypeName, f.name, expectedWith)
+				findingID := StableFindingID(CategoryMissingFuncOptions, qualName, f.name, "missing-with")
+				if !bl.ContainsFinding(CategoryMissingFuncOptions, findingID, msg) {
+					reportDiagnostic(pass, f.pos, CategoryMissingFuncOptions, findingID, msg)
+				}
 				continue
 			}
 
-			msg := fmt.Sprintf("struct %s has %s type but field %q has no %s() function",
-				qualName, optTypeName, f.name, expectedWith)
-			findingID := StableFindingID(CategoryMissingFuncOptions, qualName, f.name, "missing-with")
-			if !bl.ContainsFinding(CategoryMissingFuncOptions, findingID, msg) {
-				reportDiagnostic(pass, f.pos, CategoryMissingFuncOptions, findingID, msg)
+			// B3: Verify WithXxx parameter type matches the field type.
+			if wfi.paramType != nil && len(s.fields) > 0 {
+				fieldType := fieldTypeForMeta(pass, s.name, f.name)
+				if fieldType != nil && !types.Identical(wfi.paramType, fieldType) {
+					msg := fmt.Sprintf("%s() parameter type %s does not match field %s.%s type %s",
+						expectedWith,
+						types.TypeString(wfi.paramType, nil),
+						s.name, f.name,
+						types.TypeString(fieldType, nil))
+					findingID := StableFindingID(CategoryWrongFuncOptionType, qualName, f.name, expectedWith)
+					if !bl.ContainsFinding(CategoryWrongFuncOptionType, findingID, msg) {
+						reportDiagnostic(pass, f.pos, CategoryWrongFuncOptionType, findingID, msg)
+					}
+				}
 			}
 		}
 	}
@@ -400,6 +433,11 @@ func reportMissingImmutability(pass *analysis.Pass, structs []exportedStructInfo
 	for _, s := range structs {
 		if findConstructorForStruct(s.name, ctors) == nil {
 			continue // no constructor — exported fields are fine
+		}
+
+		// Skip structs marked as intentionally mutable.
+		if s.mutable {
+			continue
 		}
 
 		ctorName := "New" + s.name
@@ -425,11 +463,11 @@ func reportMissingImmutability(pass *analysis.Pass, structs []exportedStructInfo
 	}
 }
 
-// reportMissingStructIsValid reports exported struct types that have a
-// constructor but lack an IsValid() (bool, []error) method. Struct types
-// with constructors should validate their invariants via IsValid().
+// reportMissingStructValidate reports exported struct types that have a
+// constructor but lack a Validate() error method. Struct types
+// with constructors should validate their invariants via Validate().
 // Error types are excluded (same logic as --check-constructors).
-func reportMissingStructIsValid(
+func reportMissingStructValidate(
 	pass *analysis.Pass,
 	structs []exportedStructInfo,
 	ctors map[string]*constructorFuncInfo,
@@ -444,38 +482,61 @@ func reportMissingStructIsValid(
 			continue // no constructor — no obligation
 		}
 
-		// Skip error types — they typically don't need IsValid().
+		// Skip error types — they typically don't need Validate().
 		if strings.HasSuffix(s.name, "Error") || methods[s.name+".Error"] != nil {
 			continue
 		}
 
 		qualName := fmt.Sprintf("%s.%s", pkgName, s.name)
-		if cfg.isExcepted(qualName + ".struct-isvalid") {
+		if cfg.isExcepted(qualName + ".struct-validate") {
 			continue
 		}
 
-		mi := methods[s.name+".IsValid"]
+		mi := methods[s.name+".Validate"]
 		if mi != nil {
 			// Method exists — verify its signature matches the contract.
-			if mi.paramCount != 0 || mi.resultTypes != expectedIsValidSig {
-				msg := fmt.Sprintf("struct %s has IsValid() but wrong signature (want func() (bool, []error))", qualName)
-				findingID := StableFindingID(CategoryWrongStructIsValidSig, qualName, "IsValid")
-				if bl.ContainsFinding(CategoryWrongStructIsValidSig, findingID, msg) {
+			if mi.paramCount != 0 || mi.resultTypes != expectedValidateSig {
+				msg := fmt.Sprintf("struct %s has Validate() but wrong signature (want func() error)", qualName)
+				findingID := StableFindingID(CategoryWrongStructValidateSig, qualName, "Validate")
+				if bl.ContainsFinding(CategoryWrongStructValidateSig, findingID, msg) {
 					continue
 				}
-				reportDiagnostic(pass, s.pos, CategoryWrongStructIsValidSig, findingID, msg)
+				reportDiagnostic(pass, s.pos, CategoryWrongStructValidateSig, findingID, msg)
 			}
 			continue
 		}
 
-		msg := fmt.Sprintf("struct %s has constructor but no IsValid() method", qualName)
-		findingID := StableFindingID(CategoryMissingStructIsValid, qualName, "IsValid")
-		if bl.ContainsFinding(CategoryMissingStructIsValid, findingID, msg) {
+		msg := fmt.Sprintf("struct %s has constructor but no Validate() method", qualName)
+		findingID := StableFindingID(CategoryMissingStructValidate, qualName, "Validate")
+		if bl.ContainsFinding(CategoryMissingStructValidate, findingID, msg) {
 			continue
 		}
 
-		reportDiagnostic(pass, s.pos, CategoryMissingStructIsValid, findingID, msg)
+		reportDiagnostic(pass, s.pos, CategoryMissingStructValidate, findingID, msg)
 	}
+}
+
+// fieldTypeForMeta looks up the actual types.Type for a struct field by
+// struct name and field name. Returns nil if the struct or field is not found.
+func fieldTypeForMeta(pass *analysis.Pass, structName, fieldName string) types.Type {
+	obj := pass.Pkg.Scope().Lookup(structName)
+	if obj == nil {
+		return nil
+	}
+	named, ok := obj.Type().(*types.Named)
+	if !ok {
+		return nil
+	}
+	st, ok := named.Underlying().(*types.Struct)
+	if !ok {
+		return nil
+	}
+	for field := range st.Fields() {
+		if field.Name() == fieldName {
+			return field.Type()
+		}
+	}
+	return nil
 }
 
 // canonicalOptionTypeName returns a deterministic option type name from a

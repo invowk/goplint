@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# Test config for --audit-review-dates mode.
+
+[settings]
+skip_types = ["bool", "error"]
+
+# Overdue entry — review date in the past.
+[[exceptions]]
+pattern = "overdue.pattern"
+reason = "deferred typing at filepath boundary"
+review_after = "2020-01-01"
+
+# Overdue entry with blocked_by — past date + blocked_by annotation.
+[[exceptions]]
+pattern = "overdue.with.blocked"
+reason = "blocked by upstream"
+review_after = "2020-06-15"
+blocked_by = "upstream type proposal"
+
+# Future entry — review date far in the future. Should NOT be reported.
+[[exceptions]]
+pattern = "future.pattern"
+reason = "review later"
+review_after = "2099-01-01"
+
+# Invalid date format — should produce an invalid-date diagnostic.
+[[exceptions]]
+pattern = "invalid.date.pattern"
+reason = "bad date format"
+review_after = "not-a-date"
+
+# No review_after — should not be reported at all.
+[[exceptions]]
+pattern = "no.review.date"
+reason = "no scheduled review"

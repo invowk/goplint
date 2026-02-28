@@ -17,17 +17,25 @@ import (
 // new regressions are reported. Use loadBaseline to parse from disk and
 // writeBaseline to generate from collected findings.
 type BaselineConfig struct {
-	Primitive             BaselineCategory `toml:"primitive"`
-	MissingIsValid        BaselineCategory `toml:"missing-isvalid"`
-	MissingStringer       BaselineCategory `toml:"missing-stringer"`
-	MissingConstructor    BaselineCategory `toml:"missing-constructor"`
-	WrongConstructorSig   BaselineCategory `toml:"wrong-constructor-sig"`
-	WrongIsValidSig       BaselineCategory `toml:"wrong-isvalid-sig"`
-	WrongStringerSig      BaselineCategory `toml:"wrong-stringer-sig"`
-	MissingFuncOptions    BaselineCategory `toml:"missing-func-options"`
-	MissingImmutability   BaselineCategory `toml:"missing-immutability"`
-	MissingStructIsValid  BaselineCategory `toml:"missing-struct-isvalid"`
-	WrongStructIsValidSig BaselineCategory `toml:"wrong-struct-isvalid-sig"`
+	Primitive              BaselineCategory `toml:"primitive"`
+	MissingValidate        BaselineCategory `toml:"missing-validate"`
+	MissingStringer        BaselineCategory `toml:"missing-stringer"`
+	MissingConstructor     BaselineCategory `toml:"missing-constructor"`
+	WrongConstructorSig    BaselineCategory `toml:"wrong-constructor-sig"`
+	WrongValidateSig       BaselineCategory `toml:"wrong-validate-sig"`
+	WrongStringerSig       BaselineCategory `toml:"wrong-stringer-sig"`
+	MissingFuncOptions     BaselineCategory `toml:"missing-func-options"`
+	MissingImmutability    BaselineCategory `toml:"missing-immutability"`
+	MissingStructValidate  BaselineCategory `toml:"missing-struct-validate"`
+	WrongStructValidateSig BaselineCategory `toml:"wrong-struct-validate-sig"`
+	UnvalidatedCast        BaselineCategory `toml:"unvalidated-cast"`
+	UnusedValidateResult   BaselineCategory `toml:"unused-validate-result"`
+	UnusedConstructorError      BaselineCategory `toml:"unused-constructor-error"`
+	MissingConstructorValidate     BaselineCategory `toml:"missing-constructor-validate"`
+	IncompleteValidateDelegation BaselineCategory `toml:"incomplete-validate-delegation"`
+	NonZeroValueField            BaselineCategory `toml:"nonzero-value-field"`
+	EnumCueMissingGo             BaselineCategory `toml:"enum-cue-missing-go"`
+	EnumCueExtraGo               BaselineCategory `toml:"enum-cue-extra-go"`
 
 	// lookupByID is an O(1) index keyed by category → finding ID.
 	lookupByID map[string]map[string]bool
@@ -110,38 +118,54 @@ func (b *BaselineConfig) Count() int {
 		return 0
 	}
 	return countCategory(b.Primitive) +
-		countCategory(b.MissingIsValid) +
+		countCategory(b.MissingValidate) +
 		countCategory(b.MissingStringer) +
 		countCategory(b.MissingConstructor) +
 		countCategory(b.WrongConstructorSig) +
-		countCategory(b.WrongIsValidSig) +
+		countCategory(b.WrongValidateSig) +
 		countCategory(b.WrongStringerSig) +
 		countCategory(b.MissingFuncOptions) +
 		countCategory(b.MissingImmutability) +
-		countCategory(b.MissingStructIsValid) +
-		countCategory(b.WrongStructIsValidSig)
+		countCategory(b.MissingStructValidate) +
+		countCategory(b.WrongStructValidateSig) +
+		countCategory(b.UnvalidatedCast) +
+		countCategory(b.UnusedValidateResult) +
+		countCategory(b.UnusedConstructorError) +
+		countCategory(b.MissingConstructorValidate) +
+		countCategory(b.IncompleteValidateDelegation) +
+		countCategory(b.NonZeroValueField) +
+		countCategory(b.EnumCueMissingGo) +
+		countCategory(b.EnumCueExtraGo)
 }
 
 // buildLookup populates the internal lookup maps from the parsed TOML data.
 func (b *BaselineConfig) buildLookup() {
-	b.lookupByID = make(map[string]map[string]bool, 11)
-	b.lookupByMessage = make(map[string]map[string]bool, 11)
+	b.lookupByID = make(map[string]map[string]bool, 16)
+	b.lookupByMessage = make(map[string]map[string]bool, 16)
 
 	categoryData := []struct {
 		key string
 		cat BaselineCategory
 	}{
 		{CategoryPrimitive, b.Primitive},
-		{CategoryMissingIsValid, b.MissingIsValid},
+		{CategoryMissingValidate, b.MissingValidate},
 		{CategoryMissingStringer, b.MissingStringer},
 		{CategoryMissingConstructor, b.MissingConstructor},
 		{CategoryWrongConstructorSig, b.WrongConstructorSig},
-		{CategoryWrongIsValidSig, b.WrongIsValidSig},
+		{CategoryWrongValidateSig, b.WrongValidateSig},
 		{CategoryWrongStringerSig, b.WrongStringerSig},
 		{CategoryMissingFuncOptions, b.MissingFuncOptions},
 		{CategoryMissingImmutability, b.MissingImmutability},
-		{CategoryMissingStructIsValid, b.MissingStructIsValid},
-		{CategoryWrongStructIsValidSig, b.WrongStructIsValidSig},
+		{CategoryMissingStructValidate, b.MissingStructValidate},
+		{CategoryWrongStructValidateSig, b.WrongStructValidateSig},
+		{CategoryUnvalidatedCast, b.UnvalidatedCast},
+		{CategoryUnusedValidateResult, b.UnusedValidateResult},
+		{CategoryUnusedConstructorError, b.UnusedConstructorError},
+		{CategoryMissingConstructorValidate, b.MissingConstructorValidate},
+		{CategoryIncompleteValidateDelegation, b.IncompleteValidateDelegation},
+		{CategoryNonZeroValueField, b.NonZeroValueField},
+		{CategoryEnumCueMissingGo, b.EnumCueMissingGo},
+		{CategoryEnumCueExtraGo, b.EnumCueExtraGo},
 	}
 
 	for _, c := range categoryData {
@@ -178,16 +202,24 @@ func WriteBaseline(path string, findings map[string][]BaselineFinding) error {
 		label string
 	}{
 		{CategoryPrimitive, "Bare primitive type usage"},
-		{CategoryMissingIsValid, "Named types missing IsValid() method"},
+		{CategoryMissingValidate, "Named types missing Validate() method"},
 		{CategoryMissingStringer, "Named types missing String() method"},
 		{CategoryMissingConstructor, "Exported structs missing NewXxx() constructor"},
 		{CategoryWrongConstructorSig, "Constructors with wrong return type"},
-		{CategoryWrongIsValidSig, "Named types with wrong IsValid() signature"},
+		{CategoryWrongValidateSig, "Named types with wrong Validate() signature"},
 		{CategoryWrongStringerSig, "Named types with wrong String() signature"},
 		{CategoryMissingFuncOptions, "Structs missing functional options pattern"},
 		{CategoryMissingImmutability, "Structs with constructor but exported mutable fields"},
-		{CategoryMissingStructIsValid, "Structs with constructor but no IsValid() method"},
-		{CategoryWrongStructIsValidSig, "Structs with IsValid() but wrong signature"},
+		{CategoryMissingStructValidate, "Structs with constructor but no Validate() method"},
+		{CategoryWrongStructValidateSig, "Structs with Validate() but wrong signature"},
+		{CategoryUnvalidatedCast, "Type conversions to DDD types without Validate() check"},
+		{CategoryUnusedValidateResult, "Validate() calls with result completely discarded"},
+		{CategoryUnusedConstructorError, "Constructor calls with error return assigned to blank identifier"},
+		{CategoryMissingConstructorValidate, "Constructors returning validatable types without calling Validate()"},
+		{CategoryIncompleteValidateDelegation, "Structs with validate-all missing field Validate() delegation"},
+		{CategoryNonZeroValueField, "Struct fields using nonzero types as value (non-pointer)"},
+		{CategoryEnumCueMissingGo, "CUE disjunction members missing from Go Validate() switch"},
+		{CategoryEnumCueExtraGo, "Go Validate() switch cases not present in CUE disjunction"},
 	}
 
 	for _, cat := range categories {

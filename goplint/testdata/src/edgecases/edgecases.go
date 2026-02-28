@@ -59,6 +59,17 @@ type WrongStringerReturn struct{}
 
 func (w WrongStringerReturn) String() int { return 0 } // want `return value of edgecases\.WrongStringerReturn\.String uses primitive type int`
 
+// PointerPrimitive tests pointer-to-primitive types — still flagged.
+type PointerPrimitive struct {
+	OptionalName *string   // want `struct field edgecases\.PointerPrimitive\.OptionalName uses primitive type \*string`
+	OptionalList *[]string // want `struct field edgecases\.PointerPrimitive\.OptionalList uses primitive type \*\[\]string`
+}
+
+// NestedSlice tests nested slice of slices — flagged as [][]string.
+type NestedSlice struct {
+	Rows [][]string // want `struct field edgecases\.NestedSlice\.Rows uses primitive type \[\]\[\]string`
+}
+
 // RenderFieldStruct tests //plint:render on struct fields — should suppress
 // the finding on the annotated field, similar to //plint:ignore.
 type RenderFieldStruct struct {

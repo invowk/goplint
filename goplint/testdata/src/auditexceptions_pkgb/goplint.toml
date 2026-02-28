@@ -1,0 +1,15 @@
+# Shared test config for multi-package audit-exceptions test.
+# "Server.Name" matches in pkga but not in pkgb (stale per-package).
+# "NonExistent.Field" matches nowhere (stale in both packages).
+
+[settings]
+skip_types = ["bool", "error"]
+exclude_paths = []
+
+[[exceptions]]
+pattern = "Server.Name"
+reason = "test: matches Server.Name in pkga only"
+
+[[exceptions]]
+pattern = "NonExistent.Field"
+reason = "test: matches nothing in any package"

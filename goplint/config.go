@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -19,6 +20,8 @@ type ExceptionConfig struct {
 	// matchCounts tracks how many times each exception pattern was matched.
 	// Populated during isExcepted calls; used by --audit-exceptions to
 	// detect stale entries that matched zero locations.
+	// Safe for unsynchronized access: go/analysis runs per-package, and each
+	// run() creates a fresh ExceptionConfig via loadConfig().
 	matchCounts map[int]int
 }
 
@@ -41,6 +44,13 @@ type Exception struct {
 	Pattern string `toml:"pattern"`
 	// Reason documents why this primitive usage is intentional.
 	Reason string `toml:"reason"`
+	// ReviewAfter is an optional ISO date (e.g., "2025-12-01") indicating
+	// when this exception should be re-evaluated. Used by --audit-review-dates
+	// to flag overdue exceptions.
+	ReviewAfter string `toml:"review_after,omitempty"`
+	// BlockedBy documents what work item or condition must be resolved
+	// before this exception can be removed (e.g., "Tier 3.7 tui baseline").
+	BlockedBy string `toml:"blocked_by,omitempty"`
 }
 
 // loadConfig reads and parses the exceptions TOML file.
@@ -78,8 +88,8 @@ func loadConfig(path string) (*ExceptionConfig, error) {
 func (c *ExceptionConfig) isExcepted(qualifiedName string) bool {
 	// Also try matching without the package prefix for 2-segment patterns.
 	stripped := qualifiedName
-	if i := strings.Index(qualifiedName, "."); i >= 0 {
-		stripped = qualifiedName[i+1:]
+	if _, after, ok := strings.Cut(qualifiedName, "."); ok {
+		stripped = after
 	}
 
 	for i, exc := range c.Exceptions {
@@ -95,12 +105,7 @@ func (c *ExceptionConfig) isExcepted(qualifiedName string) bool {
 
 // isSkippedType checks whether a type name is in the skip_types list.
 func (c *ExceptionConfig) isSkippedType(typeName string) bool {
-	for _, st := range c.Settings.SkipTypes {
-		if st == typeName {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(c.Settings.SkipTypes, typeName)
 }
 
 // isExcludedPath checks whether a file path contains any of the

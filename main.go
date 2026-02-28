@@ -36,6 +36,16 @@ func main() {
 		return
 	}
 
+	// Detect --global (only meaningful with --audit-exceptions).
+	// Runs self as subprocess to aggregate stale exceptions across all packages.
+	if hasFlag(os.Args[1:], "global") {
+		if err := auditExceptionsGlobal(os.Args[1:]); err != nil {
+			fmt.Fprintf(os.Stderr, "goplint: audit-exceptions-global: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	singlechecker.Main(goplint.Analyzer)
 }
 
@@ -44,8 +54,8 @@ func main() {
 func extractUpdateBaselinePath(args []string) string {
 	for _, arg := range args {
 		trimmed := strings.TrimLeft(arg, "-")
-		if strings.HasPrefix(trimmed, "update-baseline=") {
-			return strings.TrimPrefix(trimmed, "update-baseline=")
+		if after, ok := strings.CutPrefix(trimmed, "update-baseline="); ok {
+			return after
 		}
 	}
 	return ""
@@ -98,30 +108,150 @@ func generateBaseline(outputPath string, originalArgs []string) error {
 // buildSubprocessArgs constructs args for the subprocess invocation by
 // removing -update-baseline and ensuring -json is present.
 func buildSubprocessArgs(args []string) []string {
+	return filterAndEnsureFlags(args, func(trimmed string) bool {
+		return strings.HasPrefix(trimmed, "update-baseline")
+	}, []string{"-json"})
+}
+
+// hasFlag checks if any CLI arg matches the given flag name (with or without leading dashes).
+func hasFlag(args []string, flagName string) bool {
+	for _, arg := range args {
+		trimmed := strings.TrimLeft(arg, "-")
+		if trimmed == flagName {
+			return true
+		}
+	}
+	return false
+}
+
+// auditExceptionsGlobal runs --audit-exceptions as a subprocess with -json output,
+// aggregates stale exception patterns across all packages, and reports patterns
+// that were stale in every package (globally stale — truly unreachable patterns).
+func auditExceptionsGlobal(originalArgs []string) error {
+	selfPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("resolving executable path: %w", err)
+	}
+
+	// Build subprocess args: remove --global, ensure -json and -audit-exceptions.
+	subArgs := buildGlobalAuditArgs(originalArgs)
+
+	cmd := exec.Command(selfPath, subArgs...)
+	cmd.Stderr = os.Stderr
+
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+
+	// singlechecker exits non-zero when diagnostics are found.
+	_ = cmd.Run()
+
+	// Parse the JSON stream — track stale patterns per package.
+	decoder := json.NewDecoder(bytes.NewReader(stdout.Bytes()))
+
+	// pattern → count of packages where it was reported as stale
+	stalePerPattern := make(map[string]int)
+	totalPackages := 0
+
+	for decoder.More() {
+		var result analysisResult
+		if err := decoder.Decode(&result); err != nil {
+			return fmt.Errorf("decoding JSON: %w", err)
+		}
+
+		for _, analyzers := range result {
+			totalPackages++
+			diags, ok := analyzers["goplint"]
+			if !ok {
+				continue
+			}
+			for _, d := range diags {
+				if d.Category != goplint.CategoryStaleException {
+					continue
+				}
+				pattern := extractPatternFromStaleMessage(d.Message)
+				if pattern != "" {
+					stalePerPattern[pattern]++
+				}
+			}
+		}
+	}
+
+	if totalPackages == 0 {
+		fmt.Fprintf(os.Stderr, "Global audit: no packages analyzed\n")
+		return nil
+	}
+
+	// Report patterns stale in ALL packages (truly globally stale).
+	var stalePatterns []string
+	for pattern, count := range stalePerPattern {
+		if count >= totalPackages {
+			stalePatterns = append(stalePatterns, pattern)
+		}
+	}
+	slices.Sort(stalePatterns)
+
+	for _, pattern := range stalePatterns {
+		fmt.Printf("globally stale exception: pattern %q matched no diagnostics in any package\n", pattern)
+	}
+
+	fmt.Fprintf(os.Stderr, "Global audit: %d/%d stale exception patterns are globally stale (%d packages analyzed)\n",
+		len(stalePatterns), len(stalePerPattern), totalPackages)
+
+	return nil
+}
+
+// buildGlobalAuditArgs constructs args for the subprocess invocation by
+// removing --global and ensuring -json and -audit-exceptions are present.
+func buildGlobalAuditArgs(args []string) []string {
+	return filterAndEnsureFlags(args, func(trimmed string) bool {
+		return trimmed == "global"
+	}, []string{"-json", "-audit-exceptions"})
+}
+
+// filterAndEnsureFlags is a shared helper for building subprocess arg lists.
+// It removes args where skipFn(trimmedArg) returns true and ensures each flag
+// in requiredFlags is present (prepended if missing). The trimmed form strips
+// leading dashes for comparison.
+func filterAndEnsureFlags(args []string, skipFn func(trimmed string) bool, requiredFlags []string) []string {
+	present := make(map[string]bool, len(requiredFlags))
 	var result []string
-	hasJSON := false
 
 	for _, arg := range args {
 		trimmed := strings.TrimLeft(arg, "-")
-
-		// Skip the update-baseline flag itself.
-		if strings.HasPrefix(trimmed, "update-baseline") {
+		if skipFn(trimmed) {
 			continue
 		}
-
-		if trimmed == "json" {
-			hasJSON = true
+		for _, rf := range requiredFlags {
+			if trimmed == strings.TrimLeft(rf, "-") {
+				present[rf] = true
+			}
 		}
-
 		result = append(result, arg)
 	}
 
-	if !hasJSON {
-		// Prepend -json before package patterns (which come last).
-		result = slices.Insert(result, 0, "-json")
+	for _, rf := range requiredFlags {
+		if !present[rf] {
+			result = slices.Insert(result, 0, rf)
+		}
 	}
 
 	return result
+}
+
+// extractPatternFromStaleMessage extracts the exception pattern from a
+// stale-exception diagnostic message. The message format is:
+// 'stale exception: pattern "X" matched no diagnostics (reason: Y)'
+func extractPatternFromStaleMessage(message string) string {
+	const prefix = `stale exception: pattern "`
+	_, after, found := strings.Cut(message, prefix)
+	if !found {
+		return ""
+	}
+	pattern, _, found := strings.Cut(after, `"`)
+	if !found {
+		return ""
+	}
+	return pattern
 }
 
 // analysisResult represents the go/analysis -json output structure.

@@ -25,3 +25,7 @@ reason = "test: error detail field wildcard"
 [[exceptions]]
 pattern = "*.View.return.0"
 reason = "test: interface contract return value wildcard"
+
+[[exceptions]]
+pattern = "configexceptions.NewServiceConfig.constructor-validate"
+reason = "test: constructor-validates mode exception"

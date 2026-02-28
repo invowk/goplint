@@ -30,6 +30,17 @@ type Mixed struct {
 
 func NewMixed() *Mixed { return &Mixed{} }
 
+// MutableByDesign has exported fields and a constructor but is marked
+// //goplint:mutable — no immutability diagnostic expected. Only the
+// primitive field finding is emitted.
+//
+//goplint:mutable
+type MutableByDesign struct {
+	Name string // want `struct field immutability\.MutableByDesign\.Name uses primitive type string`
+}
+
+func NewMutableByDesign() *MutableByDesign { return &MutableByDesign{} }
+
 // unexported is unexported — not checked by any structural mode.
 type unexported struct {
 	data string // want `struct field immutability\.unexported\.data uses primitive type string`

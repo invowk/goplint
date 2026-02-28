@@ -37,3 +37,14 @@ type MissingCtor struct{ z string } // want `struct field constructorsig\.Missin
 type InterfaceReturn struct{ w string } // want `struct field constructorsig\.InterfaceReturn\.w uses primitive type string`
 
 func NewInterfaceReturn() fmt.Stringer { return nil }
+
+// --- Multiple variant constructors (determinism) ---
+
+// MultiVariant has multiple variant constructors — both return the correct
+// type. Tests deterministic selection (lexicographic first by prefix match).
+type MultiVariant struct {
+	data string // want `struct field constructorsig\.MultiVariant\.data uses primitive type string`
+}
+
+func NewMultiVariantFromA(d string) *MultiVariant { return &MultiVariant{data: d} } // want `parameter "d" of constructorsig\.NewMultiVariantFromA uses primitive type string`
+func NewMultiVariantFromB(d string) *MultiVariant { return &MultiVariant{data: d} } // want `parameter "d" of constructorsig\.NewMultiVariantFromB uses primitive type string`

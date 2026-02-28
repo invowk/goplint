@@ -114,6 +114,12 @@ func TestMatchPattern(t *testing.T) {
 		{name: "empty vs non-empty", pattern: "", input: "Foo", want: false},
 		{name: "single segment exact", pattern: "Foo", input: "Foo", want: true},
 		{name: "single segment no match", pattern: "Foo", input: "Bar", want: false},
+		// 4+ segment patterns (validate-delegation, nonzero, enum-sync exceptions)
+		{name: "4-segment exact", pattern: "pkg.Type.Field.mode", input: "pkg.Type.Field.mode", want: true},
+		{name: "4-segment wildcard", pattern: "pkg.*.Field.*", input: "pkg.Type.Field.mode", want: true},
+		{name: "4-segment mismatch count", pattern: "pkg.Type.Field", input: "pkg.Type.Field.mode", want: false},
+		{name: "5-segment exact", pattern: "pkg.Type.Method.param.type", input: "pkg.Type.Method.param.type", want: true},
+		{name: "5-segment wildcard middle", pattern: "pkg.*.*.param.*", input: "pkg.Type.Method.param.type", want: true},
 	}
 
 	for _, tt := range tests {

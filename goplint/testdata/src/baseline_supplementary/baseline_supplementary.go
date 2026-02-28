@@ -2,23 +2,23 @@
 
 package baseline_supplementary
 
-// --- Missing IsValid: one baselined, one new ---
+// --- Missing Validate: one baselined, one new ---
 
-// BaselinedType is in the baseline for missing-isvalid and missing-stringer.
+// BaselinedType is in the baseline for missing-validate and missing-stringer.
 type BaselinedType string
 
-// NewType is NOT in the baseline for missing-isvalid — should be reported.
+// NewType is NOT in the baseline for missing-validate — should be reported.
 // Its missing-stringer is also new (not baselined).
-type NewType string // want `named type baseline_supplementary\.NewType has no IsValid\(\) method` `named type baseline_supplementary\.NewType has no String\(\) method`
+type NewType string // want `named type baseline_supplementary\.NewType has no Validate\(\) method` `named type baseline_supplementary\.NewType has no String\(\) method`
 
 // --- Missing Stringer: one baselined, one new ---
 
-// BaselinedStringer is in the baseline for both missing-stringer and missing-isvalid.
+// BaselinedStringer is in the baseline for both missing-stringer and missing-validate.
 type BaselinedStringer int
 
 // NewStringer is NOT in the baseline for missing-stringer — reported.
-// Its missing-isvalid is also new (not baselined).
-type NewStringer int // want `named type baseline_supplementary\.NewStringer has no String\(\) method` `named type baseline_supplementary\.NewStringer has no IsValid\(\) method`
+// Its missing-validate is also new (not baselined).
+type NewStringer int // want `named type baseline_supplementary\.NewStringer has no String\(\) method` `named type baseline_supplementary\.NewStringer has no Validate\(\) method`
 
 // --- Missing Constructor: one baselined, one new ---
 

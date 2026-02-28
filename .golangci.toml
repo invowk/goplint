@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# golangci-lint configuration for tools/goplint module.
+# This module is linted separately from the root module.
+
+version = "2"
+
+[run]
+modules-download-mode = "readonly"
+tests = true
+go = ""
+
+[linters]
+default = "none"
+enable = [
+    # modernize: A suite of analyzers that suggest simplifications to Go code,
+    # using modern language and library features.
+    "modernize",
+
+    # forbidigo: Forbids identifiers.
+    "forbidigo",
+
+    # usetesting: Reports uses of functions with replacement inside the testing
+    # package. [auto-fix]
+    "usetesting",
+]
+
+[linters.settings.forbidigo]
+forbid = [
+    # Go 1.26+ supports typed extraction via errors.AsType[T].
+    { pattern = '^errors\.As$', msg = "use errors.AsType[T] (Go 1.26+)" },
+]
+
+[linters.settings.usetesting]
+# Scope this to context modernization. Keep os.* helper checks disabled to
+# avoid unrelated policy churn in this module.
+os-create-temp = false
+os-mkdir-temp = false
+os-setenv = false
+os-temp-dir = false
+os-chdir = false
+context-background = true
+context-todo = true
+
+[linters.exclusions]
+generated = "lax"
+
+# Enforce errors.AsType[T] in non-test code.
+[[linters.exclusions.rules]]
+linters = ["forbidigo"]
+path = "_test\\.go$"
+
+[issues]
+max-issues-per-linter = 0
+max-same-issues = 0
+uniq-by-line = false

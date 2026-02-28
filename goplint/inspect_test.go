@@ -236,6 +236,23 @@ func TestParseDirectiveKeys(t *testing.T) {
 			text:     "//plint:ignore,render",
 			wantKeys: []string{"ignore", "render"},
 		},
+		// Prose references must NOT trigger directives.
+		{
+			name: "prose reference to plint:ignore",
+			text: "// see plint:ignore for docs",
+		},
+		{
+			name: "prose reference to goplint:ignore",
+			text: "// refer to goplint:ignore directive",
+		},
+		{
+			name: "prose reference to nolint:goplint",
+			text: "// see nolint:goplint convention",
+		},
+		{
+			name: "prose mid-sentence plint:render",
+			text: "// use plint:render for display functions",
+		},
 	}
 
 	for _, tt := range tests {
@@ -329,6 +346,22 @@ func TestHasIgnoreDirective(t *testing.T) {
 			name:        "goplint combined matches ignore",
 			lineComment: "//goplint:ignore,internal",
 			want:        true,
+		},
+		// Prose references must not suppress findings.
+		{
+			name:        "prose reference to plint:ignore in line comment",
+			lineComment: "// see plint:ignore for docs",
+			want:        false,
+		},
+		{
+			name: "prose reference to goplint:ignore in doc comment",
+			doc:  "// refer to goplint:ignore directive",
+			want: false,
+		},
+		{
+			name:        "prose reference to nolint:goplint",
+			lineComment: "// see nolint:goplint convention",
+			want:        false,
 		},
 	}
 
