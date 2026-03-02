@@ -27,13 +27,15 @@ func inspectClosureCastsCFA(
 	closurePrefix string,
 	excCfg *ExceptionConfig,
 	bl *BaselineConfig,
+	checkUBV bool,
+	checkUBVCross bool,
 ) {
 	if lit.Body == nil {
 		return
 	}
 
 	// Build CFG for this closure's body.
-	closureCFG := buildFuncCFG(lit.Body)
+	closureCFG := buildFuncCFGForPass(pass, lit.Body)
 	if closureCFG == nil {
 		return
 	}
@@ -42,13 +44,32 @@ func inspectClosureCastsCFA(
 
 	// Collect casts using the shared CFA collection logic.
 	// Nested closures are analyzed recursively with compound prefixes.
-	assignedCasts, unassignedCasts := collectCFACasts(
+	assignedCasts, unassignedCasts, closureCalls, _ := collectCFACasts(
 		pass, lit.Body, parentMap,
 		func(nested *ast.FuncLit, nestedIdx int) {
 			nestedPrefix := closurePrefix + "/" + strconv.Itoa(nestedIdx)
-			inspectClosureCastsCFA(pass, nested, qualEnclosingFunc, nestedPrefix, excCfg, bl)
+			inspectClosureCastsCFA(pass, nested, qualEnclosingFunc, nestedPrefix, excCfg, bl, checkUBV, checkUBVCross)
 		},
 	)
+
+	// Collect closure classifications lazily — only needed when assigned casts exist.
+	// Path validation includes deferred closures + IIFEs; UBV ordering uses only IIFEs.
+	var pathSyncLits map[*ast.FuncLit]bool
+	var ubvSyncLits map[*ast.FuncLit]bool
+	var pathSyncCalls closureVarCallSet
+	var ubvSyncCalls closureVarCallSet
+	var pathMethodCalls methodValueValidateCallSet
+	var ubvMethodCalls methodValueValidateCallSet
+	if len(assignedCasts) > 0 {
+		pathSyncLits = collectSynchronousClosureLits(lit.Body)
+		pathSyncCalls = collectSynchronousClosureVarCalls(closureCalls)
+		pathMethodCalls = collectMethodValueValidateCalls(pass, lit.Body)
+		if checkUBV || checkUBVCross {
+			ubvSyncLits = collectUBVClosureLits(lit.Body)
+			ubvSyncCalls = collectUBVClosureVarCalls(closureCalls)
+			ubvMethodCalls = pathMethodCalls
+		}
+	}
 
 	// Report assigned casts with unvalidated paths.
 	for _, ac := range assignedCasts {
@@ -66,12 +87,56 @@ func inspectClosureCastsCFA(
 			continue
 		}
 
-		if !hasPathToReturnWithoutValidate(closureCFG, defBlock, defIdx, ac.varName) {
+		if !hasPathToReturnWithoutValidate(pass, closureCFG, defBlock, defIdx, ac.target, pathSyncLits, pathSyncCalls, pathMethodCalls) {
+			// All paths validated. Check for use-before-validate (same-block first, then cross-block).
+			if checkUBV && hasUseBeforeValidateInBlock(pass, defBlock.Nodes, defIdx+1, ac.target, ubvSyncLits, ubvSyncCalls, ubvMethodCalls) {
+				ubvMsg := fmt.Sprintf("variable %s of type %s used before Validate() in same block", ac.target.displayName, ac.typeName)
+				ubvID := PackageScopedFindingID(pass,
+					CategoryUseBeforeValidate,
+					"cfa",
+					"closure",
+					closurePrefix,
+					qualEnclosingFunc,
+					ac.typeName,
+					"ubv",
+					stablePosKey(pass, ac.pos.Pos()),
+					ac.target.key(),
+				)
+				if !bl.ContainsFinding(CategoryUseBeforeValidate, ubvID, ubvMsg) {
+					reportDiagnostic(pass, ac.pos.Pos(), CategoryUseBeforeValidate, ubvID, ubvMsg)
+				}
+			} else if checkUBVCross && hasUseBeforeValidateCrossBlock(pass, defBlock, defIdx, ac.target, ubvSyncLits, ubvSyncCalls, ubvMethodCalls) {
+				ubvMsg := fmt.Sprintf("variable %s of type %s used before Validate() across blocks", ac.target.displayName, ac.typeName)
+				ubvID := PackageScopedFindingID(pass,
+					CategoryUseBeforeValidate,
+					"cfa",
+					"closure",
+					closurePrefix,
+					qualEnclosingFunc,
+					ac.typeName,
+					"ubv-xblock",
+					stablePosKey(pass, ac.pos.Pos()),
+					ac.target.key(),
+				)
+				if !bl.ContainsFinding(CategoryUseBeforeValidate, ubvID, ubvMsg) {
+					reportDiagnostic(pass, ac.pos.Pos(), CategoryUseBeforeValidate, ubvID, ubvMsg)
+				}
+			}
 			continue
 		}
 
 		msg := fmt.Sprintf("type conversion to %s from non-constant without Validate() check", ac.typeName)
-		findingID := StableFindingID(CategoryUnvalidatedCast, "cfa", "closure", closurePrefix, qualEnclosingFunc, ac.typeName, "assigned", strconv.Itoa(ac.castIndex))
+		findingID := PackageScopedFindingID(pass,
+			CategoryUnvalidatedCast,
+			"cfa",
+			"closure",
+			closurePrefix,
+			qualEnclosingFunc,
+			ac.typeName,
+			"assigned",
+			stablePosKey(pass, ac.pos.Pos()),
+			ac.target.key(),
+		)
 		if bl.ContainsFinding(CategoryUnvalidatedCast, findingID, msg) {
 			continue
 		}
@@ -91,7 +156,16 @@ func inspectClosureCastsCFA(
 		}
 
 		msg := fmt.Sprintf("type conversion to %s from non-constant without Validate() check", uc.typeName)
-		findingID := StableFindingID(CategoryUnvalidatedCast, "cfa", "closure", closurePrefix, qualEnclosingFunc, uc.typeName, "unassigned", strconv.Itoa(uc.castIndex))
+		findingID := PackageScopedFindingID(pass,
+			CategoryUnvalidatedCast,
+			"cfa",
+			"closure",
+			closurePrefix,
+			qualEnclosingFunc,
+			uc.typeName,
+			"unassigned",
+			stablePosKey(pass, uc.pos.Pos()),
+		)
 		if bl.ContainsFinding(CategoryUnvalidatedCast, findingID, msg) {
 			continue
 		}

@@ -11,8 +11,10 @@ import (
 )
 
 func TestAnalyzer(t *testing.T) {
+	t.Parallel()
+
 	testdata := analysistest.TestData()
-	analysistest.Run(t, testdata, goplint.Analyzer,
+	analysistest.Run(t, testdata, goplint.NewAnalyzer(),
 		"basic",
 		"structs",
 		"funcparams",

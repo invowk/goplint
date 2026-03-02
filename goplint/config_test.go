@@ -13,7 +13,7 @@ func TestLoadConfig(t *testing.T) {
 
 	t.Run("empty path returns empty config", func(t *testing.T) {
 		t.Parallel()
-		cfg, err := loadConfig("")
+		cfg, err := loadConfig("", false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -24,7 +24,7 @@ func TestLoadConfig(t *testing.T) {
 
 	t.Run("nonexistent file returns empty config", func(t *testing.T) {
 		t.Parallel()
-		cfg, err := loadConfig(filepath.Join(t.TempDir(), "nonexistent.toml"))
+		cfg, err := loadConfig(filepath.Join(t.TempDir(), "nonexistent.toml"), false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -53,7 +53,7 @@ reason = "wildcard test"
 			t.Fatalf("failed to write test file: %v", err)
 		}
 
-		cfg, err := loadConfig(path)
+		cfg, err := loadConfig(path, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -81,7 +81,7 @@ reason = "wildcard test"
 			t.Fatalf("failed to write test file: %v", err)
 		}
 
-		cfg, err := loadConfig(path)
+		cfg, err := loadConfig(path, false)
 		if err == nil {
 			t.Fatal("expected error for invalid TOML, got nil")
 		}
@@ -89,6 +89,286 @@ reason = "wildcard test"
 			t.Errorf("expected nil config on error, got %+v", cfg)
 		}
 	})
+
+	t.Run("unknown top-level key returns error", func(t *testing.T) {
+		t.Parallel()
+		content := `
+[settings]
+skip_types = ["bool"]
+
+unknown_key = "oops"
+`
+		path := filepath.Join(t.TempDir(), "unknown-top.toml")
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
+
+		_, err := loadConfig(path, false)
+		if err == nil {
+			t.Fatal("expected error for unknown top-level key")
+		}
+	})
+
+	t.Run("unknown exception field returns error", func(t *testing.T) {
+		t.Parallel()
+		content := `
+[[exceptions]]
+pattern = "Foo.Bar"
+reason = "test"
+unexpected = "nope"
+`
+		path := filepath.Join(t.TempDir(), "unknown-exception-field.toml")
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
+
+		_, err := loadConfig(path, false)
+		if err == nil {
+			t.Fatal("expected error for unknown exception field")
+		}
+	})
+
+	t.Run("invalid exception glob returns error", func(t *testing.T) {
+		t.Parallel()
+		content := `
+[[exceptions]]
+pattern = "pkg.[bad.Type"
+reason = "invalid glob"
+`
+		path := filepath.Join(t.TempDir(), "invalid-exception-glob.toml")
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatalf("failed to write test file: %v", err)
+		}
+
+		_, err := loadConfig(path, false)
+		if err == nil {
+			t.Fatal("expected error for invalid exception glob")
+		}
+	})
+
+	t.Run("nonexistent file returns error when strict", func(t *testing.T) {
+		t.Parallel()
+		_, err := loadConfig(filepath.Join(t.TempDir(), "nonexistent.toml"), true)
+		if err == nil {
+			t.Fatal("expected error for missing config in strict mode")
+		}
+	})
+}
+
+func TestLoadConfigCached_CloneIsolation(t *testing.T) {
+	t.Parallel()
+
+	content := `
+[settings]
+skip_types = ["bool"]
+exclude_paths = ["specs/"]
+include_packages = ["github.com/invowk/invowk"]
+
+[[exceptions]]
+pattern = "pkg.Type.Field"
+reason = "test"
+`
+	path := writeTempFile(t, "cached-config.toml", content)
+	state := &flagState{}
+	resetFlagStateDefaults(state)
+
+	first, err := loadConfigCached(state, path, false)
+	if err != nil {
+		t.Fatalf("first loadConfigCached error: %v", err)
+	}
+	second, err := loadConfigCached(state, path, false)
+	if err != nil {
+		t.Fatalf("second loadConfigCached error: %v", err)
+	}
+
+	if first == second {
+		t.Fatal("expected per-run config clone, got shared pointer")
+	}
+
+	first.Settings.SkipTypes[0] = "mutated-skip-type"
+	first.Settings.ExcludePaths[0] = "mutated-path"
+	first.Settings.IncludePackages[0] = "mutated-pkg"
+	first.Exceptions[0].Pattern = "mutated.pattern"
+	first.matchCounts[0] = 42
+
+	if second.Settings.SkipTypes[0] != "bool" {
+		t.Fatalf("skip_types leaked across clones: got %q", second.Settings.SkipTypes[0])
+	}
+	if second.Settings.ExcludePaths[0] != "specs/" {
+		t.Fatalf("exclude_paths leaked across clones: got %q", second.Settings.ExcludePaths[0])
+	}
+	if second.Settings.IncludePackages[0] != "github.com/invowk/invowk" {
+		t.Fatalf("include_packages leaked across clones: got %q", second.Settings.IncludePackages[0])
+	}
+	if second.Exceptions[0].Pattern != "pkg.Type.Field" {
+		t.Fatalf("exceptions leaked across clones: got %q", second.Exceptions[0].Pattern)
+	}
+	if second.matchCounts[0] != 0 {
+		t.Fatalf("matchCounts leaked across clones: got %d", second.matchCounts[0])
+	}
+}
+
+func TestConfigTemplate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil config returns empty template", func(t *testing.T) {
+		t.Parallel()
+
+		got := configTemplate(nil)
+		if got == nil {
+			t.Fatal("configTemplate(nil) returned nil")
+		}
+		if len(got.Exceptions) != 0 {
+			t.Fatalf("configTemplate(nil) exceptions len = %d, want 0", len(got.Exceptions))
+		}
+		if len(got.Settings.SkipTypes) != 0 || len(got.Settings.ExcludePaths) != 0 || len(got.Settings.IncludePackages) != 0 {
+			t.Fatalf("configTemplate(nil) settings should be empty: %+v", got.Settings)
+		}
+	})
+
+	t.Run("returns clone", func(t *testing.T) {
+		t.Parallel()
+
+		orig := &ExceptionConfig{
+			Settings: Settings{
+				SkipTypes:       []string{"bool"},
+				ExcludePaths:    []string{"specs/"},
+				IncludePackages: []string{"github.com/invowk/invowk"},
+			},
+			Exceptions: []Exception{
+				{Pattern: "pkg.Type.Field", Reason: "test"},
+			},
+		}
+		got := configTemplate(orig)
+		got.Settings.SkipTypes[0] = "mutated"
+		got.Settings.ExcludePaths[0] = "mutated"
+		got.Settings.IncludePackages[0] = "mutated"
+		got.Exceptions[0].Pattern = "mutated"
+
+		if orig.Settings.SkipTypes[0] != "bool" {
+			t.Fatalf("SkipTypes was mutated in original: %q", orig.Settings.SkipTypes[0])
+		}
+		if orig.Settings.ExcludePaths[0] != "specs/" {
+			t.Fatalf("ExcludePaths was mutated in original: %q", orig.Settings.ExcludePaths[0])
+		}
+		if orig.Settings.IncludePackages[0] != "github.com/invowk/invowk" {
+			t.Fatalf("IncludePackages was mutated in original: %q", orig.Settings.IncludePackages[0])
+		}
+		if orig.Exceptions[0].Pattern != "pkg.Type.Field" {
+			t.Fatalf("Exceptions was mutated in original: %q", orig.Exceptions[0].Pattern)
+		}
+	})
+}
+
+func TestShouldAnalyzePackage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		includePackages []string
+		pkgPath         string
+		want            bool
+	}{
+		{
+			name:            "empty list allows all",
+			includePackages: nil,
+			pkgPath:         "fmt",
+			want:            true,
+		},
+		{
+			name:            "empty slice allows all",
+			includePackages: []string{},
+			pkgPath:         "github.com/other/pkg",
+			want:            true,
+		},
+		{
+			name:            "exact match",
+			includePackages: []string{"github.com/invowk/invowk"},
+			pkgPath:         "github.com/invowk/invowk",
+			want:            true,
+		},
+		{
+			name:            "prefix match subpackage",
+			includePackages: []string{"github.com/invowk/invowk"},
+			pkgPath:         "github.com/invowk/invowk/internal/config",
+			want:            true,
+		},
+		{
+			name:            "no match stdlib",
+			includePackages: []string{"github.com/invowk/invowk"},
+			pkgPath:         "fmt",
+			want:            false,
+		},
+		{
+			name:            "no match third-party",
+			includePackages: []string{"github.com/invowk/invowk"},
+			pkgPath:         "github.com/spf13/cobra",
+			want:            false,
+		},
+		{
+			name:            "multiple prefixes first matches",
+			includePackages: []string{"github.com/invowk/invowk", "github.com/other/pkg"},
+			pkgPath:         "github.com/invowk/invowk/pkg/types",
+			want:            true,
+		},
+		{
+			name:            "multiple prefixes second matches",
+			includePackages: []string{"github.com/invowk/invowk", "github.com/other/pkg"},
+			pkgPath:         "github.com/other/pkg/sub",
+			want:            true,
+		},
+		{
+			name:            "multiple prefixes none match",
+			includePackages: []string{"github.com/invowk/invowk", "github.com/other/pkg"},
+			pkgPath:         "github.com/unrelated/lib",
+			want:            false,
+		},
+		{
+			name:            "partial prefix does not match",
+			includePackages: []string{"github.com/invowk/invowk"},
+			pkgPath:         "github.com/invowk/invowk-other",
+			want:            true, // HasPrefix matches — "invowk-other" starts with "invowk"
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := &ExceptionConfig{Settings: Settings{IncludePackages: tt.includePackages}}
+			got := cfg.ShouldAnalyzePackage(tt.pkgPath)
+			if got != tt.want {
+				t.Errorf("ShouldAnalyzePackage(%q) = %v, want %v", tt.pkgPath, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadConfig_IncludePackages(t *testing.T) {
+	t.Parallel()
+
+	content := `
+[settings]
+skip_types = ["bool"]
+include_packages = ["github.com/invowk/invowk", "github.com/other/pkg"]
+`
+	path := filepath.Join(t.TempDir(), "include-packages.toml")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	cfg, err := loadConfig(path, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Settings.IncludePackages) != 2 {
+		t.Fatalf("expected 2 include_packages, got %d", len(cfg.Settings.IncludePackages))
+	}
+	if cfg.Settings.IncludePackages[0] != "github.com/invowk/invowk" {
+		t.Errorf("expected first prefix %q, got %q", "github.com/invowk/invowk", cfg.Settings.IncludePackages[0])
+	}
+	if cfg.Settings.IncludePackages[1] != "github.com/other/pkg" {
+		t.Errorf("expected second prefix %q, got %q", "github.com/other/pkg", cfg.Settings.IncludePackages[1])
+	}
 }
 
 func TestMatchPattern(t *testing.T) {
@@ -320,6 +600,12 @@ func TestIsExcludedPath(t *testing.T) {
 			name:         "multiple excludes second matches",
 			excludePaths: []string{"specs/", "testutil/"},
 			filePath:     "/home/foo/testutil/bar.go",
+			want:         true,
+		},
+		{
+			name:         "windows separators are normalized",
+			excludePaths: []string{"specs/", "testutil/"},
+			filePath:     `C:\work\repo\specs\bar.go`,
 			want:         true,
 		},
 	}

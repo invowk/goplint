@@ -26,7 +26,7 @@ type Server struct { // want `exported struct checkall\.Server has no NewServer\
 
 // Client has a constructor — not flagged for missing constructor, but
 // flagged for missing Validate() by --check-struct-validate.
-type Client struct { // want `struct checkall\.Client has constructor but no Validate\(\) method`
+type Client struct { // want `struct checkall\.Client has constructor but no Validate\(\) method` `struct checkall\.Client has 1 validatable field\(s\) but no Validate\(\) method`
 	host Mode
 }
 
@@ -210,7 +210,7 @@ func (n NonZeroID) Validate() error {
 func (n NonZeroID) String() string { return fmt.Sprintf("%d", int(n)) }
 
 // Holder uses NonZeroID as a value field (should be *NonZeroID).
-type Holder struct { // want `exported struct checkall\.Holder has no NewHolder\(\) constructor`
+type Holder struct { // want `exported struct checkall\.Holder has no NewHolder\(\) constructor` `struct checkall\.Holder has 1 validatable field\(s\) but no Validate\(\) method`
 	ID NonZeroID // want `struct field checkall\.Holder\.ID uses nonzero type NonZeroID as value`
 }
 
@@ -232,4 +232,11 @@ func (p Priority) String() string { return string(p) }
 func NewPriority(s string) (*Priority, error) { // want `parameter "s" of checkall\.NewPriority uses primitive type string`
 	p := Priority(s) // want `type conversion to Priority from non-constant without Validate\(\) check`
 	return &p, nil
+}
+
+// --- Redundant intermediate conversion (--check-redundant-conversion) ---
+
+// redundantConversion performs a type conversion with a redundant string() hop.
+func redundantConversion(m Mode) MissingAll {
+	return MissingAll(string(m)) // want `redundant intermediate conversion to string in MissingAll\(string\(\.\.\.\)\); use MissingAll\(\.\.\.\) directly`
 }

@@ -5,12 +5,18 @@ package goplint
 import (
 	"fmt"
 	"go/ast"
+	"go/token"
 	"go/types"
-	"strconv"
+	"slices"
 	"strings"
 
 	"golang.org/x/tools/go/analysis"
 )
+
+type validateCall struct {
+	targetKey string
+	pos       token.Pos
+}
 
 // inspectUnvalidatedCasts walks a function body to find type conversions from
 // raw primitives to DDD Value Types where Validate() is not called on the
@@ -26,15 +32,7 @@ func inspectUnvalidatedCasts(pass *analysis.Pass, fn *ast.FuncDecl, cfg *Excepti
 	}
 
 	// Build the qualified function name for exception matching.
-	pkgName := packageName(pass.Pkg)
-	funcName := fn.Name.Name
-	if fn.Recv != nil && len(fn.Recv.List) > 0 {
-		recvName := receiverTypeName(fn.Recv.List[0].Type)
-		if recvName != "" {
-			funcName = recvName + "." + funcName
-		}
-	}
-	qualFuncName := pkgName + "." + funcName
+	funcQualName := qualFuncName(pass, fn)
 
 	// Phase 1: Build a parent map for auto-skip context detection.
 	parentMap := buildParentMap(fn.Body)
@@ -42,7 +40,7 @@ func inspectUnvalidatedCasts(pass *analysis.Pass, fn *ast.FuncDecl, cfg *Excepti
 	// Phase 2: Single walk collecting assigned casts, unassigned casts,
 	// and validated variable names.
 	type assignedCast struct {
-		varName   string
+		target    castTarget
 		typeName  string
 		pos       ast.Node
 		castIndex int
@@ -55,7 +53,7 @@ func inspectUnvalidatedCasts(pass *analysis.Pass, fn *ast.FuncDecl, cfg *Excepti
 
 	var assignedCasts []assignedCast
 	var unassignedCasts []unassignedCast
-	validatedVars := make(map[string]bool)
+	var validateCalls []validateCall
 	castIndex := 0 // sequential counter for unique finding IDs per cast
 
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
@@ -76,8 +74,11 @@ func inspectUnvalidatedCasts(pass *analysis.Pass, fn *ast.FuncDecl, cfg *Excepti
 
 		// Detect Validate() calls: x.Validate()
 		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Validate" {
-			if ident, ok := sel.X.(*ast.Ident); ok {
-				validatedVars[ident.Name] = true
+			if key := targetKeyForExpr(pass, sel.X); key != "" {
+				validateCalls = append(validateCalls, validateCall{
+					targetKey: key,
+					pos:       call.Pos(),
+				})
 			}
 			return true
 		}
@@ -128,26 +129,16 @@ func inspectUnvalidatedCasts(pass *analysis.Pass, fn *ast.FuncDecl, cfg *Excepti
 
 		// Determine if this cast is assigned to a variable.
 		parent := parentMap[call]
-
-		if assign, ok := parent.(*ast.AssignStmt); ok {
-			// Find the variable name that receives this cast.
-			for i, rhs := range assign.Rhs {
-				if rhs != call {
-					continue
-				}
-				if i < len(assign.Lhs) {
-					if ident, ok := assign.Lhs[i].(*ast.Ident); ok && ident.Name != "_" {
-						assignedCasts = append(assignedCasts, assignedCast{
-							varName:   ident.Name,
-							typeName:  targetTypeName,
-							pos:       call,
-							castIndex: castIndex,
-						})
-						castIndex++
-						return true
-					}
-				}
-			}
+		target, _, assigned := resolveCastAssignmentTarget(pass, call, parentMap)
+		if assigned {
+			assignedCasts = append(assignedCasts, assignedCast{
+				target:    target,
+				typeName:  targetTypeName,
+				pos:       call,
+				castIndex: castIndex,
+			})
+			castIndex++
+			return true
 		}
 
 		// Unassigned cast — check auto-skip contexts.
@@ -165,19 +156,28 @@ func inspectUnvalidatedCasts(pass *analysis.Pass, fn *ast.FuncDecl, cfg *Excepti
 	})
 
 	// Phase 3: Report findings.
-	// Assigned casts: report if variable is not in the validated set.
+	// Assigned casts: report if no matching Validate call occurs after
+	// the cast site. This preserves basic ordering in AST fallback mode.
 	for _, ac := range assignedCasts {
-		if validatedVars[ac.varName] {
+		if hasValidateAfterCast(validateCalls, ac.target.key(), ac.pos.Pos()) {
 			continue
 		}
 
-		excKey := qualFuncName + ".cast-validation"
+		excKey := funcQualName + ".cast-validation"
 		if cfg.isExcepted(excKey) {
 			continue
 		}
 
 		msg := fmt.Sprintf("type conversion to %s from non-constant without Validate() check", ac.typeName)
-		findingID := StableFindingID(CategoryUnvalidatedCast, qualFuncName, ac.typeName, "assigned", strconv.Itoa(ac.castIndex))
+		findingID := PackageScopedFindingID(pass,
+			CategoryUnvalidatedCast,
+			"ast",
+			funcQualName,
+			ac.typeName,
+			"assigned",
+			stablePosKey(pass, ac.pos.Pos()),
+			ac.target.key(),
+		)
 		if bl.ContainsFinding(CategoryUnvalidatedCast, findingID, msg) {
 			continue
 		}
@@ -187,19 +187,41 @@ func inspectUnvalidatedCasts(pass *analysis.Pass, fn *ast.FuncDecl, cfg *Excepti
 
 	// Unassigned casts: always report (no variable to track).
 	for _, uc := range unassignedCasts {
-		excKey := qualFuncName + ".cast-validation"
+		excKey := funcQualName + ".cast-validation"
 		if cfg.isExcepted(excKey) {
 			continue
 		}
 
 		msg := fmt.Sprintf("type conversion to %s from non-constant without Validate() check", uc.typeName)
-		findingID := StableFindingID(CategoryUnvalidatedCast, qualFuncName, uc.typeName, "unassigned", strconv.Itoa(uc.castIndex))
+		findingID := PackageScopedFindingID(pass,
+			CategoryUnvalidatedCast,
+			"ast",
+			funcQualName,
+			uc.typeName,
+			"unassigned",
+			stablePosKey(pass, uc.pos.Pos()),
+		)
 		if bl.ContainsFinding(CategoryUnvalidatedCast, findingID, msg) {
 			continue
 		}
 
 		reportDiagnostic(pass, uc.pos.Pos(), CategoryUnvalidatedCast, findingID, msg)
 	}
+}
+
+func hasValidateAfterCast(validateCalls []validateCall, targetKey string, castPos token.Pos) bool {
+	if targetKey == "" {
+		return false
+	}
+	for _, vc := range validateCalls {
+		if vc.targetKey != targetKey {
+			continue
+		}
+		if vc.pos > castPos {
+			return true
+		}
+	}
+	return false
 }
 
 // buildParentMap builds a mapping from each AST node to its parent node
@@ -245,9 +267,16 @@ func isAutoSkipContext(pass *analysis.Pass, call *ast.CallExpr, parent ast.Node,
 	if parent == nil {
 		return false
 	}
+	castNode, nonParenParent := parentAfterParens(call, parentMap)
+	if nonParenParent != nil {
+		parent = nonParenParent
+	}
 
 	// Map index: m[DddType(s)]
-	if idx, ok := parent.(*ast.IndexExpr); ok && idx.Index == call {
+	if idx, ok := parent.(*ast.IndexExpr); ok && idx.Index == castNode && isMapIndexExpr(pass, idx) {
+		if isMapIndexWriteLHS(idx, parentMap) {
+			return false
+		}
 		return true
 	}
 
@@ -259,13 +288,14 @@ func isAutoSkipContext(pass *analysis.Pass, call *ast.CallExpr, parent ast.Node,
 	}
 
 	// Switch tag: switch DddType(s) { case ...: } — semantically a comparison.
-	if sw, ok := parent.(*ast.SwitchStmt); ok && sw.Tag == call {
+	if sw, ok := parent.(*ast.SwitchStmt); ok && sw.Tag == castNode {
 		return true
 	}
 
-	// fmt.* function argument: the parent is a *ast.CallExpr targeting fmt.*
+	// fmt.*, log/slog, or strings comparison function argument: the parent
+	// is a *ast.CallExpr targeting a display-only or comparison-only package.
 	if outerCall, ok := parent.(*ast.CallExpr); ok && outerCall != call {
-		if isFmtCall(pass, outerCall) {
+		if isAutoSkipCall(pass, outerCall) {
 			return true
 		}
 	}
@@ -273,7 +303,7 @@ func isAutoSkipContext(pass *analysis.Pass, call *ast.CallExpr, parent ast.Node,
 	// Chained Validate: DddType(x).Validate() — validated directly on cast result.
 	// The parent of the type conversion CallExpr is the SelectorExpr that
 	// forms the .Validate() method call.
-	if sel, ok := parent.(*ast.SelectorExpr); ok && sel.Sel.Name == "Validate" {
+	if sel, ok := parent.(*ast.SelectorExpr); ok && sel.Sel.Name == "Validate" && selectorIsDirectCallTarget(sel, parentMap) {
 		return true
 	}
 
@@ -284,6 +314,26 @@ func isAutoSkipContext(pass *analysis.Pass, call *ast.CallExpr, parent ast.Node,
 	}
 
 	return false
+}
+
+func selectorIsDirectCallTarget(sel *ast.SelectorExpr, parentMap map[ast.Node]ast.Node) bool {
+	if sel == nil || parentMap == nil {
+		return false
+	}
+	current := ast.Node(sel)
+	for {
+		parent := parentMap[current]
+		paren, ok := parent.(*ast.ParenExpr)
+		if ok && paren.X == current {
+			current = paren
+			continue
+		}
+		call, ok := parent.(*ast.CallExpr)
+		if !ok {
+			return false
+		}
+		return call.Fun == current
+	}
 }
 
 // isAutoSkipAncestor walks up the parent chain (bounded) looking for an
@@ -303,9 +353,9 @@ func isAutoSkipAncestor(pass *analysis.Pass, start ast.Node, parentMap map[ast.N
 		if isStatementNode(grandparent) {
 			break
 		}
-		// Check if the grandparent is an fmt.* call.
+		// Check if the grandparent is a display-only or comparison-only call.
 		if outerCall, ok := grandparent.(*ast.CallExpr); ok {
-			if isFmtCall(pass, outerCall) {
+			if isAutoSkipCall(pass, outerCall) {
 				return true
 			}
 		}
@@ -329,27 +379,175 @@ func isStatementNode(n ast.Node) bool {
 	}
 }
 
-// isFmtCall reports whether the given call expression targets a function
-// in the "fmt" package (e.g., fmt.Sprintf, fmt.Fprintf).
+func isMapIndexExpr(pass *analysis.Pass, idx *ast.IndexExpr) bool {
+	if pass == nil || pass.TypesInfo == nil || idx == nil {
+		return false
+	}
+	baseType := pass.TypesInfo.TypeOf(idx.X)
+	if baseType == nil {
+		return false
+	}
+	_, ok := types.Unalias(baseType).Underlying().(*types.Map)
+	return ok
+}
+
+func isMapIndexWriteLHS(idx *ast.IndexExpr, parentMap map[ast.Node]ast.Node) bool {
+	if idx == nil {
+		return false
+	}
+	assign, ok := parentMap[idx].(*ast.AssignStmt)
+	if !ok {
+		return false
+	}
+	for _, lhs := range assign.Lhs {
+		if stripParens(lhs) == idx {
+			return true
+		}
+	}
+	return false
+}
+
+// isPackageCall reports whether the given call expression targets a function
+// in one of the specified import paths. Uses the type checker to resolve
+// the package through any import alias, including dot-imported symbols.
+func isPackageCall(pass *analysis.Pass, call *ast.CallExpr, importPaths ...string) bool {
+	if pass == nil || pass.TypesInfo == nil || call == nil {
+		return false
+	}
+
+	switch fun := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		ident, ok := fun.X.(*ast.Ident)
+		if !ok {
+			return false
+		}
+		obj := pass.TypesInfo.Uses[ident]
+		if obj == nil {
+			return false
+		}
+		pkgName, ok := obj.(*types.PkgName)
+		if !ok {
+			return false
+		}
+		return slices.Contains(importPaths, pkgName.Imported().Path())
+	case *ast.Ident:
+		obj := pass.TypesInfo.Uses[fun]
+		if obj == nil || obj.Pkg() == nil {
+			return false
+		}
+		return slices.Contains(importPaths, obj.Pkg().Path())
+	default:
+		return false
+	}
+}
+
+// isFmtCall reports whether the call targets the "fmt" package.
 func isFmtCall(pass *analysis.Pass, call *ast.CallExpr) bool {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok {
+	return isPackageCall(pass, call, "fmt")
+}
+
+// isLogCall reports whether the call targets "log" or "log/slog" — display-only sinks.
+func isLogCall(pass *analysis.Pass, call *ast.CallExpr) bool {
+	return isPackageCall(pass, call, "log", "log/slog")
+}
+
+// isStrconvCall reports whether the call targets the "strconv" package.
+func isStrconvCall(pass *analysis.Pass, call *ast.CallExpr) bool {
+	return isPackageCall(pass, call, "strconv")
+}
+
+// isAutoSkipCall reports whether the call targets a display-only or
+// comparison-only package function. Used by both isAutoSkipContext
+// (direct parent) and isAutoSkipAncestor (grandparent walk) to avoid
+// repeating the same disjunction.
+func isAutoSkipCall(pass *analysis.Pass, call *ast.CallExpr) bool {
+	return isFmtCall(pass, call) ||
+		isLogCall(pass, call) ||
+		isStringsComparisonCall(pass, call) ||
+		isBytesComparisonCall(pass, call) ||
+		isSlicesComparisonCall(pass, call) ||
+		isErrorsComparisonCall(pass, call)
+}
+
+type packageFuncMatcher func(name string) bool
+
+// isPackageFuncMatch reports whether the call targets a function in the
+// given import path that satisfies matcher.
+func isPackageFuncMatch(pass *analysis.Pass, call *ast.CallExpr, importPath string, matcher packageFuncMatcher) bool {
+	if !isPackageCall(pass, call, importPath) {
 		return false
 	}
-	ident, ok := sel.X.(*ast.Ident)
-	if !ok {
+	return matcher(packageCallFuncName(call))
+}
+
+func packageCallFuncName(call *ast.CallExpr) string {
+	if call == nil {
+		return ""
+	}
+	switch fun := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		return fun.Sel.Name
+	case *ast.Ident:
+		return fun.Name
+	default:
+		return ""
+	}
+}
+
+// isStringsComparisonCall reports whether the call targets one of the string
+// comparison functions in the "strings" package that are semantically
+// equivalent to equality/containment checks.
+func isStringsComparisonCall(pass *analysis.Pass, call *ast.CallExpr) bool {
+	return isPackageFuncMatch(pass, call, "strings", isContainmentPredicateFunc)
+}
+
+// isSlicesComparisonCall reports whether the call targets one of the
+// comparison/lookup functions in the "slices" package that are semantically
+// equivalent to membership or position checks.
+func isSlicesComparisonCall(pass *analysis.Pass, call *ast.CallExpr) bool {
+	return isPackageFuncMatch(pass, call, "slices", isSlicesComparisonFunc)
+}
+
+// isErrorsComparisonCall reports whether the call targets errors.Is or
+// errors.As — type-matching comparison operations where the cast value
+// is used for error identity/type matching, not as domain input.
+func isErrorsComparisonCall(pass *analysis.Pass, call *ast.CallExpr) bool {
+	return isPackageFuncMatch(pass, call, "errors", isErrorsComparisonFunc)
+}
+
+// isBytesComparisonCall reports whether the call targets one of the
+// comparison functions in the "bytes" package that are semantically
+// equivalent to equality/containment checks on byte slices. Uses the
+// same function name set as strings (Contains, HasPrefix, etc.).
+func isBytesComparisonCall(pass *analysis.Pass, call *ast.CallExpr) bool {
+	return isPackageFuncMatch(pass, call, "bytes", isContainmentPredicateFunc)
+}
+
+func isContainmentPredicateFunc(name string) bool {
+	switch name {
+	case "Contains", "HasPrefix", "HasSuffix", "EqualFold":
+		return true
+	default:
 		return false
 	}
-	// Use the type checker to resolve the identifier to its package.
-	obj := pass.TypesInfo.Uses[ident]
-	if obj == nil {
+}
+
+func isSlicesComparisonFunc(name string) bool {
+	switch name {
+	case "Contains", "ContainsFunc", "Index", "IndexFunc":
+		return true
+	default:
 		return false
 	}
-	pkgName, ok := obj.(*types.PkgName)
-	if !ok {
+}
+
+func isErrorsComparisonFunc(name string) bool {
+	switch name {
+	case "As", "Is":
+		return true
+	default:
 		return false
 	}
-	return pkgName.Imported().Path() == "fmt"
 }
 
 // isErrorMessageExpr reports whether expr is a call that produces display
@@ -371,41 +569,29 @@ func isErrorMessageExpr(pass *analysis.Pass, expr ast.Expr) bool {
 		return false
 	}
 
-	// Pattern 1: x.Error() — error interface method.
-	if sel.Sel.Name == "Error" && len(call.Args) == 0 {
+	// Pattern 1: x.Error() on values implementing the built-in error interface.
+	if sel.Sel.Name == "Error" && len(call.Args) == 0 && receiverImplementsError(pass, sel.X) {
 		return true
 	}
 
-	// Pattern 2: fmt.Sprintf(...), fmt.Errorf(...), etc.
-	if isFmtCall(pass, call) {
-		return true
-	}
-
-	// Pattern 3: strconv.Itoa(...), strconv.FormatInt(...), etc.
-	// All strconv functions return formatted strings, never raw user input.
-	return isStrconvCall(pass, call)
+	// Pattern 2+3: display-only packages (fmt, strconv).
+	return isFmtCall(pass, call) || isStrconvCall(pass, call)
 }
 
-// isStrconvCall reports whether the given call expression targets a function
-// in the "strconv" package (e.g., strconv.Itoa, strconv.FormatInt).
-func isStrconvCall(pass *analysis.Pass, call *ast.CallExpr) bool {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok {
+func receiverImplementsError(pass *analysis.Pass, expr ast.Expr) bool {
+	if pass == nil || pass.TypesInfo == nil || expr == nil {
 		return false
 	}
-	ident, ok := sel.X.(*ast.Ident)
-	if !ok {
+	receiverType := pass.TypesInfo.TypeOf(expr)
+	if receiverType == nil {
 		return false
 	}
-	obj := pass.TypesInfo.Uses[ident]
-	if obj == nil {
+	errorType := types.Universe.Lookup("error").Type()
+	if errorType == nil {
 		return false
 	}
-	pkgName, ok := obj.(*types.PkgName)
-	if !ok {
-		return false
-	}
-	return pkgName.Imported().Path() == "strconv"
+	return types.Implements(receiverType, errorType.Underlying().(*types.Interface)) ||
+		types.Implements(types.NewPointer(receiverType), errorType.Underlying().(*types.Interface))
 }
 
 // isRawPrimitive reports whether t is a bare primitive type (string, int, etc.)

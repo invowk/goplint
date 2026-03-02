@@ -25,6 +25,34 @@ func (*NonZeroFact) AFact() {}
 // String returns a human-readable representation for analysistest fact matching.
 func (*NonZeroFact) String() string { return "nonzero" }
 
+// exportNonZeroFacts scans type declarations in a GenDecl for //goplint:nonzero
+// directives and exports NonZeroFact for matching types. This is called for ALL
+// packages (even those filtered by include_packages) to ensure cross-package
+// nonzero field checking works.
+func exportNonZeroFacts(pass *analysis.Pass, gd *ast.GenDecl) {
+	if gd.Tok != token.TYPE {
+		return
+	}
+	for _, spec := range gd.Specs {
+		ts, ok := spec.(*ast.TypeSpec)
+		if !ok {
+			continue
+		}
+		// Skip type aliases — they inherit facts from the target.
+		if ts.Assign.IsValid() {
+			continue
+		}
+		if !hasNonZeroDirective(gd.Doc, ts.Doc) {
+			continue
+		}
+		obj := pass.TypesInfo.Defs[ts.Name]
+		if obj == nil {
+			continue
+		}
+		pass.ExportObjectFact(obj, &NonZeroFact{})
+	}
+}
+
 // inspectNonZero performs two phases of nonzero analysis:
 //
 // Phase 1 (export): Scans type declarations for //goplint:nonzero directives
@@ -39,27 +67,10 @@ func inspectNonZero(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConfi
 	for _, file := range pass.Files {
 		for _, decl := range file.Decls {
 			gd, ok := decl.(*ast.GenDecl)
-			if !ok || gd.Tok != token.TYPE {
+			if !ok {
 				continue
 			}
-			for _, spec := range gd.Specs {
-				ts, ok := spec.(*ast.TypeSpec)
-				if !ok {
-					continue
-				}
-				// Skip type aliases — they inherit facts from the target.
-				if ts.Assign.IsValid() {
-					continue
-				}
-				if !hasNonZeroDirective(gd.Doc, ts.Doc) {
-					continue
-				}
-				obj := pass.TypesInfo.Defs[ts.Name]
-				if obj == nil {
-					continue
-				}
-				pass.ExportObjectFact(obj, &NonZeroFact{})
-			}
+			exportNonZeroFacts(pass, gd)
 		}
 	}
 

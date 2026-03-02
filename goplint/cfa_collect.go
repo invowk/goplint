@@ -4,6 +4,8 @@ package goplint
 
 import (
 	"go/ast"
+	"go/token"
+	"go/types"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -11,18 +13,18 @@ import (
 // cfaAssignedCast records a type conversion assigned to a named variable,
 // along with its containing AssignStmt for CFG lookup.
 type cfaAssignedCast struct {
-	varName  string
-	typeName string
-	pos      ast.Node
-	assign   ast.Node // the AssignStmt containing this cast
+	target    castTarget
+	typeName  string
+	pos       ast.Node
+	assign    ast.Node // AssignStmt or ValueSpec containing this cast
 	castIndex int
 }
 
 // cfaUnassignedCast records a type conversion not assigned to a named
 // variable (e.g., return, function argument, blank identifier).
 type cfaUnassignedCast struct {
-	typeName string
-	pos      ast.Node
+	typeName  string
+	pos       ast.Node
 	castIndex int
 }
 
@@ -33,11 +35,41 @@ type cfaUnassignedCast struct {
 // the closure body.
 type cfaClosureHandler func(lit *ast.FuncLit, closureIdx int)
 
+type closureInvocationKind int
+
+const (
+	closureInvocationDirect closureInvocationKind = iota
+	closureInvocationDefer
+	closureInvocationGo
+)
+
+type closureVarCall struct {
+	call ast.Node
+	lit  *ast.FuncLit
+	kind closureInvocationKind
+}
+
+type closureBindingEvent struct {
+	pos token.Pos
+	lit *ast.FuncLit
+}
+
+type validateMethodValueBindingEvent struct {
+	pos          token.Pos
+	receiver     ast.Expr
+	isMethodExpr bool
+}
+
+type methodValueValidateCall struct {
+	call     *ast.CallExpr
+	receiver ast.Expr
+}
+
 // collectCFACasts walks a function or closure body and classifies type
 // conversions from raw primitives to DDD Value Types into assigned and
-// unassigned casts. Closures are delegated to the provided handler
-// rather than being analyzed inline — each closure gets its own CFG
-// and independent validation scope.
+// unassigned casts. Executable closures (IIFEs, go/defer closure calls)
+// are delegated to the provided handler rather than being analyzed inline.
+// Non-executable literals (for example, detached func values) are skipped.
 //
 // This is the shared cast-collection logic used by both
 // inspectUnvalidatedCastsCFA (outer functions) and
@@ -48,22 +80,51 @@ func collectCFACasts(
 	body *ast.BlockStmt,
 	parentMap map[ast.Node]ast.Node,
 	onClosure cfaClosureHandler,
-) ([]cfaAssignedCast, []cfaUnassignedCast) {
+) ([]cfaAssignedCast, []cfaUnassignedCast, []closureVarCall, []methodValueValidateCall) {
 	var assignedCasts []cfaAssignedCast
 	var unassignedCasts []cfaUnassignedCast
+	var closureCalls []closureVarCall
+	var methodValueCalls []methodValueValidateCall
 	castIndex := 0
 	closureIndex := 0
+	closureVarBindings := collectClosureVarBindingEvents(pass, body)
+	validateMethodBindings := collectValidateMethodValueBindingEvents(pass, body)
+	analyzedClosures := make(map[*ast.FuncLit]bool)
+
+	analyzeClosure := func(lit *ast.FuncLit) {
+		if lit == nil || analyzedClosures[lit] {
+			return
+		}
+		analyzedClosures[lit] = true
+		onClosure(lit, closureIndex)
+		closureIndex++
+	}
 
 	ast.Inspect(body, func(n ast.Node) bool {
 		if lit, ok := n.(*ast.FuncLit); ok {
-			onClosure(lit, closureIndex)
-			closureIndex++
+			if isExecutableClosureLiteral(lit, parentMap) {
+				analyzeClosure(lit)
+			}
 			return false
 		}
 
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
 			return true
+		}
+		if lit, kind, ok := executableClosureVarCall(pass, call, closureVarBindings, parentMap); ok {
+			analyzeClosure(lit)
+			closureCalls = append(closureCalls, closureVarCall{
+				call: call,
+				lit:  lit,
+				kind: kind,
+			})
+		}
+		if receiver, ok := validateMethodReceiverForCall(pass, call, validateMethodBindings); ok {
+			methodValueCalls = append(methodValueCalls, methodValueValidateCall{
+				call:     call,
+				receiver: receiver,
+			})
 		}
 
 		// Not a type conversion — skip.
@@ -100,26 +161,17 @@ func collectCFACasts(
 		targetTypeName := qualifiedTypeName(targetType, pass.Pkg)
 		parent := parentMap[call]
 
-		// Check if assigned to a named variable.
-		if assign, ok := parent.(*ast.AssignStmt); ok {
-			for i, rhs := range assign.Rhs {
-				if rhs != call {
-					continue
-				}
-				if i < len(assign.Lhs) {
-					if ident, ok := assign.Lhs[i].(*ast.Ident); ok && ident.Name != "_" {
-						assignedCasts = append(assignedCasts, cfaAssignedCast{
-							varName:  ident.Name,
-							typeName: targetTypeName,
-							pos:      call,
-							assign:   assign,
-							castIndex: castIndex,
-						})
-						castIndex++
-						return true
-					}
-				}
-			}
+		target, assignNode, assigned := resolveCastAssignmentTarget(pass, call, parentMap)
+		if assigned {
+			assignedCasts = append(assignedCasts, cfaAssignedCast{
+				target:    target,
+				typeName:  targetTypeName,
+				pos:       call,
+				assign:    assignNode,
+				castIndex: castIndex,
+			})
+			castIndex++
+			return true
 		}
 
 		// Unassigned cast — check auto-skip contexts.
@@ -128,13 +180,376 @@ func collectCFACasts(
 		}
 
 		unassignedCasts = append(unassignedCasts, cfaUnassignedCast{
-			typeName: targetTypeName,
-			pos:      call,
+			typeName:  targetTypeName,
+			pos:       call,
 			castIndex: castIndex,
 		})
 		castIndex++
 		return true
 	})
 
-	return assignedCasts, unassignedCasts
+	return assignedCasts, unassignedCasts, closureCalls, methodValueCalls
+}
+
+// isExecutableClosureLiteral reports whether lit is directly invoked in-place:
+// func() { ... }(), go func() { ... }(), or defer func() { ... }().
+func isExecutableClosureLiteral(lit *ast.FuncLit, parentMap map[ast.Node]ast.Node) bool {
+	if lit == nil || parentMap == nil {
+		return false
+	}
+	call, ok := closureLiteralCall(lit, parentMap)
+	if !ok {
+		return false
+	}
+	return stripParens(call.Fun) == lit
+}
+
+// closureLiteralCall returns the CallExpr that invokes lit, allowing any number
+// of parenthesized wrappers between the literal and the call expression.
+func closureLiteralCall(lit *ast.FuncLit, parentMap map[ast.Node]ast.Node) (*ast.CallExpr, bool) {
+	if lit == nil || parentMap == nil {
+		return nil, false
+	}
+	current := ast.Node(lit)
+	for {
+		parent := parentMap[current]
+		if parent == nil {
+			return nil, false
+		}
+		if paren, ok := parent.(*ast.ParenExpr); ok && paren.X == current {
+			current = paren
+			continue
+		}
+		call, ok := parent.(*ast.CallExpr)
+		if !ok {
+			return nil, false
+		}
+		return call, true
+	}
+}
+
+func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) map[string][]closureBindingEvent {
+	if pass == nil || pass.TypesInfo == nil || body == nil {
+		return nil
+	}
+	bindings := make(map[string][]closureBindingEvent)
+
+	recordBinding := func(lhs *ast.Ident, rhs ast.Expr, atPos token.Pos) {
+		if lhs == nil || lhs.Name == "_" {
+			return
+		}
+		obj := objectForIdent(pass, lhs)
+		if obj == nil {
+			return
+		}
+		if _, isVar := obj.(*types.Var); !isVar {
+			return
+		}
+		lit, ok := exprFuncLit(rhs)
+		if !ok {
+			if rhsIdent, rhsOK := stripParens(rhs).(*ast.Ident); rhsOK {
+				rhsObj := objectForIdent(pass, rhsIdent)
+				if rhsObj != nil {
+					if matched, aliasOK := latestClosureBindingBefore(bindings[objectKey(rhsObj)], atPos); aliasOK {
+						lit = matched
+						ok = true
+					}
+				}
+			}
+		}
+		key := objectKey(obj)
+		event := closureBindingEvent{pos: atPos}
+		if ok {
+			event.lit = lit
+		}
+		bindings[key] = append(bindings[key], event)
+	}
+
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.AssignStmt:
+			for i, rhs := range node.Rhs {
+				if i >= len(node.Lhs) {
+					break
+				}
+				lhsIdent, ok := stripParens(node.Lhs[i]).(*ast.Ident)
+				if !ok {
+					continue
+				}
+				recordBinding(lhsIdent, rhs, lhsIdent.Pos())
+			}
+		case *ast.ValueSpec:
+			for i, rhs := range node.Values {
+				if i >= len(node.Names) {
+					break
+				}
+				recordBinding(node.Names[i], rhs, node.Names[i].Pos())
+			}
+		}
+		return true
+	})
+
+	return bindings
+}
+
+func latestClosureBindingBefore(events []closureBindingEvent, atPos token.Pos) (*ast.FuncLit, bool) {
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i].pos > atPos {
+			continue
+		}
+		if events[i].lit == nil {
+			return nil, false
+		}
+		return events[i].lit, true
+	}
+	return nil, false
+}
+
+func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) map[string][]validateMethodValueBindingEvent {
+	if pass == nil || pass.TypesInfo == nil || body == nil {
+		return nil
+	}
+	bindings := make(map[string][]validateMethodValueBindingEvent)
+
+	recordBinding := func(lhs ast.Expr, rhs ast.Expr, atPos token.Pos) {
+		if lhs == nil {
+			return
+		}
+		lhsExpr := stripParens(lhs)
+		if ident, ok := lhsExpr.(*ast.Ident); ok {
+			if ident.Name == "_" {
+				return
+			}
+			obj := objectForIdent(pass, ident)
+			if obj == nil {
+				return
+			}
+			if _, isVar := obj.(*types.Var); !isVar {
+				return
+			}
+		}
+		lhsKey := targetKeyForExpr(pass, lhsExpr)
+		if lhsKey == "" {
+			return
+		}
+		receiver, isMethodExpr, ok := validateMethodReceiverFromExpr(pass, rhs)
+		if !ok {
+			rhsKey := targetKeyForExpr(pass, stripParens(rhs))
+			if rhsKey != "" {
+				if matched, aliasOK := latestValidateMethodBindingBefore(bindings[rhsKey], atPos); aliasOK {
+					receiver = matched.receiver
+					isMethodExpr = matched.isMethodExpr
+					ok = true
+				}
+			}
+		}
+
+		event := validateMethodValueBindingEvent{pos: atPos}
+		if ok {
+			event.receiver = receiver
+			event.isMethodExpr = isMethodExpr
+		}
+		bindings[lhsKey] = append(bindings[lhsKey], event)
+		if fallbackKey := targetKeyForExpr(nil, lhsExpr); fallbackKey != "" && fallbackKey != lhsKey {
+			bindings[fallbackKey] = append(bindings[fallbackKey], event)
+		}
+	}
+
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.AssignStmt:
+			for i, rhs := range node.Rhs {
+				if i >= len(node.Lhs) {
+					break
+				}
+				recordBinding(node.Lhs[i], rhs, node.Lhs[i].Pos())
+			}
+		case *ast.ValueSpec:
+			for i, rhs := range node.Values {
+				if i >= len(node.Names) {
+					break
+				}
+				recordBinding(node.Names[i], rhs, node.Names[i].Pos())
+			}
+		}
+		return true
+	})
+
+	return bindings
+}
+
+func latestValidateMethodBindingBefore(events []validateMethodValueBindingEvent, atPos token.Pos) (validateMethodValueBindingEvent, bool) {
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i].pos > atPos {
+			continue
+		}
+		if events[i].receiver == nil {
+			return validateMethodValueBindingEvent{}, false
+		}
+		return events[i], true
+	}
+	return validateMethodValueBindingEvent{}, false
+}
+
+func validateMethodReceiverFromExpr(pass *analysis.Pass, expr ast.Expr) (receiver ast.Expr, isMethodExpr bool, ok bool) {
+	if pass == nil || pass.TypesInfo == nil || expr == nil {
+		return nil, false, false
+	}
+	sel, ok := stripParens(expr).(*ast.SelectorExpr)
+	if !ok || sel.Sel.Name != "Validate" {
+		return nil, false, false
+	}
+
+	if selection, hasSelection := pass.TypesInfo.Selections[sel]; hasSelection {
+		if selection.Obj() == nil || selection.Obj().Name() != "Validate" {
+			return nil, false, false
+		}
+		switch selection.Kind() {
+		case types.MethodVal:
+			recvType := pass.TypesInfo.TypeOf(sel.X)
+			if recvType == nil || !hasValidateMethod(recvType) {
+				return nil, false, false
+			}
+			return sel.X, false, true
+		case types.MethodExpr:
+			return sel.X, true, true
+		default:
+			return nil, false, false
+		}
+	}
+
+	recvType := pass.TypesInfo.TypeOf(sel.X)
+	if recvType == nil || !hasValidateMethod(recvType) {
+		return nil, false, false
+	}
+	return sel.X, false, true
+}
+
+func validateMethodReceiverForCall(
+	pass *analysis.Pass,
+	call *ast.CallExpr,
+	bindings map[string][]validateMethodValueBindingEvent,
+) (ast.Expr, bool) {
+	if pass == nil || pass.TypesInfo == nil || call == nil || len(bindings) == 0 {
+		return nil, false
+	}
+	funExpr := stripParens(call.Fun)
+	var key string
+	switch fun := funExpr.(type) {
+	case *ast.Ident:
+		key = targetKeyForExpr(pass, fun)
+	case *ast.SelectorExpr:
+		key = targetKeyForExpr(pass, fun)
+	default:
+		return nil, false
+	}
+	if key == "" {
+		return nil, false
+	}
+	events := bindings[key]
+	if len(events) == 0 {
+		if fallbackKey := targetKeyForExpr(nil, funExpr); fallbackKey != "" && fallbackKey != key {
+			events = bindings[fallbackKey]
+		}
+	}
+	matched, ok := latestValidateMethodBindingBefore(events, call.Pos())
+	if !ok {
+		return nil, false
+	}
+	if matched.isMethodExpr {
+		if len(call.Args) == 0 {
+			return nil, false
+		}
+		return call.Args[0], true
+	}
+	return matched.receiver, true
+}
+
+func collectMethodValueValidateCalls(pass *analysis.Pass, body *ast.BlockStmt) methodValueValidateCallSet {
+	if pass == nil || pass.TypesInfo == nil || body == nil {
+		return nil
+	}
+	bindings := collectValidateMethodValueBindingEvents(pass, body)
+	if len(bindings) == 0 {
+		return nil
+	}
+	out := make(methodValueValidateCallSet)
+	ast.Inspect(body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		receiver, ok := validateMethodReceiverForCall(pass, call, bindings)
+		if !ok {
+			return true
+		}
+		out[call] = receiver
+		return true
+	})
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func exprFuncLit(expr ast.Expr) (*ast.FuncLit, bool) {
+	if expr == nil {
+		return nil, false
+	}
+	lit, ok := stripParens(expr).(*ast.FuncLit)
+	return lit, ok
+}
+
+// executableClosureVarCall reports whether call invokes a local variable bound
+// to a function literal (for example, f := func() { ... }; f()).
+func executableClosureVarCall(
+	pass *analysis.Pass,
+	call *ast.CallExpr,
+	bindings map[string][]closureBindingEvent,
+	parentMap map[ast.Node]ast.Node,
+) (*ast.FuncLit, closureInvocationKind, bool) {
+	if pass == nil || pass.TypesInfo == nil || call == nil || len(bindings) == 0 {
+		return nil, closureInvocationDirect, false
+	}
+	funIdent, ok := stripParens(call.Fun).(*ast.Ident)
+	if !ok {
+		return nil, closureInvocationDirect, false
+	}
+	obj := objectForIdent(pass, funIdent)
+	if obj == nil {
+		return nil, closureInvocationDirect, false
+	}
+
+	events, ok := bindings[objectKey(obj)]
+	if !ok || len(events) == 0 {
+		return nil, closureInvocationDirect, false
+	}
+
+	var matched *ast.FuncLit
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i].pos > call.Pos() {
+			continue
+		}
+		matched = events[i].lit
+		break
+	}
+	if matched == nil {
+		return nil, closureInvocationDirect, false
+	}
+
+	return matched, closureInvocationKindForCall(call, parentMap), true
+}
+
+func closureInvocationKindForCall(call *ast.CallExpr, parentMap map[ast.Node]ast.Node) closureInvocationKind {
+	if call == nil || parentMap == nil {
+		return closureInvocationDirect
+	}
+	switch parentMap[call].(type) {
+	case *ast.GoStmt:
+		return closureInvocationGo
+	case *ast.DeferStmt:
+		return closureInvocationDefer
+	default:
+		return closureInvocationDirect
+	}
 }

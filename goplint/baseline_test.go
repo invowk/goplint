@@ -14,7 +14,7 @@ func TestLoadBaseline(t *testing.T) {
 
 	t.Run("empty path returns empty baseline", func(t *testing.T) {
 		t.Parallel()
-		bl, err := loadBaseline("")
+		bl, err := loadBaseline("", false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -29,7 +29,7 @@ func TestLoadBaseline(t *testing.T) {
 
 	t.Run("nonexistent file returns empty baseline", func(t *testing.T) {
 		t.Parallel()
-		bl, err := loadBaseline("/nonexistent/path/baseline.toml")
+		bl, err := loadBaseline("/nonexistent/path/baseline.toml", false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -58,7 +58,7 @@ messages = [
 ]
 `
 		path := writeTempFile(t, "baseline.toml", content)
-		bl, err := loadBaseline(path)
+		bl, err := loadBaseline(path, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -77,7 +77,7 @@ entries = [
 ]
 `
 		path := writeTempFile(t, "baseline-v2.toml", content)
-		bl, err := loadBaseline(path)
+		bl, err := loadBaseline(path, false)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -92,11 +92,118 @@ entries = [
 	t.Run("invalid TOML returns error", func(t *testing.T) {
 		t.Parallel()
 		path := writeTempFile(t, "bad.toml", "[[invalid toml")
-		_, err := loadBaseline(path)
+		_, err := loadBaseline(path, false)
 		if err == nil {
 			t.Fatal("expected error for invalid TOML")
 		}
 	})
+
+	t.Run("unknown top-level baseline category returns error", func(t *testing.T) {
+		t.Parallel()
+		content := `
+[unknown-category]
+entries = [
+    { id = "id-1", message = "x" },
+]
+`
+		path := writeTempFile(t, "unknown-category.toml", content)
+		_, err := loadBaseline(path, false)
+		if err == nil {
+			t.Fatal("expected error for unknown top-level baseline category")
+		}
+	})
+
+	t.Run("unknown field in entry returns error", func(t *testing.T) {
+		t.Parallel()
+		content := `
+[primitive]
+entries = [
+    { id = "id-1", message = "x", extra = "unexpected" },
+]
+`
+		path := writeTempFile(t, "unknown-entry-field.toml", content)
+		_, err := loadBaseline(path, false)
+		if err == nil {
+			t.Fatal("expected error for unknown baseline entry field")
+		}
+	})
+
+	t.Run("nonexistent file returns error when strict", func(t *testing.T) {
+		t.Parallel()
+		_, err := loadBaseline("/nonexistent/path/baseline.toml", true)
+		if err == nil {
+			t.Fatal("expected error for missing baseline in strict mode")
+		}
+	})
+}
+
+func TestLoadBaselineCached_ReusesConfig(t *testing.T) {
+	t.Parallel()
+
+	content := `
+[primitive]
+entries = [
+    { id = "id-1", message = "struct field pkg.Foo.Bar uses primitive type string" },
+]
+`
+	path := writeTempFile(t, "cached-baseline.toml", content)
+	state := &flagState{}
+	resetFlagStateDefaults(state)
+
+	first, err := loadBaselineCached(state, path, false)
+	if err != nil {
+		t.Fatalf("first loadBaselineCached error: %v", err)
+	}
+	second, err := loadBaselineCached(state, path, false)
+	if err != nil {
+		t.Fatalf("second loadBaselineCached error: %v", err)
+	}
+
+	if first != second {
+		t.Fatal("expected cached baseline pointer reuse across loads")
+	}
+	if !second.ContainsFinding(CategoryPrimitive, "id-1", "") {
+		t.Fatal("expected cached baseline to retain loaded entries")
+	}
+}
+
+func TestLoadBaselineCached_StrictModeCacheIsolation(t *testing.T) {
+	t.Parallel()
+
+	content := `
+[primitive]
+entries = [
+    { id = "id-1", message = "struct field pkg.Foo.Bar uses primitive type string" },
+]
+`
+	path := writeTempFile(t, "strict-mode-baseline.toml", content)
+	state := &flagState{}
+	resetFlagStateDefaults(state)
+
+	nonStrict, err := loadBaselineCached(state, path, false)
+	if err != nil {
+		t.Fatalf("non-strict load error: %v", err)
+	}
+	strict, err := loadBaselineCached(state, path, true)
+	if err != nil {
+		t.Fatalf("strict load error: %v", err)
+	}
+	if nonStrict == strict {
+		t.Fatal("expected strict and non-strict cache keys to use distinct cache entries")
+	}
+
+	missingPath := filepath.Join(t.TempDir(), "missing-baseline.toml")
+	nonStrictMissing, err := loadBaselineCached(state, missingPath, false)
+	if err != nil {
+		t.Fatalf("non-strict missing baseline should not error: %v", err)
+	}
+	if nonStrictMissing == nil {
+		t.Fatal("expected non-strict missing baseline load to return empty baseline")
+	}
+
+	if _, err := loadBaselineCached(state, missingPath, true); err == nil {
+		t.Fatal("expected strict missing baseline load to return error")
+	}
 }
 
 func TestBaselineContains(t *testing.T) {
@@ -160,7 +267,7 @@ messages = [
 ]
 `
 	path := writeTempFile(t, "baseline.toml", content)
-	bl, err := loadBaseline(path)
+	bl, err := loadBaseline(path, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -269,6 +376,26 @@ messages = [
 				t.Errorf("Contains(%q, %q) = %v, want %v", tt.category, tt.message, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestContainsFinding_StrictIDNoMessageFallback(t *testing.T) {
+	t.Parallel()
+
+	content := `
+[primitive]
+messages = [
+    "struct field pkg.Foo.Bar uses primitive type string",
+]
+`
+	path := writeTempFile(t, "baseline.toml", content)
+	bl, err := loadBaseline(path, false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if bl.ContainsFinding(CategoryPrimitive, "non-matching-id", "struct field pkg.Foo.Bar uses primitive type string") {
+		t.Fatal("expected non-matching ID to fail without message fallback")
 	}
 }
 
@@ -397,7 +524,7 @@ func TestBaselineRoundTrip(t *testing.T) {
 		t.Fatalf("write error: %v", err)
 	}
 
-	bl, err := loadBaseline(outPath)
+	bl, err := loadBaseline(outPath, false)
 	if err != nil {
 		t.Fatalf("load error: %v", err)
 	}
@@ -459,30 +586,8 @@ func TestQuote(t *testing.T) {
 func TestBaselineCategoryCompleteness(t *testing.T) {
 	t.Parallel()
 
-	// Authoritative list of categories that MUST be present in baseline
-	// infrastructure. StaleException and UnknownDirective are intentionally
-	// excluded — they are never baselined.
-	baselinedCategories := []string{
-		CategoryPrimitive,
-		CategoryMissingValidate,
-		CategoryMissingStringer,
-		CategoryMissingConstructor,
-		CategoryWrongConstructorSig,
-		CategoryWrongValidateSig,
-		CategoryWrongStringerSig,
-		CategoryMissingFuncOptions,
-		CategoryMissingImmutability,
-		CategoryMissingStructValidate,
-		CategoryWrongStructValidateSig,
-		CategoryUnvalidatedCast,
-		CategoryUnusedValidateResult,
-		CategoryUnusedConstructorError,
-		CategoryMissingConstructorValidate,
-		CategoryIncompleteValidateDelegation,
-		CategoryNonZeroValueField,
-		CategoryEnumCueMissingGo,
-		CategoryEnumCueExtraGo,
-	}
+	// Authoritative list comes from the canonical category registry.
+	baselinedCategories := BaselinedCategoryNames()
 
 	// Verify buildLookup() initializes an entry for each category.
 	bl := emptyBaseline()
@@ -522,7 +627,7 @@ func TestBaselineCategoryCompleteness(t *testing.T) {
 	if err := WriteBaseline(outPath, findings); err != nil {
 		t.Fatalf("WriteBaseline error: %v", err)
 	}
-	loaded, err := loadBaseline(outPath)
+	loaded, err := loadBaseline(outPath, false)
 	if err != nil {
 		t.Fatalf("loadBaseline error: %v", err)
 	}

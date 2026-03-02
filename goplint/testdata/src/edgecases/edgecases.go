@@ -2,13 +2,13 @@
 
 package edgecases
 
-// ByteData has a []byte field — exempt (I/O boundary type).
+// ByteData has a []byte field — flagged under strict primitive policy.
 type ByteData struct {
-	Data []byte // no diagnostic — []byte exempt
+	Data []byte // want `struct field edgecases\.ByteData\.Data uses primitive type \[\]byte`
 }
 
-// ByteParam has a []byte parameter — exempt.
-func ByteParam(data []byte) {
+// ByteParam has a []byte parameter — flagged under strict primitive policy.
+func ByteParam(data []byte) { // want `parameter "data" of edgecases\.ByteParam uses primitive type \[\]byte`
 	_ = data
 }
 
@@ -69,6 +69,23 @@ type PointerPrimitive struct {
 type NestedSlice struct {
 	Rows [][]string // want `struct field edgecases\.NestedSlice\.Rows uses primitive type \[\]\[\]string`
 }
+
+// FixedArrayPrimitive verifies fixed-length arrays are treated as primitive wrappers.
+type FixedArrayPrimitive struct {
+	Hash [32]byte // want `struct field edgecases\.FixedArrayPrimitive\.Hash uses primitive type \[32\]byte`
+}
+
+// ComplexAndUintptr verifies strict primitive policy for complex/uintptr forms.
+type ComplexAndUintptr struct {
+	Frequency complex64 // want `struct field edgecases\.ComplexAndUintptr\.Frequency uses primitive type complex64`
+	Address   uintptr   // want `struct field edgecases\.ComplexAndUintptr\.Address uses primitive type uintptr`
+}
+
+func AcceptComplex(value complex128, ptr uintptr) { // want `parameter "value" of edgecases\.AcceptComplex uses primitive type complex128` `parameter "ptr" of edgecases\.AcceptComplex uses primitive type uintptr`
+	_, _ = value, ptr
+}
+
+func ReturnComplex() complex128 { return 1 + 2i } // want `return value of edgecases\.ReturnComplex uses primitive type complex128`
 
 // RenderFieldStruct tests //plint:render on struct fields — should suppress
 // the finding on the annotated field, similar to //plint:ignore.

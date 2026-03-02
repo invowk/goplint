@@ -44,6 +44,13 @@ func NewServer(addr string) (*Server, error) { // want `parameter "addr" of cons
 	return &Server{addr: addr}, nil
 }
 
+// NewServerNamedResultBareReturn uses named results and bare return, but does
+// NOT validate the returned Server. This must be flagged.
+func NewServerNamedResultBareReturn(addr string) (srv *Server, err error) { // want `parameter "addr" of constructorvalidates\.NewServerNamedResultBareReturn uses primitive type string` `constructor constructorvalidates\.NewServerNamedResultBareReturn returns constructorvalidates\.Server which has Validate\(\) but never calls it`
+	srv = &Server{addr: addr}
+	return
+}
+
 // --- Non-validating factory (with ignore directive) ---
 
 type Options struct {
@@ -79,7 +86,7 @@ type engineImpl struct {
 	name string // want `struct field constructorvalidates\.engineImpl\.name uses primitive type string`
 }
 
-func (e *engineImpl) Run() error     { return nil }
+func (e *engineImpl) Run() error      { return nil }
 func (e *engineImpl) Validate() error { return nil }
 
 func NewEngine(name string) Engine { // want `parameter "name" of constructorvalidates\.NewEngine uses primitive type string`
@@ -198,6 +205,35 @@ func NewBuilder(path string) (*Builder, error) { // want `parameter "path" of co
 	return buildBuilder(path), nil
 }
 
+// --- Helper with partial validation coverage ---
+
+type Partial struct {
+	name string // want `struct field constructorvalidates\.Partial\.name uses primitive type string`
+}
+
+func (p *Partial) Validate() error {
+	if p.name == "" {
+		return fmt.Errorf("empty partial name")
+	}
+	return nil
+}
+
+func maybeInitPartial(name string, validate bool) (*Partial, error) { // want `parameter "name" of constructorvalidates\.maybeInitPartial uses primitive type string`
+	p := &Partial{name: name}
+	if !validate {
+		return p, nil
+	}
+	if err := p.Validate(); err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// NewPartial delegates to helper that validates only on one branch — flagged.
+func NewPartial(name string, validate bool) (*Partial, error) { // want `parameter "name" of constructorvalidates\.NewPartial uses primitive type string` `constructor constructorvalidates\.NewPartial returns constructorvalidates\.Partial which has Validate\(\) but never calls it`
+	return maybeInitPartial(name, validate)
+}
+
 // --- Deep transitive chain: NewPipeline → buildStages → initStage → stage.Validate() ---
 // This is a 3-level delegation chain (depth 0→1→2→validate). Previously,
 // len(visited) >= 3 would have stopped at the 3rd unique function, but
@@ -234,6 +270,77 @@ func assemblePipeline(name string) (*Pipeline, error) { // want `parameter "name
 // NOT flagged — the 4-level chain (depth 0→1→2→3) is within the maxTransitiveDepth limit.
 func NewPipeline(name string) (*Pipeline, error) { // want `parameter "name" of constructorvalidates\.NewPipeline uses primitive type string`
 	return assemblePipeline(name)
+}
+
+// --- Depth boundary: exactly maxTransitiveDepth-1 (5 hops, depth 0→4) ---
+// This chain passes through 5 functions before reaching Validate().
+// The depth guard is `depth >= maxTransitiveDepth` (5), so depths
+// 0, 1, 2, 3, 4 are all accepted. NOT flagged.
+
+type DepthBoundary struct {
+	name string // want `struct field constructorvalidates\.DepthBoundary\.name uses primitive type string`
+}
+
+func (d *DepthBoundary) Validate() error {
+	if d.name == "" {
+		return fmt.Errorf("empty name")
+	}
+	return nil
+}
+
+func boundaryL4(d *DepthBoundary) error { return d.Validate() }
+func boundaryL3(d *DepthBoundary) error { return boundaryL4(d) }
+func boundaryL2(d *DepthBoundary) error { return boundaryL3(d) }
+func boundaryL1(d *DepthBoundary) error { return boundaryL2(d) }
+
+func boundaryAssemble(name string) (*DepthBoundary, error) { // want `parameter "name" of constructorvalidates\.boundaryAssemble uses primitive type string`
+	d := &DepthBoundary{name: name}
+	if err := boundaryL1(d); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// NewDepthBoundary delegates through boundaryAssemble → L1 → L2 → L3 → L4 → Validate().
+// NOT flagged — depth 0→1→2→3→4 is within maxTransitiveDepth (5).
+func NewDepthBoundary(name string) (*DepthBoundary, error) { // want `parameter "name" of constructorvalidates\.NewDepthBoundary uses primitive type string`
+	return boundaryAssemble(name)
+}
+
+// --- Depth beyond: exactly maxTransitiveDepth (6 hops, depth 0→5) ---
+// This chain passes through 6 functions before reaching Validate().
+// At depth 5, `depth >= maxTransitiveDepth` (5) stops recursion.
+// SHOULD be flagged because the analyzer cannot see the Validate() call.
+
+type DepthBeyond struct {
+	name string // want `struct field constructorvalidates\.DepthBeyond\.name uses primitive type string`
+}
+
+func (d *DepthBeyond) Validate() error {
+	if d.name == "" {
+		return fmt.Errorf("empty name")
+	}
+	return nil
+}
+
+func beyondL5(d *DepthBeyond) error { return d.Validate() }
+func beyondL4(d *DepthBeyond) error { return beyondL5(d) }
+func beyondL3(d *DepthBeyond) error { return beyondL4(d) }
+func beyondL2(d *DepthBeyond) error { return beyondL3(d) }
+func beyondL1(d *DepthBeyond) error { return beyondL2(d) }
+
+func beyondAssemble(name string) (*DepthBeyond, error) { // want `parameter "name" of constructorvalidates\.beyondAssemble uses primitive type string`
+	d := &DepthBeyond{name: name}
+	if err := beyondL1(d); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+// NewDepthBeyond delegates through beyondAssemble → L1 → L2 → L3 → L4 → L5 → Validate().
+// FLAGGED — depth 0→1→2→3→4→5 hits maxTransitiveDepth cutoff at L5.
+func NewDepthBeyond(name string) (*DepthBeyond, error) { // want `parameter "name" of constructorvalidates\.NewDepthBeyond uses primitive type string` `constructor constructorvalidates\.NewDepthBeyond returns constructorvalidates\.DepthBeyond which has Validate\(\) but never calls it`
+	return beyondAssemble(name)
 }
 
 // --- Constant-only type (//goplint:constant-only) — constructor NOT flagged ---
@@ -310,6 +417,32 @@ func NewStore(name string) (*Store, error) { // want `parameter "name" of constr
 	return s, nil
 }
 
+// --- Closure-variable validation path should count ---
+
+type Session struct {
+	addr string // want `struct field constructorvalidates\.Session\.addr uses primitive type string`
+}
+
+func (s *Session) Validate() error {
+	if s.addr == "" {
+		return fmt.Errorf("empty addr")
+	}
+	return nil
+}
+
+// NewSession uses a closure variable call to invoke Validate(). This should
+// satisfy constructor-validates in CFA mode.
+func NewSession(addr string) (*Session, error) { // want `parameter "addr" of constructorvalidates\.NewSession uses primitive type string`
+	s := &Session{addr: addr}
+	validateFn := func() error {
+		return s.Validate()
+	}
+	if err := validateFn(); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
 // --- Method-call on wrong type — should NOT satisfy the check ---
 
 type GatewayConfig struct {
@@ -337,4 +470,180 @@ func NewGateway(gc GatewayConfig) (*Gateway, error) { // want `constructor const
 		return nil, err
 	}
 	return &Gateway{config: gc}, nil
+}
+
+// --- Multi-path constructor: CFA detects partial validation ---
+
+type MultiPath struct {
+	name string // want `struct field constructorvalidates\.MultiPath\.name uses primitive type string`
+}
+
+func (m *MultiPath) Validate() error {
+	if m.name == "" {
+		return fmt.Errorf("empty name")
+	}
+	return nil
+}
+
+// NewMultiPath validates on only one path — CFA flags this because the
+// "fast" path returns without calling Validate(). In AST mode (--no-cfa),
+// this would NOT be flagged because bodyCallsValidateOnType finds the
+// Validate() call in the else branch.
+func NewMultiPath(name string, fast bool) (*MultiPath, error) { // want `parameter "name" of constructorvalidates\.NewMultiPath uses primitive type string` `constructor constructorvalidates\.NewMultiPath returns constructorvalidates\.MultiPath which has Validate\(\) but never calls it`
+	m := &MultiPath{name: name}
+	if fast {
+		return m, nil // unvalidated return
+	}
+	return m, m.Validate()
+}
+
+// NewMultiPathAllPaths validates on ALL paths — NOT flagged by CFA.
+func NewMultiPathAllPaths(name string, mode bool) (*MultiPath, error) { // want `parameter "name" of constructorvalidates\.NewMultiPathAllPaths uses primitive type string`
+	m := &MultiPath{name: name}
+	if mode {
+		if err := m.Validate(); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := m.Validate(); err != nil {
+			return nil, err
+		}
+	}
+	return m, nil
+}
+
+// --- Early error return should not require Validate() on nil return paths ---
+
+type EarlyReturn struct {
+	name string // want `struct field constructorvalidates\.EarlyReturn\.name uses primitive type string`
+}
+
+func (e *EarlyReturn) Validate() error {
+	if e.name == "" {
+		return fmt.Errorf("empty name")
+	}
+	return nil
+}
+
+// NewEarlyReturn validates on the success path. The early nil/error return
+// must not force a constructor-validates finding.
+func NewEarlyReturn(name string, fail bool) (*EarlyReturn, error) { // want `parameter "name" of constructorvalidates\.NewEarlyReturn uses primitive type string`
+	if fail {
+		return nil, fmt.Errorf("forced failure")
+	}
+	e := &EarlyReturn{name: name}
+	if err := e.Validate(); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+// --- Path-sensitive transitive validation ---
+
+type PathSensitive struct {
+	name string // want `struct field constructorvalidates\.PathSensitive\.name uses primitive type string`
+}
+
+func (p *PathSensitive) Validate() error {
+	if p.name == "" {
+		return fmt.Errorf("empty name")
+	}
+	return nil
+}
+
+func maybeValidatePathSensitive(p *PathSensitive) {
+	if false {
+		_ = p.Validate()
+	}
+}
+
+// NewPathSensitive only calls a helper that validates on a dead branch.
+// SHOULD be flagged by constructor-validates.
+func NewPathSensitive(name string) (*PathSensitive, error) { // want `parameter "name" of constructorvalidates\.NewPathSensitive uses primitive type string` `constructor constructorvalidates\.NewPathSensitive returns constructorvalidates\.PathSensitive which has Validate\(\) but never calls it`
+	p := &PathSensitive{name: name}
+	maybeValidatePathSensitive(p)
+	return p, nil
+}
+
+// --- Deferred closure validation should count in CFA mode ---
+
+type DeferredValidated struct {
+	name string // want `struct field constructorvalidates\.DeferredValidated\.name uses primitive type string`
+}
+
+func (d *DeferredValidated) Validate() error {
+	if d.name == "" {
+		return fmt.Errorf("empty name")
+	}
+	return nil
+}
+
+// NewDeferredValidated validates via a deferred closure that sets the named
+// error return before function exit.
+func NewDeferredValidated(name string) (d *DeferredValidated, err error) { // want `parameter "name" of constructorvalidates\.NewDeferredValidated uses primitive type string`
+	d = &DeferredValidated{name: name}
+	defer func() {
+		validateErr := d.Validate()
+		if err == nil {
+			err = validateErr
+		}
+	}()
+	return d, nil
+}
+
+// --- Mixed direct + helper validation across paths ---
+
+type MixedPathValidated struct {
+	name string // want `struct field constructorvalidates\.MixedPathValidated\.name uses primitive type string`
+}
+
+func (m *MixedPathValidated) Validate() error {
+	if m.name == "" {
+		return fmt.Errorf("empty name")
+	}
+	return nil
+}
+
+func validateMixedPath(m *MixedPathValidated) error {
+	return m.Validate()
+}
+
+// NewMixedPathValidated validates directly on one branch and via helper on the
+// other branch. All return paths validate.
+func NewMixedPathValidated(name string, fast bool) (*MixedPathValidated, error) { // want `parameter "name" of constructorvalidates\.NewMixedPathValidated uses primitive type string`
+	m := &MixedPathValidated{name: name}
+	if fast {
+		if err := m.Validate(); err != nil {
+			return nil, err
+		}
+		return m, nil
+	}
+	if err := validateMixedPath(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// --- Decoy same-type Validate call must not satisfy constructor-validates ---
+
+type DecoyValidated struct {
+	name string // want `struct field constructorvalidates\.DecoyValidated\.name uses primitive type string`
+}
+
+func (d *DecoyValidated) Validate() error {
+	if d.name == "" {
+		return fmt.Errorf("empty name")
+	}
+	return nil
+}
+
+// NewDecoyValidated validates a different instance than the one returned.
+// This must still be flagged.
+func NewDecoyValidated(name string) (*DecoyValidated, error) { // want `parameter "name" of constructorvalidates\.NewDecoyValidated uses primitive type string` `constructor constructorvalidates\.NewDecoyValidated returns constructorvalidates\.DecoyValidated which has Validate\(\) but never calls it`
+	decoy := &DecoyValidated{name: name}
+	if err := decoy.Validate(); err != nil {
+		return nil, err
+	}
+	real := &DecoyValidated{name: name}
+	return real, nil
 }

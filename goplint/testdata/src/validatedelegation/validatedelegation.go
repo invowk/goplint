@@ -305,6 +305,19 @@ func (c *JoinConfig) Validate() error {
 	return errors.Join(c.FieldName.Validate(), c.FieldMode.Validate())
 }
 
+// --- errors.Join delegation — incomplete (FieldMode missing) ---
+
+//goplint:validate-all
+type IncompleteJoinConfig struct { // want `validatedelegation\.IncompleteJoinConfig\.Validate\(\) does not delegate to field FieldMode which has Validate\(\)`
+	FieldName Name
+	FieldMode Mode
+}
+
+func (c *IncompleteJoinConfig) Validate() error {
+	return errors.Join(c.FieldName.Validate())
+	// FieldMode.Validate() missing from errors.Join — FLAGGED
+}
+
 // --- Helper method delegation — complete ---
 
 //goplint:validate-all
@@ -392,4 +405,227 @@ func (c *TwoLevelIncomplete) validateOnly() error {
 func (c *TwoLevelIncomplete) validateJustName() error {
 	return c.FieldName.Validate()
 	// FieldMode.Validate() missing — should be flagged.
+}
+
+// --- Index-based range loop delegation — complete ---
+
+//goplint:validate-all
+type IndexLoopConfig struct {
+	Items     []Name
+	FieldMode Mode
+}
+
+func (c *IndexLoopConfig) Validate() error {
+	for i := range c.Items {
+		if err := c.Items[i].Validate(); err != nil {
+			return err
+		}
+	}
+	if err := c.FieldMode.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// --- Index-based range loop delegation — incomplete (Items not validated) ---
+
+//goplint:validate-all
+type IncompleteIndexLoopConfig struct { // want `validatedelegation\.IncompleteIndexLoopConfig\.Validate\(\) does not delegate to field Items which has Validate\(\)`
+	Items     []Name
+	FieldMode Mode
+}
+
+func (c *IncompleteIndexLoopConfig) Validate() error {
+	for i := range c.Items {
+		_ = c.Items[i] // use but no Validate()
+	}
+	if err := c.FieldMode.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// --- Four-level helper delegation — complete (tests depth=5 limit) ---
+
+//goplint:validate-all
+type FourLevelHelperConfig struct {
+	FieldName Name
+	FieldMode Mode
+}
+
+func (c *FourLevelHelperConfig) Validate() error {
+	return c.level1()
+}
+
+func (c *FourLevelHelperConfig) level1() error {
+	return c.level2()
+}
+
+func (c *FourLevelHelperConfig) level2() error {
+	return c.level3()
+}
+
+func (c *FourLevelHelperConfig) level3() error {
+	if err := c.FieldName.Validate(); err != nil {
+		return err
+	}
+	return c.FieldMode.Validate()
+}
+
+// --- Five-level helper delegation — complete (tests maxHelperMethodDepth boundary-1) ---
+// Validate() → helperL1() → helperL2() → helperL3() → helperL4() → field.Validate()
+// Depth 0→1→2→3→4 = exactly maxHelperMethodDepth-1. NOT flagged.
+
+//goplint:validate-all
+type FiveLevelHelperConfig struct {
+	FieldName Name
+	FieldMode Mode
+}
+
+func (c *FiveLevelHelperConfig) Validate() error {
+	return c.fiveHelperL1()
+}
+
+func (c *FiveLevelHelperConfig) fiveHelperL1() error {
+	return c.fiveHelperL2()
+}
+
+func (c *FiveLevelHelperConfig) fiveHelperL2() error {
+	return c.fiveHelperL3()
+}
+
+func (c *FiveLevelHelperConfig) fiveHelperL3() error {
+	return c.fiveHelperL4()
+}
+
+func (c *FiveLevelHelperConfig) fiveHelperL4() error {
+	if err := c.FieldName.Validate(); err != nil {
+		return err
+	}
+	return c.FieldMode.Validate()
+}
+
+// --- Six-level helper delegation — exceeds maxHelperMethodDepth (FLAGGED) ---
+// Validate() → L1 → L2 → L3 → L4 → L5 → L6 → field.Validate()
+//
+// How depth tracking works in findHelperMethodDelegations:
+// At each depth D, the function scans the helper body directly for
+// c.Field.Validate() calls, THEN recurses at depth D+1 for sub-helpers.
+// So at depth=4, L5's body is scanned (finding L6 as a sub-helper, not
+// direct delegations). The recursion into L5 at depth=5 is cut off by
+// `depth >= maxHelperMethodDepth` (5), so L6 (which has the actual
+// field delegations) is never discovered.
+
+//goplint:validate-all
+type SixLevelHelperConfig struct { // want `validatedelegation\.SixLevelHelperConfig\.Validate\(\) does not delegate to field FieldName which has Validate\(\)` `validatedelegation\.SixLevelHelperConfig\.Validate\(\) does not delegate to field FieldMode which has Validate\(\)`
+	FieldName Name
+	FieldMode Mode
+}
+
+func (c *SixLevelHelperConfig) Validate() error {
+	return c.sixHelperL1()
+}
+
+func (c *SixLevelHelperConfig) sixHelperL1() error {
+	return c.sixHelperL2()
+}
+
+func (c *SixLevelHelperConfig) sixHelperL2() error {
+	return c.sixHelperL3()
+}
+
+func (c *SixLevelHelperConfig) sixHelperL3() error {
+	return c.sixHelperL4()
+}
+
+func (c *SixLevelHelperConfig) sixHelperL4() error {
+	return c.sixHelperL5()
+}
+
+func (c *SixLevelHelperConfig) sixHelperL5() error {
+	return c.sixHelperL6()
+}
+
+func (c *SixLevelHelperConfig) sixHelperL6() error {
+	if err := c.FieldName.Validate(); err != nil {
+		return err
+	}
+	return c.FieldMode.Validate()
+}
+
+// --- Pointer validatable fields ---
+
+//goplint:validate-all
+type PointerCompleteConfig struct {
+	FieldName *Name
+	FieldMode *Mode
+}
+
+func (c *PointerCompleteConfig) Validate() error {
+	if c.FieldName != nil {
+		if err := c.FieldName.Validate(); err != nil {
+			return err
+		}
+	}
+	if c.FieldMode != nil {
+		if err := c.FieldMode.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//goplint:validate-all
+type PointerIncompleteConfig struct { // want `validatedelegation\.PointerIncompleteConfig\.Validate\(\) does not delegate to field FieldMode which has Validate\(\)`
+	FieldName *Name
+	FieldMode *Mode
+}
+
+func (c *PointerIncompleteConfig) Validate() error {
+	if c.FieldName != nil {
+		if err := c.FieldName.Validate(); err != nil {
+			return err
+		}
+	}
+	// FieldMode.Validate() is missing!
+	return nil
+}
+
+// --- Alias rebinding must not count as delegation for the original field ---
+
+//goplint:validate-all
+type AliasRebindConfig struct { // want `validatedelegation\.AliasRebindConfig\.Validate\(\) does not delegate to field Primary which has Validate\(\)`
+	Primary   Name
+	Secondary Name
+}
+
+func (c *AliasRebindConfig) Validate() error {
+	alias := c.Primary
+	alias = c.Secondary
+	return alias.Validate()
+}
+
+// --- Conditional helper calls do not guarantee delegation on all paths ---
+
+//goplint:validate-all
+type ConditionalHelperConfig struct { // want `validatedelegation\.ConditionalHelperConfig\.Validate\(\) does not delegate to field FieldName which has Validate\(\)` `validatedelegation\.ConditionalHelperConfig\.Validate\(\) does not delegate to field FieldMode which has Validate\(\)`
+	FieldName Name
+	FieldMode Mode
+}
+
+func (c *ConditionalHelperConfig) Validate() error {
+	if c.FieldName != "" {
+		return c.validateMaybe()
+	}
+	return nil
+}
+
+func (c *ConditionalHelperConfig) validateMaybe() error {
+	if err := c.FieldName.Validate(); err != nil {
+		return err
+	}
+	if err := c.FieldMode.Validate(); err != nil {
+		return err
+	}
+	return nil
 }

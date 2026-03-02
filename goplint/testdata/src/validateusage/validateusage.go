@@ -41,6 +41,11 @@ func blankedResult() {
 	_ = d.Validate() // want `Validate\(\) result discarded`
 }
 
+func valueSpecBlankedResult() {
+	d := DddType("test")
+	var _ = d.Validate() // want `Validate\(\) result discarded`
+}
+
 // --- Correct usage tests (should NOT be flagged) ---
 
 func correctUsageCheckErr() {

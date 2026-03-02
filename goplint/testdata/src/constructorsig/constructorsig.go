@@ -48,3 +48,13 @@ type MultiVariant struct {
 
 func NewMultiVariantFromA(d string) *MultiVariant { return &MultiVariant{data: d} } // want `parameter "d" of constructorsig\.NewMultiVariantFromA uses primitive type string`
 func NewMultiVariantFromB(d string) *MultiVariant { return &MultiVariant{data: d} } // want `parameter "d" of constructorsig\.NewMultiVariantFromB uses primitive type string`
+
+// --- Variant constructor with wrong return type ---
+
+type VariantWrongReturn struct {
+	value string // want `struct field constructorsig\.VariantWrongReturn\.value uses primitive type string`
+}
+
+func NewVariantWrongReturnFromSource(v string) *GoodReturn { // want `parameter "v" of constructorsig\.NewVariantWrongReturnFromSource uses primitive type string` `constructor NewVariantWrongReturnFromSource\(\) for constructorsig\.VariantWrongReturn returns GoodReturn, expected VariantWrongReturn`
+	return nil
+}

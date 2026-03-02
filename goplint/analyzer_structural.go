@@ -77,10 +77,23 @@ func trackConstructorDetails(pass *analysis.Pass, fn *ast.FuncDecl, seen map[str
 		pos: fn.Name.Pos(),
 	}
 
-	// Resolve return type name and detect interface returns.
+	// Resolve return type name, detect interface returns, and check for
+	// error return (last return type is error).
 	if fn.Type.Results != nil {
 		info.returnTypeName = resolveReturnTypeName(pass, fn.Type.Results)
+		if obj := pass.TypesInfo.Defs[fn.Name]; obj != nil {
+			if sig, ok := obj.Type().(*types.Signature); ok && sig.Results() != nil {
+				for resultVar := range sig.Results().Variables() {
+					if isErrorType(resultVar.Type()) {
+						continue
+					}
+					info.returnTypeKey = typeIdentityKey(resultVar.Type())
+					break
+				}
+			}
+		}
 		info.returnsInterface = returnsInterface(pass, fn.Type.Results)
+		info.returnsError = constructorReturnsError(pass, fn.Type.Results)
 	}
 
 	// Count parameters and detect variadic option pattern.
@@ -117,6 +130,124 @@ func trackConstructorDetails(pass *analysis.Pass, fn *ast.FuncDecl, seen map[str
 	seen[name] = info
 }
 
+// constructorReturnsError checks if the last return type in a constructor's
+// result list is the error interface. Constructors for validatable types
+// should return (T, error) so Validate() failures can propagate.
+func constructorReturnsError(pass *analysis.Pass, results *ast.FieldList) bool {
+	if results == nil || len(results.List) == 0 {
+		return false
+	}
+	lastField := results.List[len(results.List)-1]
+	resolved := pass.TypesInfo.TypeOf(lastField.Type)
+	if resolved == nil {
+		return false
+	}
+	return isErrorType(resolved)
+}
+
+// inspectConstructorReturnError checks whether NewXxx() constructors for
+// types with Validate() include error in their return signature. If the
+// constructed type has Validate(), the constructor should return (T, error)
+// so validation failures can be surfaced to the caller.
+//
+// Types annotated with //goplint:constant-only are exempt — their values
+// only come from compile-time constants, so Validate() never fails.
+//
+// Supports both same-package and cross-package return types. Same-package
+// types are checked via buildValidatableStructs (fast path); cross-package
+// types are resolved via the type checker using resolveReturnTypeValidateInfo.
+func inspectConstructorReturnError(
+	pass *analysis.Pass,
+	ctors map[string]*constructorFuncInfo,
+	constantOnlyTypes map[string]bool,
+	cfg *ExceptionConfig,
+	bl *BaselineConfig,
+) {
+	pkgName := packageName(pass.Pkg)
+
+	// Build a set of struct names that have Validate() methods (same-package).
+	validatableStructs := buildValidatableStructs(pass)
+
+	// Walk file decls to access FuncDecl for cross-package type resolution.
+	for _, file := range pass.Files {
+		if isTestFile(pass, file.Pos()) {
+			continue
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv != nil || fn.Body == nil {
+				continue
+			}
+
+			name := fn.Name.Name
+			if !strings.HasPrefix(name, "New") || len(name) <= 3 {
+				continue
+			}
+
+			ctorInfo, exists := ctors[name]
+			if !exists {
+				continue
+			}
+
+			// Skip constructors returning interfaces.
+			if ctorInfo.returnsInterface {
+				continue
+			}
+
+			returnType := ctorInfo.returnTypeName
+			if returnType == "" {
+				continue
+			}
+			retInfo := resolveReturnTypeValidateInfo(pass, fn)
+			returnTypeKey := retInfo.TypeKey
+			if returnTypeKey == "" {
+				returnTypeKey = pass.Pkg.Path() + "." + returnType
+			}
+
+			// Check if the return type has Validate(). Try same-package
+			// fast path first, then cross-package via type checker.
+			var returnTypePkg string
+			if validatableStructs[returnType] {
+				returnTypePkg = pkgName
+			} else {
+				if !retInfo.HasValidate {
+					continue
+				}
+				returnTypePkg = retInfo.TypePkgName
+			}
+			if returnTypePkg == "" {
+				returnTypePkg = pkgName
+			}
+
+			// Skip types annotated with //goplint:constant-only.
+			if constantOnlyTypes[returnTypeKey] {
+				continue
+			}
+
+			// Check if the constructor already returns error.
+			if ctorInfo.returnsError {
+				continue
+			}
+
+			qualName := fmt.Sprintf("%s.%s", pkgName, name)
+			excKey := qualName + ".constructor-return-error"
+			if cfg.isExcepted(excKey) {
+				continue
+			}
+
+			msg := fmt.Sprintf(
+				"constructor %s returns %s.%s which has Validate() but constructor does not return error",
+				qualName, returnTypePkg, returnType)
+			findingID := StableFindingID(CategoryMissingConstructorErrorReturn, qualName, returnType)
+			if bl.ContainsFinding(CategoryMissingConstructorErrorReturn, findingID, msg) {
+				continue
+			}
+
+			reportDiagnostic(pass, ctorInfo.pos, CategoryMissingConstructorErrorReturn, findingID, msg)
+		}
+	}
+}
+
 // countParams counts the total number of parameters in a field list,
 // accounting for multi-name fields like (a, b int) counting as 2.
 func countParams(fields *ast.FieldList) int {
@@ -134,8 +265,9 @@ func countParams(fields *ast.FieldList) int {
 // withFuncInfo records a WithXxx option function with its resolved
 // parameter type for type verification.
 type withFuncInfo struct {
-	name      string     // function name (e.g., "WithHost")
-	paramType types.Type // resolved type of the first non-option parameter, nil if none
+	name       string     // function name (e.g., "WithHost")
+	paramType  types.Type // resolved type of the first non-option parameter, nil if none
+	paramCount int        // total parameter count
 }
 
 // trackWithFunctions records free functions named WithXxx that return a
@@ -177,6 +309,9 @@ func trackWithFunctions(pass *analysis.Pass, fn *ast.FuncDecl, optionTypes map[s
 		return
 	}
 
+	// Resolve parameter shape for signature and type verification.
+	paramCount := countParams(fn.Type.Params)
+
 	// Resolve the first parameter type for type verification.
 	var paramType types.Type
 	if fn.Type.Params != nil && len(fn.Type.Params.List) > 0 {
@@ -184,8 +319,9 @@ func trackWithFunctions(pass *analysis.Pass, fn *ast.FuncDecl, optionTypes map[s
 	}
 
 	out[targetStruct] = append(out[targetStruct], withFuncInfo{
-		name:      name,
-		paramType: paramType,
+		name:       name,
+		paramType:  paramType,
+		paramCount: paramCount,
 	})
 }
 
@@ -213,9 +349,14 @@ func collectExportedStructsWithFields(pass *analysis.Pass, node *ast.GenDecl, ou
 			continue
 		}
 
+		typeKey := ""
+		if obj := pass.TypesInfo.Defs[ts.Name]; obj != nil {
+			typeKey = typeIdentityKey(obj.Type())
+		}
 		info := exportedStructInfo{
 			name:    ts.Name.Name,
 			pos:     ts.Name.Pos(),
+			typeKey: typeKey,
 			mutable: hasMutableDirective(node.Doc, ts.Doc),
 		}
 
@@ -242,10 +383,10 @@ func collectExportedStructsWithFields(pass *analysis.Pass, node *ast.GenDecl, ou
 
 // reportWrongConstructorSig reports constructors whose return type does not
 // match the struct they are supposed to construct. Uses exact match for
-// the primary constructor (NewXxx) plus prefix match for variant constructors
-// (NewXxxFromY) that DO return the right type — but flags variants whose
-// return type is wrong. This avoids false positives where NewFooBar
-// (intended for FooBar) is flagged against Foo.
+// the primary constructor (NewXxx) plus prefix match for variants.
+// For variants, disambiguation prefers a likely alternate target when the
+// constructor name also starts with "New"+returnedType (for example,
+// NewFooBar returning FooBar should not be flagged against Foo).
 func reportWrongConstructorSig(pass *analysis.Pass, structs []exportedStructInfo, ctors map[string]*constructorFuncInfo, cfg *ExceptionConfig, bl *BaselineConfig) {
 	pkgName := packageName(pass.Pkg)
 
@@ -263,12 +404,13 @@ func reportWrongConstructorSig(pass *analysis.Pass, structs []exportedStructInfo
 			}
 
 			// For variant constructors (name longer than "New" + structName),
-			// only check if they return the target struct's type. If they
-			// return a different type, they likely target a different struct
-			// (e.g., NewCommandScope targets CommandScope, not Command).
+			// disambiguate likely alternate targets by returned type.
 			isExact := ctorName == prefix
-			if !isExact && ctorInfo.returnTypeName != s.name && !ctorInfo.returnsInterface {
-				continue
+			if !isExact && ctorInfo.returnTypeName != "" && ctorInfo.returnTypeName != s.name && !ctorInfo.returnsInterface {
+				candidatePrefix := "New" + ctorInfo.returnTypeName
+				if strings.HasPrefix(ctorName, candidatePrefix) {
+					continue
+				}
 			}
 
 			// Interface returns are valid factory patterns — skip the check.
@@ -322,7 +464,7 @@ func reportMissingFuncOptions(
 		// Fall back to prefix match for existence checks.
 		ctorName := "New" + s.name
 		exactCtor := ctors[ctorName]
-		anyCtor := findConstructorForStruct(s.name, ctors)
+		anyCtor := findConstructorForStruct(s, ctors)
 
 		qualName := fmt.Sprintf("%s.%s", pkgName, s.name)
 		if cfg.isExcepted(qualName + ".func-options") {
@@ -404,7 +546,16 @@ func reportMissingFuncOptions(
 				continue
 			}
 
-			// B3: Verify WithXxx parameter type matches the field type.
+			// B3: Verify WithXxx signature shape and parameter type.
+			if wfi.paramCount != 1 {
+				msg := fmt.Sprintf("%s() should accept exactly one parameter matching field %s.%s, got %d parameters",
+					expectedWith, s.name, f.name, wfi.paramCount)
+				findingID := StableFindingID(CategoryWrongFuncOptionType, qualName, f.name, expectedWith, "arity")
+				if !bl.ContainsFinding(CategoryWrongFuncOptionType, findingID, msg) {
+					reportDiagnostic(pass, f.pos, CategoryWrongFuncOptionType, findingID, msg)
+				}
+				continue
+			}
 			if wfi.paramType != nil && len(s.fields) > 0 {
 				fieldType := fieldTypeForMeta(pass, s.name, f.name)
 				if fieldType != nil && !types.Identical(wfi.paramType, fieldType) {
@@ -431,7 +582,7 @@ func reportMissingImmutability(pass *analysis.Pass, structs []exportedStructInfo
 	pkgName := packageName(pass.Pkg)
 
 	for _, s := range structs {
-		if findConstructorForStruct(s.name, ctors) == nil {
+		if findConstructorForStruct(s, ctors) == nil {
 			continue // no constructor — exported fields are fine
 		}
 
@@ -478,7 +629,7 @@ func reportMissingStructValidate(
 	pkgName := packageName(pass.Pkg)
 
 	for _, s := range structs {
-		if findConstructorForStruct(s.name, ctors) == nil {
+		if findConstructorForStruct(s, ctors) == nil {
 			continue // no constructor — no obligation
 		}
 

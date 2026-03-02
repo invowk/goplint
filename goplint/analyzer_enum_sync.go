@@ -3,6 +3,7 @@
 package goplint
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/constant"
@@ -23,10 +24,11 @@ import (
 // //goplint:enum-cue=<cuePath>. The analyzer compares the CUE
 // disjunction members against the Go Validate() switch case literals.
 type enumCueAnnotation struct {
-	typeName     string         // unqualified Go type name (e.g., "RuntimeMode")
-	cuePath      string         // CUE path expression (e.g., "#RuntimeType")
-	pos          token.Pos      // position of the type declaration for diagnostics
-	validateBody *ast.BlockStmt // body of the Validate() method; nil if not found
+	typeName         string         // unqualified Go type name (e.g., "RuntimeMode")
+	cuePath          string         // CUE path expression (e.g., "#RuntimeType")
+	pos              token.Pos      // position of the type declaration for diagnostics
+	validateBody     *ast.BlockStmt // body of the Validate() method; nil if not found
+	validateReceiver string         // receiver identifier used in Validate() (e.g., "m")
 }
 
 // inspectEnumSync compares Go Validate() switch case literals against CUE
@@ -47,10 +49,17 @@ func inspectEnumSync(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConf
 		pkgName := packageName(pass.Pkg)
 		for _, ann := range annotations {
 			qualName := pkgName + "." + ann.typeName
+			excKey := fmt.Sprintf("%s.no-schema.enum-cue-missing-go", qualName)
+			if cfg.isExcepted(excKey) {
+				continue
+			}
 			msg := fmt.Sprintf(
 				"type %s has //goplint:enum-cue directive but no *_schema.cue file found in package directory",
 				qualName)
 			findingID := StableFindingID(CategoryEnumCueMissingGo, qualName, "no-schema")
+			if bl.ContainsFinding(CategoryEnumCueMissingGo, findingID, msg) {
+				continue
+			}
 			reportDiagnostic(pass, ann.pos, CategoryEnumCueMissingGo, findingID, msg)
 		}
 		return
@@ -64,7 +73,7 @@ func inspectEnumSync(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConf
 		// Extract Go switch case literals from the Validate() body.
 		var goCases []string
 		if ann.validateBody != nil {
-			goCases = extractSwitchCaseLiterals(pass, ann.validateBody)
+			goCases = extractSwitchCaseLiterals(pass, ann.validateBody, ann.validateReceiver)
 		}
 		goSet := make(map[string]bool, len(goCases))
 		for _, v := range goCases {
@@ -74,10 +83,17 @@ func inspectEnumSync(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConf
 		// Extract CUE disjunction members from the schema.
 		cueMembers, cueErr := extractCUEDisjunctionMembers(schemaBytes, schemaFilename, ann.cuePath)
 		if cueErr != nil {
+			excKey := fmt.Sprintf("%s.cue-error.enum-cue-missing-go", qualName)
+			if cfg.isExcepted(excKey) {
+				continue
+			}
 			msg := fmt.Sprintf(
 				"type %s: failed to extract CUE disjunction from %s at path %q: %v",
 				qualName, filepath.Base(schemaFilename), ann.cuePath, cueErr)
 			findingID := StableFindingID(CategoryEnumCueMissingGo, qualName, ann.cuePath, "cue-error")
+			if bl.ContainsFinding(CategoryEnumCueMissingGo, findingID, msg) {
+				continue
+			}
 			reportDiagnostic(pass, ann.pos, CategoryEnumCueMissingGo, findingID, msg)
 			continue
 		}
@@ -151,12 +167,13 @@ func collectEnumCueAnnotations(pass *analysis.Pass) []enumCueAnnotation {
 				if !found || cuePath == "" {
 					continue
 				}
-				validateBody, _ := findMethodBody(pass, ts.Name.Name, "Validate")
+				validateBody, validateReceiver := findMethodBody(pass, ts.Name.Name, "Validate")
 				result = append(result, enumCueAnnotation{
-					typeName:     ts.Name.Name,
-					cuePath:      cuePath,
-					pos:          ts.Name.Pos(),
-					validateBody: validateBody,
+					typeName:         ts.Name.Name,
+					cuePath:          cuePath,
+					pos:              ts.Name.Pos(),
+					validateBody:     validateBody,
+					validateReceiver: validateReceiver,
 				})
 			}
 		}
@@ -164,17 +181,20 @@ func collectEnumCueAnnotations(pass *analysis.Pass) []enumCueAnnotation {
 	return result
 }
 
-// extractSwitchCaseLiterals walks a function body and collects all string
-// and int literal values from switch case clauses. Handles direct literals
-// (case "native":), named constants (case RuntimeNative:), and conversion
-// switches (switch string(v) { ... }).
-func extractSwitchCaseLiterals(pass *analysis.Pass, body *ast.BlockStmt) []string {
+// extractSwitchCaseLiterals walks a function body and collects string/int
+// literals from switch case clauses. When receiverName is non-empty, only
+// switches whose tag directly references the receiver (switch r { ... }) or
+// a simple conversion of it (switch string(r) { ... }) are considered.
+func extractSwitchCaseLiterals(pass *analysis.Pass, body *ast.BlockStmt, receiverName string) []string {
 	var literals []string
 	seen := make(map[string]bool)
 
 	ast.Inspect(body, func(n ast.Node) bool {
 		sw, ok := n.(*ast.SwitchStmt)
 		if !ok {
+			return true
+		}
+		if receiverName != "" && !switchTagUsesReceiver(pass, sw.Tag, receiverName) {
 			return true
 		}
 		for _, stmt := range sw.Body.List {
@@ -198,6 +218,28 @@ func extractSwitchCaseLiterals(pass *analysis.Pass, body *ast.BlockStmt) []strin
 		return true
 	})
 	return literals
+}
+
+func switchTagUsesReceiver(pass *analysis.Pass, tag ast.Expr, receiverName string) bool {
+	if tag == nil || receiverName == "" {
+		return false
+	}
+	if ident, ok := stripParensAndStar(tag).(*ast.Ident); ok {
+		return ident.Name == receiverName
+	}
+	call, ok := stripParensAndStar(tag).(*ast.CallExpr)
+	if !ok || len(call.Args) != 1 {
+		return false
+	}
+	// Only accept explicit conversions (e.g., string(v), int(v)).
+	tv, ok := pass.TypesInfo.Types[call.Fun]
+	if !ok || !tv.IsType() {
+		return false
+	}
+	if ident, ok := stripParensAndStar(call.Args[0]).(*ast.Ident); ok {
+		return ident.Name == receiverName
+	}
+	return false
 }
 
 // resolveConstantValue resolves an AST expression to a constant string or
@@ -295,13 +337,16 @@ func findPackageCUESchema(pass *analysis.Pass) ([]byte, string, error) {
 
 	// Concatenate all schema files. CUE supports multiple definitions in
 	// a single compilation unit, so concatenation is semantically valid
-	// for top-level #Definition declarations.
+	// for top-level #Definition declarations. Package declarations are
+	// stripped to prevent compilation errors when merging files that each
+	// have their own "package" line.
 	var combined []byte
 	for _, name := range schemaNames {
 		data, readErr := os.ReadFile(filepath.Join(pkgDir, name))
 		if readErr != nil {
 			return nil, "", fmt.Errorf("reading CUE schema %s: %w", name, readErr)
 		}
+		data = stripCUEPackageDecl(data)
 		combined = append(combined, data...)
 		combined = append(combined, '\n')
 	}
@@ -418,4 +463,20 @@ func sortedKeys(m map[string]bool) []string {
 // underscores so CUE member values don't confuse the exception matcher.
 func sanitizeForPattern(s string) string {
 	return strings.ReplaceAll(s, ".", "_")
+}
+
+// stripCUEPackageDecl removes CUE "package <name>" declaration lines from
+// schema file contents. This is needed when concatenating multiple schema
+// files — each file may have its own package declaration, but the combined
+// content is compiled as a single CUE compilation unit.
+func stripCUEPackageDecl(data []byte) []byte {
+	result := make([]byte, 0, len(data))
+	for line := range bytes.SplitSeq(data, []byte("\n")) {
+		if bytes.HasPrefix(bytes.TrimSpace(line), []byte("package ")) {
+			continue
+		}
+		result = append(result, line...)
+		result = append(result, '\n')
+	}
+	return result
 }

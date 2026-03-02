@@ -4,6 +4,7 @@ package goplint
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"go/types"
 	"slices"
@@ -22,12 +23,12 @@ func TestShouldSkipFunc(t *testing.T) {
 	}{
 		{name: "init", funcName: "init", want: true},
 		{name: "main", funcName: "main", want: true},
-		{name: "Test prefix", funcName: "TestFoo", want: true},
-		{name: "Benchmark prefix", funcName: "BenchmarkFoo", want: true},
-		{name: "Fuzz prefix", funcName: "FuzzFoo", want: true},
-		{name: "Example prefix", funcName: "ExampleFoo", want: true},
+		{name: "Test prefix", funcName: "TestFoo", want: false},
+		{name: "Benchmark prefix", funcName: "BenchmarkFoo", want: false},
+		{name: "Fuzz prefix", funcName: "FuzzFoo", want: false},
+		{name: "Example prefix", funcName: "ExampleFoo", want: false},
 		{name: "normal func", funcName: "doSomething", want: false},
-		{name: "Testing (still Test prefix)", funcName: "Testing", want: true},
+		{name: "Testing (still Test prefix)", funcName: "Testing", want: false},
 		{name: "test lowercase", funcName: "testHelper", want: false},
 		{name: "Mainfunc (not main)", funcName: "Mainfunc", want: false},
 		{name: "Init capitalized (not init)", funcName: "Init", want: false},
@@ -198,6 +199,15 @@ func TestParseDirectiveKeys(t *testing.T) {
 			wantKeys: []string{"ignore"},
 		},
 		{
+			name: "nolint near-miss does not match",
+			text: "//nolint:goplintfoo",
+		},
+		{
+			name:     "nolint list matches goplint exactly",
+			text:     "//nolint:unused,goplint",
+			wantKeys: []string{"ignore"},
+		},
+		{
 			name: "regular comment, no directive prefix",
 			text: "// regular comment",
 		},
@@ -296,6 +306,11 @@ func TestHasIgnoreDirective(t *testing.T) {
 			name:        "nolint:goplint in line comment",
 			lineComment: "//nolint:goplint",
 			want:        true,
+		},
+		{
+			name:        "nolint near-miss does not suppress",
+			lineComment: "//nolint:goplintfoo",
+			want:        false,
 		},
 		{
 			name: "goplint:ignore in doc comment",
@@ -653,4 +668,73 @@ func TestIsTestFile(t *testing.T) {
 	if !isTestFile(pass, minimalTestPos) {
 		t.Error("expected _test.go (minimal name) to be detected as test file")
 	}
+}
+
+func TestHasIgnoreAtPos_StatementOwnership(t *testing.T) {
+	t.Parallel()
+
+	parse := func(t *testing.T, src string) (*analysis.Pass, *ast.BlockStmt) {
+		t.Helper()
+		fset := token.NewFileSet()
+		file, err := parser.ParseFile(fset, "test.go", src, parser.ParseComments)
+		if err != nil {
+			t.Fatalf("parse error: %v", err)
+		}
+
+		var body *ast.BlockStmt
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Name.Name != "f" {
+				continue
+			}
+			body = fn.Body
+			break
+		}
+		if body == nil {
+			t.Fatal("function f not found")
+		}
+
+		pass := &analysis.Pass{
+			Fset:  fset,
+			Files: []*ast.File{file},
+		}
+		return pass, body
+	}
+
+	t.Run("standalone previous-line directive suppresses", func(t *testing.T) {
+		t.Parallel()
+		src := `package p
+func f() {
+	//goplint:ignore
+	x := 1
+	_ = x
+}`
+		pass, body := parse(t, src)
+		assign, ok := body.List[0].(*ast.AssignStmt)
+		if !ok {
+			t.Fatalf("expected AssignStmt, got %T", body.List[0])
+		}
+		if !hasIgnoreAtPos(pass, assign.Pos()) {
+			t.Fatal("expected previous-line standalone directive to suppress statement")
+		}
+	})
+
+	t.Run("trailing previous-line directive does not suppress next statement", func(t *testing.T) {
+		t.Parallel()
+		src := `package p
+func f() {
+	x := 1 //goplint:ignore
+	y := 2
+	_ = x
+	_ = y
+}`
+		pass, body := parse(t, src)
+		assign, ok := body.List[1].(*ast.AssignStmt)
+		if !ok {
+			t.Fatalf("expected AssignStmt, got %T", body.List[1])
+		}
+		if hasIgnoreAtPos(pass, assign.Pos()) {
+			t.Fatal("expected trailing comment on previous statement to not suppress next statement")
+		}
+	})
 }

@@ -264,3 +264,24 @@ func NewTypeMatch(opts ...TypeMatchOption) *TypeMatch {
 	}
 	return t
 }
+
+// --- Signature shape: WithXxx must accept exactly one parameter ---
+
+type ArityMismatch struct {
+	mode string // want `struct field funcoptions\.ArityMismatch\.mode uses primitive type string` `WithMode\(\) should accept exactly one parameter matching field ArityMismatch.mode, got 0 parameters`
+}
+
+type ArityMismatchOption func(*ArityMismatch)
+
+// WithMode has wrong arity (0 parameters) and should be flagged.
+func WithMode() ArityMismatchOption {
+	return func(a *ArityMismatch) { a.mode = "default" }
+}
+
+func NewArityMismatch(opts ...ArityMismatchOption) *ArityMismatch {
+	a := &ArityMismatch{}
+	for _, opt := range opts {
+		opt(a)
+	}
+	return a
+}

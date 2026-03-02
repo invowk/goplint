@@ -5,6 +5,7 @@ package goplint
 import (
 	"go/ast"
 	"go/token"
+	"strconv"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -24,21 +25,13 @@ func inspectValidateUsage(pass *analysis.Pass, fn *ast.FuncDecl, cfg *ExceptionC
 	}
 
 	// Build the qualified function name for exception matching.
-	pkgName := packageName(pass.Pkg)
-	funcName := fn.Name.Name
-	if fn.Recv != nil && len(fn.Recv.List) > 0 {
-		recvName := receiverTypeName(fn.Recv.List[0].Type)
-		if recvName != "" {
-			funcName = recvName + "." + funcName
-		}
-	}
-	qualFuncName := pkgName + "." + funcName
+	funcQualName := qualFuncName(pass, fn)
 
 	// Build a parent map for detecting expression statements and blank
 	// assignments containing Validate() calls.
 	parentMap := buildParentMap(fn.Body)
 
-	inspectValidateUsageInBody(pass, fn.Body, parentMap, qualFuncName, cfg, bl)
+	inspectValidateUsageInBody(pass, fn.Body, parentMap, funcQualName, cfg, bl)
 }
 
 // inspectValidateUsageInBody checks a block statement for discarded
@@ -96,6 +89,15 @@ func inspectValidateUsageInBody(
 				return true
 			}
 		}
+		// Check 3: Blank identifier in var declaration.
+		// Pattern: var _ = x.Validate()
+		if valueSpec, isValueSpec := parent.(*ast.ValueSpec); isValueSpec {
+			if isBlankValueSpecForValidate(valueSpec, call) {
+				reportValidateUsageFinding(pass, call.Pos(), qualFuncName, cfg, bl,
+					"Validate() result discarded — error return is unused")
+				return true
+			}
+		}
 
 		return true
 	})
@@ -126,6 +128,22 @@ func isAllBlankForValidate(assign *ast.AssignStmt, call *ast.CallExpr) bool {
 	return false
 }
 
+// isBlankValueSpecForValidate reports whether a ValueSpec assigns the
+// Validate() call result to blank identifier.
+func isBlankValueSpecForValidate(valueSpec *ast.ValueSpec, call *ast.CallExpr) bool {
+	valueIdx := -1
+	for i, value := range valueSpec.Values {
+		if value == call {
+			valueIdx = i
+			break
+		}
+	}
+	if valueIdx < 0 || valueIdx >= len(valueSpec.Names) {
+		return false
+	}
+	return valueSpec.Names[valueIdx].Name == "_"
+}
+
 // reportValidateUsageFinding emits a diagnostic for a Validate() usage issue,
 // respecting exception patterns and baseline suppression.
 func reportValidateUsageFinding(
@@ -141,7 +159,7 @@ func reportValidateUsageFinding(
 		return
 	}
 
-	findingID := StableFindingID(CategoryUnusedValidateResult, qualFuncName, message)
+	findingID := StableFindingID(CategoryUnusedValidateResult, qualFuncName, message, strconv.Itoa(int(pos)))
 	if bl.ContainsFinding(CategoryUnusedValidateResult, findingID, message) {
 		return
 	}

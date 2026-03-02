@@ -32,17 +32,9 @@ func inspectConstructorErrorUsage(pass *analysis.Pass, fn *ast.FuncDecl, cfg *Ex
 	}
 
 	// Build the qualified function name for exception matching.
-	pkgName := packageName(pass.Pkg)
-	funcName := fn.Name.Name
-	if fn.Recv != nil && len(fn.Recv.List) > 0 {
-		recvName := receiverTypeName(fn.Recv.List[0].Type)
-		if recvName != "" {
-			funcName = recvName + "." + funcName
-		}
-	}
-	qualFuncName := pkgName + "." + funcName
+	funcQualName := qualFuncName(pass, fn)
 
-	inspectConstructorErrorUsageInBody(pass, fn.Body, qualFuncName, cfg, bl)
+	inspectConstructorErrorUsageInBody(pass, fn.Body, funcQualName, cfg, bl)
 }
 
 // inspectConstructorErrorUsageInBody checks a block statement for constructor
@@ -62,12 +54,41 @@ func inspectConstructorErrorUsageInBody(
 		}
 
 		assign, ok := n.(*ast.AssignStmt)
+		if ok {
+			// Look at each RHS expression for constructor calls.
+			for _, rhs := range assign.Rhs {
+				call, ok := rhs.(*ast.CallExpr)
+				if !ok {
+					continue
+				}
+
+				ctorName := constructorCallName(call)
+				if ctorName == "" {
+					continue
+				}
+
+				if !returnsErrorLast(pass, call) {
+					continue
+				}
+
+				if !isErrorReturnBlanked(assign, call) {
+					continue
+				}
+
+				reportConstructorErrorUsageFinding(pass, call.Pos(), qualFuncName, ctorName, cfg, bl)
+			}
+			return true
+		}
+
+		valueSpec, ok := n.(*ast.ValueSpec)
 		if !ok {
 			return true
 		}
 
-		// Look at each RHS expression for constructor calls.
-		for _, rhs := range assign.Rhs {
+		// Handle var declarations:
+		//   var v, _ = NewFoo(...)
+		//   var _, err = NewFoo(...)
+		for _, rhs := range valueSpec.Values {
 			call, ok := rhs.(*ast.CallExpr)
 			if !ok {
 				continue
@@ -82,7 +103,7 @@ func inspectConstructorErrorUsageInBody(
 				continue
 			}
 
-			if !isErrorReturnBlanked(assign, call) {
+			if !isErrorReturnBlankedValueSpec(valueSpec, call) {
 				continue
 			}
 
@@ -91,6 +112,26 @@ func inspectConstructorErrorUsageInBody(
 
 		return true
 	})
+}
+
+// isErrorReturnBlankedValueSpec reports whether the constructor call's error
+// return is assigned to a blank identifier in a var declaration ValueSpec.
+func isErrorReturnBlankedValueSpec(valueSpec *ast.ValueSpec, call *ast.CallExpr) bool {
+	// Multi-value return assigned from a single RHS call.
+	// Pattern: var result, _ = NewFoo(...)
+	if len(valueSpec.Values) == 1 && valueSpec.Values[0] == call && len(valueSpec.Names) >= 2 {
+		return valueSpec.Names[len(valueSpec.Names)-1].Name == "_"
+	}
+
+	// One-to-one assignment form.
+	// Pattern: var _ = NewFoo(...), where call is single-return.
+	for i, rhs := range valueSpec.Values {
+		if rhs != call {
+			continue
+		}
+		return i < len(valueSpec.Names) && valueSpec.Names[i].Name == "_"
+	}
+	return false
 }
 
 // constructorCallName extracts the function name from a call expression if

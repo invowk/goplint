@@ -56,11 +56,8 @@ func inspectStructFields(pass *analysis.Pass, node *ast.GenDecl, cfg *ExceptionC
 			// For map types, produce a targeted message identifying which
 			// part(s) of the map are primitive instead of showing the full
 			// composite type.
-			typeName := primitiveTypeName(fieldType)
-			if detail, ok := primitiveMapDetail(fieldType); ok {
-				typeName = detail
-			}
-			if cfg.isSkippedType(typeName) {
+			typeName, ok := primitiveFindingTypeName(fieldType, cfg)
+			if !ok {
 				continue
 			}
 
@@ -71,7 +68,7 @@ func inspectStructFields(pass *analysis.Pass, node *ast.GenDecl, cfg *ExceptionC
 				}
 
 				msg := fmt.Sprintf("struct field %s uses primitive type %s", qualName, typeName)
-				findingID := StableFindingID(CategoryPrimitive, "struct-field", qualName, typeName)
+				findingID := PackageScopedFindingID(pass, CategoryPrimitive, "struct-field", qualName, typeName)
 				if bl.ContainsFinding(CategoryPrimitive, findingID, msg) {
 					continue
 				}
@@ -87,7 +84,7 @@ func inspectStructFields(pass *analysis.Pass, node *ast.GenDecl, cfg *ExceptionC
 				}
 
 				msg := fmt.Sprintf("struct field %s uses primitive type %s", qualName, typeName)
-				findingID := StableFindingID(CategoryPrimitive, "struct-field", qualName, typeName)
+				findingID := PackageScopedFindingID(pass, CategoryPrimitive, "struct-field", qualName, typeName)
 				if bl.ContainsFinding(CategoryPrimitive, findingID, msg) {
 					continue
 				}
@@ -125,16 +122,17 @@ func inspectFuncDecl(pass *analysis.Pass, fn *ast.FuncDecl, cfg *ExceptionConfig
 
 	// Prefix with package name for exception matching.
 	funcName = pkgName + "." + funcName
+	contractMethod := isKnownInterfaceContractMethod(pass, fn)
 
 	// Check parameters — always checked, even with //goplint:render.
-	if fn.Type.Params != nil {
+	if fn.Type.Params != nil && !contractMethod {
 		inspectFieldList(pass, fn.Type.Params, funcName, "parameter", cfg, bl)
 	}
 
 	// Check return types — skip for render functions (display output),
 	// and for well-known interface methods (String, Error, GoString,
 	// MarshalText) whose return types are dictated by the interface contract.
-	if fn.Type.Results != nil && !isRender && !isInterfaceMethodReturn(fn) {
+	if fn.Type.Results != nil && !isRender && !isInterfaceMethodReturn(fn) && !contractMethod {
 		inspectReturnTypes(pass, fn.Type.Results, funcName, cfg, bl)
 	}
 }
@@ -157,11 +155,8 @@ func inspectFieldList(pass *analysis.Pass, fields *ast.FieldList, funcName, kind
 			continue
 		}
 
-		typeName := primitiveTypeName(fieldType)
-		if detail, ok := primitiveMapDetail(fieldType); ok {
-			typeName = detail
-		}
-		if cfg.isSkippedType(typeName) {
+		typeName, ok := primitiveFindingTypeName(fieldType, cfg)
+		if !ok {
 			continue
 		}
 
@@ -172,7 +167,7 @@ func inspectFieldList(pass *analysis.Pass, fields *ast.FieldList, funcName, kind
 			}
 
 			msg := fmt.Sprintf("%s %q of %s uses primitive type %s", kind, name.Name, funcName, typeName)
-			findingID := StableFindingID(CategoryPrimitive, kind, funcName, name.Name, typeName)
+			findingID := PackageScopedFindingID(pass, CategoryPrimitive, kind, funcName, name.Name, typeName)
 			if bl.ContainsFinding(CategoryPrimitive, findingID, msg) {
 				continue
 			}
@@ -188,7 +183,7 @@ func inspectFieldList(pass *analysis.Pass, fields *ast.FieldList, funcName, kind
 			}
 
 			msg := fmt.Sprintf("unnamed %s of %s uses primitive type %s", kind, funcName, typeName)
-			findingID := StableFindingID(CategoryPrimitive, "unnamed-"+kind, funcName, strconv.Itoa(fieldIndex), typeName)
+			findingID := PackageScopedFindingID(pass, CategoryPrimitive, "unnamed-"+kind, funcName, strconv.Itoa(fieldIndex), typeName)
 			if bl.ContainsFinding(CategoryPrimitive, findingID, msg) {
 				continue
 			}
@@ -216,11 +211,8 @@ func inspectReturnTypes(pass *analysis.Pass, results *ast.FieldList, funcName st
 			continue
 		}
 
-		typeName := primitiveTypeName(fieldType)
-		if detail, ok := primitiveMapDetail(fieldType); ok {
-			typeName = detail
-		}
-		if cfg.isSkippedType(typeName) {
+		typeName, ok := primitiveFindingTypeName(fieldType, cfg)
+		if !ok {
 			continue
 		}
 
@@ -232,7 +224,7 @@ func inspectReturnTypes(pass *analysis.Pass, results *ast.FieldList, funcName st
 			}
 
 			msg := fmt.Sprintf("return value %q of %s uses primitive type %s", name.Name, funcName, typeName)
-			findingID := StableFindingID(CategoryPrimitive, "named-return", funcName, name.Name, typeName)
+			findingID := PackageScopedFindingID(pass, CategoryPrimitive, "named-return", funcName, name.Name, typeName)
 			if bl.ContainsFinding(CategoryPrimitive, findingID, msg) {
 				continue
 			}
@@ -248,7 +240,7 @@ func inspectReturnTypes(pass *analysis.Pass, results *ast.FieldList, funcName st
 			}
 
 			msg := fmt.Sprintf("return value of %s uses primitive type %s", funcName, typeName)
-			findingID := StableFindingID(CategoryPrimitive, "return", funcName, strconv.Itoa(i), typeName)
+			findingID := PackageScopedFindingID(pass, CategoryPrimitive, "return", funcName, strconv.Itoa(i), typeName)
 			if bl.ContainsFinding(CategoryPrimitive, findingID, msg) {
 				continue
 			}
@@ -258,24 +250,31 @@ func inspectReturnTypes(pass *analysis.Pass, results *ast.FieldList, funcName st
 	}
 }
 
-// shouldSkipFunc returns true for functions that should not be analyzed:
-// init, main, test functions, and generated code.
+// shouldSkipFunc returns true for functions that should not be analyzed.
+// Test/benchmark/fuzz/example functions are skipped at file traversal level
+// (_test.go files), so function-name prefix checks are intentionally avoided.
 func shouldSkipFunc(fn *ast.FuncDecl) bool {
 	name := fn.Name.Name
 	switch {
 	case name == "init" || name == "main":
 		return true
-	case strings.HasPrefix(name, "Test"):
-		return true
-	case strings.HasPrefix(name, "Benchmark"):
-		return true
-	case strings.HasPrefix(name, "Fuzz"):
-		return true
-	case strings.HasPrefix(name, "Example"):
-		return true
 	default:
 		return false
 	}
+}
+
+func primitiveFindingTypeName(fieldType types.Type, cfg *ExceptionConfig) (string, bool) {
+	if detail, ok := primitiveMapDetailWithSkip(fieldType, cfg); ok {
+		return detail, true
+	}
+	if _, isMap := types.Unalias(fieldType).(*types.Map); isMap {
+		return "", false
+	}
+	typeName := primitiveTypeName(fieldType)
+	if cfg != nil && cfg.isSkippedType(typeName) {
+		return "", false
+	}
+	return typeName, true
 }
 
 // isInterfaceMethodReturn returns true if the function is a method whose
@@ -365,19 +364,22 @@ func receiverTypeName(expr ast.Expr) string {
 	return ""
 }
 
-// knownDirectiveKeys lists all recognized directive keys for validation.
-// Unknown keys in a //goplint: or //plint: comment trigger an
-// unknown-directive warning.
-var knownDirectiveKeys = map[string]bool{
-	"ignore":        true,
-	"internal":      true,
-	"render":        true,
-	"nonzero":       true,
-	"validate-all":  true,
-	"constant-only": true,
-	"mutable":       true,
-	"no-delegate":   true,
-	"enum-cue":      true,
+func isKnownDirectiveKey(key string) bool {
+	switch key {
+	case "ignore",
+		"internal",
+		"render",
+		"nonzero",
+		"validate-all",
+		"constant-only",
+		"mutable",
+		"no-delegate",
+		"enum-cue",
+		"validates-type":
+		return true
+	default:
+		return false
+	}
 }
 
 // hasIgnoreDirective checks whether a field/func has an ignore directive.
@@ -528,10 +530,18 @@ func parseDirectiveKeys(text string) (keys []string, unknown []string) {
 	content = strings.TrimSpace(content)
 
 	// Handle nolint:goplint as a special "ignore" directive.
-	// This is a golangci-lint convention — always means "suppress all".
-	// Must appear at content start, not embedded in prose.
-	if strings.HasPrefix(content, "nolint:goplint") {
-		return []string{"ignore"}, nil
+	// Match the token exactly in the nolint linter list, so near-misses like
+	// nolint:goplintfoo are not treated as valid suppressions.
+	if rest, ok := strings.CutPrefix(content, "nolint:"); ok {
+		if sepIdx := strings.Index(rest, " --"); sepIdx >= 0 {
+			rest = rest[:sepIdx]
+		}
+		for linter := range strings.SplitSeq(rest, ",") {
+			if strings.TrimSpace(linter) == "goplint" {
+				return []string{"ignore"}, nil
+			}
+		}
+		return nil, nil
 	}
 
 	// Look for goplint: or plint: prefix at the start of content.
@@ -562,7 +572,7 @@ func parseDirectiveKeys(text string) (keys []string, unknown []string) {
 			continue
 		}
 		keyPart, _, _ := strings.Cut(part, "=")
-		if knownDirectiveKeys[keyPart] {
+		if isKnownDirectiveKey(keyPart) {
 			keys = append(keys, keyPart)
 		} else {
 			unknown = append(unknown, part)
@@ -576,8 +586,10 @@ func parseDirectiveKeys(text string) (keys []string, unknown []string) {
 // or the line immediately before the given position. This enables per-statement
 // suppression in CFA mode where struct-level doc comments are not available.
 func hasIgnoreAtPos(pass *analysis.Pass, pos token.Pos) bool {
-	posLine := pass.Fset.Position(pos).Line
-	filename := pass.Fset.Position(pos).Filename
+	posPos := pass.Fset.Position(pos)
+	posLine := posPos.Line
+	filename := posPos.Filename
+	stmtStartLine := findEnclosingStmtStartLine(pass, pos)
 
 	for _, file := range pass.Files {
 		if pass.Fset.Position(file.Pos()).Filename != filename {
@@ -585,9 +597,16 @@ func hasIgnoreAtPos(pass *analysis.Pass, pos token.Pos) bool {
 		}
 		for _, cg := range file.Comments {
 			for _, c := range cg.List {
-				commentLine := pass.Fset.Position(c.Pos()).Line
-				// Check same line or line immediately above.
-				if commentLine != posLine && commentLine != posLine-1 {
+				commentPos := pass.Fset.Position(c.Slash)
+				commentLine := commentPos.Line
+
+				if commentLine != posLine && commentLine != stmtStartLine && commentLine != stmtStartLine-1 {
+					continue
+				}
+				// For previous-line comments, only accept standalone directives.
+				// Trailing comments from the previous statement must not suppress
+				// the next statement.
+				if commentLine == stmtStartLine-1 && isTrailingComment(pass, file, c) {
 					continue
 				}
 				keys, _ := parseDirectiveKeys(strings.TrimSpace(c.Text))
@@ -599,6 +618,83 @@ func hasIgnoreAtPos(pass *analysis.Pass, pos token.Pos) bool {
 		break
 	}
 	return false
+}
+
+func findEnclosingStmtStartLine(pass *analysis.Pass, pos token.Pos) int {
+	if pass == nil || pass.Fset == nil {
+		return 0
+	}
+	target := pass.Fset.Position(pos)
+	if target.Line == 0 || target.Filename == "" {
+		return 0
+	}
+
+	bestLine := target.Line
+	bestSpan := target.Offset + 1
+
+	for _, file := range pass.Files {
+		filePos := pass.Fset.Position(file.Pos())
+		if filePos.Filename != target.Filename {
+			continue
+		}
+
+		ast.Inspect(file, func(n ast.Node) bool {
+			stmt, ok := n.(ast.Stmt)
+			if !ok {
+				return true
+			}
+			stmtPos := pass.Fset.Position(stmt.Pos())
+			stmtEnd := pass.Fset.Position(stmt.End())
+			if stmtPos.Filename != target.Filename || stmtEnd.Filename != target.Filename {
+				return true
+			}
+			if stmtPos.Offset > target.Offset || target.Offset >= stmtEnd.Offset {
+				return true
+			}
+
+			span := stmtEnd.Offset - stmtPos.Offset
+			if span < bestSpan {
+				bestSpan = span
+				bestLine = stmtPos.Line
+			}
+			return true
+		})
+		break
+	}
+
+	return bestLine
+}
+
+func isTrailingComment(pass *analysis.Pass, file *ast.File, comment *ast.Comment) bool {
+	if pass == nil || pass.Fset == nil || file == nil || comment == nil {
+		return false
+	}
+	commentPos := pass.Fset.Position(comment.Slash)
+	if commentPos.Line == 0 || commentPos.Filename == "" {
+		return false
+	}
+
+	isTrailing := false
+	ast.Inspect(file, func(n ast.Node) bool {
+		if isTrailing {
+			return false
+		}
+		stmt, ok := n.(ast.Stmt)
+		if !ok {
+			return true
+		}
+		stmtEnd := pass.Fset.Position(stmt.End())
+		if stmtEnd.Filename != commentPos.Filename || stmtEnd.Line != commentPos.Line {
+			return true
+		}
+		if stmtEnd.Offset <= commentPos.Offset {
+			isTrailing = true
+			return false
+		}
+		return true
+	})
+
+	return isTrailing
 }
 
 // isTestFile returns true if the filename ends with _test.go.
@@ -617,4 +713,19 @@ func packageName(pkg *types.Package) string {
 		return path[i+1:]
 	}
 	return path
+}
+
+// qualFuncName builds a package-qualified function/method name for exception
+// matching and diagnostic messages. For methods, the format is
+// "pkg.ReceiverType.MethodName"; for functions, "pkg.FuncName".
+func qualFuncName(pass *analysis.Pass, fn *ast.FuncDecl) string {
+	pkgName := packageName(pass.Pkg)
+	funcName := fn.Name.Name
+	if fn.Recv != nil && len(fn.Recv.List) > 0 {
+		recvName := receiverTypeName(fn.Recv.List[0].Type)
+		if recvName != "" {
+			funcName = recvName + "." + funcName
+		}
+	}
+	return pkgName + "." + funcName
 }

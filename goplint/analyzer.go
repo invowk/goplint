@@ -30,405 +30,80 @@ import (
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
-	"golang.org/x/tools/go/ast/inspector"
 )
 
 // Diagnostic category constants for structured JSON output.
 // These appear in the "category" field of analysis.Diagnostic
 // when using -json mode, enabling agents to filter by finding type.
 const (
-	CategoryPrimitive              = "primitive"
-	CategoryMissingValidate        = "missing-validate"
-	CategoryMissingStringer        = "missing-stringer"
-	CategoryMissingConstructor     = "missing-constructor"
-	CategoryWrongConstructorSig    = "wrong-constructor-sig"
-	CategoryMissingFuncOptions     = "missing-func-options"
-	CategoryMissingImmutability    = "missing-immutability"
-	CategoryWrongValidateSig       = "wrong-validate-sig"
-	CategoryWrongStringerSig       = "wrong-stringer-sig"
-	CategoryMissingStructValidate  = "missing-struct-validate"
-	CategoryWrongStructValidateSig = "wrong-struct-validate-sig"
-	CategoryUnvalidatedCast        = "unvalidated-cast"
-	CategoryUnusedValidateResult   = "unused-validate-result"
-	CategoryUnusedConstructorError = "unused-constructor-error"
-	CategoryMissingConstructorValidate     = "missing-constructor-validate"
-	CategoryIncompleteValidateDelegation = "incomplete-validate-delegation"
-	CategoryNonZeroValueField          = "nonzero-value-field"
-	CategoryStaleException             = "stale-exception"
-	CategoryWrongFuncOptionType        = "wrong-func-option-type"
-	CategoryOverdueReview              = "overdue-review"
-	CategoryEnumCueMissingGo           = "enum-cue-missing-go"
-	CategoryEnumCueExtraGo             = "enum-cue-extra-go"
-	CategoryUnknownDirective           = "unknown-directive"
-	CategorySuggestValidateAll         = "suggest-validate-all"
+	CategoryPrimitive                     = "primitive"
+	CategoryMissingValidate               = "missing-validate"
+	CategoryMissingStringer               = "missing-stringer"
+	CategoryMissingConstructor            = "missing-constructor"
+	CategoryWrongConstructorSig           = "wrong-constructor-sig"
+	CategoryMissingFuncOptions            = "missing-func-options"
+	CategoryMissingImmutability           = "missing-immutability"
+	CategoryWrongValidateSig              = "wrong-validate-sig"
+	CategoryWrongStringerSig              = "wrong-stringer-sig"
+	CategoryMissingStructValidate         = "missing-struct-validate"
+	CategoryWrongStructValidateSig        = "wrong-struct-validate-sig"
+	CategoryUnvalidatedCast               = "unvalidated-cast"
+	CategoryUnusedValidateResult          = "unused-validate-result"
+	CategoryUnusedConstructorError        = "unused-constructor-error"
+	CategoryMissingConstructorValidate    = "missing-constructor-validate"
+	CategoryIncompleteValidateDelegation  = "incomplete-validate-delegation"
+	CategoryNonZeroValueField             = "nonzero-value-field"
+	CategoryStaleException                = "stale-exception"
+	CategoryWrongFuncOptionType           = "wrong-func-option-type"
+	CategoryOverdueReview                 = "overdue-review"
+	CategoryEnumCueMissingGo              = "enum-cue-missing-go"
+	CategoryEnumCueExtraGo                = "enum-cue-extra-go"
+	CategoryUnknownDirective              = "unknown-directive"
+	CategoryUseBeforeValidate             = "use-before-validate"
+	CategorySuggestValidateAll            = "suggest-validate-all"
+	CategoryMissingConstructorErrorReturn = "missing-constructor-error-return"
+	CategoryRedundantConversion           = "redundant-conversion"
+	CategoryMissingStructValidateFields   = "missing-struct-validate-fields"
 )
 
-// Flag binding variables for the analyzer's flag set. These are populated
-// by the go/analysis framework during flag parsing via BoolVar/StringVar.
-// The run() function never reads or mutates these directly — it reads them
-// once via newRunConfig() into a local struct.
-var (
-	configPath          string
-	baselinePath        string
-	auditExceptions     bool
-	checkAll            bool
-	checkValidate       bool
-	checkStringer       bool
-	checkConstructors   bool
-	checkConstructorSig bool
-	checkFuncOptions    bool
-	checkImmutability   bool
-	checkStructValidate bool
-	checkCastValidation          bool
-	checkValidateUsage           bool
-	checkConstructorErrUsage     bool
-	checkConstructorValidates    bool
-	checkValidateDelegation      bool
-	checkNonZero                 bool
-	noCFA                        bool
-	auditReviewDates             bool
-	checkEnumSync                bool
-	suggestValidateAll           bool
-)
-
-// Analyzer is the goplint analysis pass. Use it with singlechecker
-// or multichecker, or via go vet -vettool.
-var Analyzer = &analysis.Analyzer{
-	Name:      "goplint",
-	Doc:       "reports bare primitive types where DDD Value Types should be used",
-	URL:       "https://github.com/invowk/invowk/tools/goplint",
-	Run:       run,
-	Requires:  []*analysis.Analyzer{inspect.Analyzer},
-	FactTypes: []analysis.Fact{(*NonZeroFact)(nil)},
+// NewAnalyzer constructs an analyzer with isolated flag state.
+func NewAnalyzer() *analysis.Analyzer {
+	return newAnalyzerWithState(&flagState{})
 }
 
-func init() {
-	Analyzer.Flags.StringVar(&configPath, "config", "",
-		"path to exceptions TOML config file")
-	Analyzer.Flags.StringVar(&baselinePath, "baseline", "",
-		"path to baseline TOML file (suppress known findings, report only new ones)")
-	Analyzer.Flags.BoolVar(&auditExceptions, "audit-exceptions", false,
-		"report exception patterns that matched zero locations (stale entries)")
-	Analyzer.Flags.BoolVar(&checkValidate, "check-validate", false,
-		"report named non-struct types missing Validate() error method")
-	Analyzer.Flags.BoolVar(&checkStringer, "check-stringer", false,
-		"report named non-struct types missing String() string method")
-	Analyzer.Flags.BoolVar(&checkConstructors, "check-constructors", false,
-		"report exported struct types missing NewXxx() constructor function")
-	Analyzer.Flags.BoolVar(&checkConstructorSig, "check-constructor-sig", false,
-		"report NewXxx() constructors whose return type doesn't match the struct")
-	Analyzer.Flags.BoolVar(&checkFuncOptions, "check-func-options", false,
-		"report structs that should use or complete the functional options pattern")
-	Analyzer.Flags.BoolVar(&checkImmutability, "check-immutability", false,
-		"report structs with constructors that have exported mutable fields")
-	Analyzer.Flags.BoolVar(&checkStructValidate, "check-struct-validate", false,
-		"report exported struct types with constructors missing Validate() error method")
-	Analyzer.Flags.BoolVar(&checkCastValidation, "check-cast-validation", false,
-		"report type conversions to DDD Value Types from non-constants without Validate() check")
-	Analyzer.Flags.BoolVar(&checkValidateUsage, "check-validate-usage", false,
-		"detect unused Validate() results")
-	Analyzer.Flags.BoolVar(&checkConstructorErrUsage, "check-constructor-error-usage", false,
-		"detect constructor calls with error return assigned to blank identifier")
-	Analyzer.Flags.BoolVar(&checkConstructorValidates, "check-constructor-validates", false,
-		"report NewXxx() constructors that return types with Validate() but never call it")
-	Analyzer.Flags.BoolVar(&checkValidateDelegation, "check-validate-delegation", false,
-		"report structs with //goplint:validate-all whose Validate() misses field delegations")
-	Analyzer.Flags.BoolVar(&checkNonZero, "check-nonzero", false,
-		"report struct fields using nonzero-annotated types as value (non-pointer) fields where they are semantically optional")
-	Analyzer.Flags.BoolVar(&auditReviewDates, "audit-review-dates", false,
-		"report exception patterns with review_after dates that have passed")
-	Analyzer.Flags.BoolVar(&noCFA, "no-cfa", false,
-		"disable control-flow analysis and use AST heuristic for cast-validation (CFA is enabled by default)")
-	Analyzer.Flags.BoolVar(&checkEnumSync, "check-enum-sync", false,
-		"report mismatches between Go Validate() switch cases and CUE schema disjunction members (requires //goplint:enum-cue= directive)")
-	Analyzer.Flags.BoolVar(&suggestValidateAll, "suggest-validate-all", false,
-		"report structs with Validate() + validatable fields but no //goplint:validate-all directive (advisory)")
-	Analyzer.Flags.BoolVar(&checkAll, "check-all", false,
-		"enable all DDD compliance checks (validate + stringer + constructors + structural + cast-validation + validate-usage + constructor-error-usage + constructor-validates + nonzero + CFA)")
+func newAnalyzerWithState(state *flagState) *analysis.Analyzer {
+	resetFlagStateDefaults(state)
+	analyzer := &analysis.Analyzer{
+		Name:     "goplint",
+		Doc:      "reports bare primitive types where DDD Value Types should be used",
+		URL:      "https://github.com/invowk/invowk/tools/goplint",
+		Requires: []*analysis.Analyzer{inspect.Analyzer},
+		FactTypes: []analysis.Fact{
+			(*NonZeroFact)(nil),
+			(*ValidatesTypeFact)(nil),
+		},
+	}
+	analyzer.Run = func(pass *analysis.Pass) (any, error) {
+		return runWithState(pass, state)
+	}
+	bindAnalyzerFlags(analyzer, state)
+	return analyzer
 }
 
-// runConfig holds the resolved flag values for a single run() invocation.
-// Reading flag bindings into this struct at run() entry ensures run()
-// never reads or mutates package-level state directly.
-type runConfig struct {
-	configPath          string
-	baselinePath        string
-	auditExceptions     bool
-	checkAll            bool
-	checkValidate       bool
-	checkStringer       bool
-	checkConstructors   bool
-	checkConstructorSig bool
-	checkFuncOptions    bool
-	checkImmutability   bool
-	checkStructValidate bool
-	checkCastValidation          bool
-	checkValidateUsage           bool
-	checkConstructorErrUsage     bool
-	checkConstructorValidates    bool
-	checkValidateDelegation      bool
-	checkNonZero                 bool
-	noCFA                        bool
-	auditReviewDates             bool
-	checkEnumSync                bool
-	suggestValidateAll           bool
-}
-
-// newRunConfig reads the current flag binding values into a local config
-// struct and applies the --check-all expansion. The expansion happens on
-// the local struct, never mutating the package-level flag variables.
-func newRunConfig() runConfig {
-	rc := runConfig{
-		configPath:          configPath,
-		baselinePath:        baselinePath,
-		auditExceptions:     auditExceptions,
-		checkAll:            checkAll,
-		checkValidate:       checkValidate,
-		checkStringer:       checkStringer,
-		checkConstructors:   checkConstructors,
-		checkConstructorSig: checkConstructorSig,
-		checkFuncOptions:    checkFuncOptions,
-		checkImmutability:   checkImmutability,
-		checkStructValidate: checkStructValidate,
-		checkCastValidation:          checkCastValidation,
-		checkValidateUsage:           checkValidateUsage,
-		checkConstructorErrUsage:     checkConstructorErrUsage,
-		checkConstructorValidates:    checkConstructorValidates,
-		checkValidateDelegation:      checkValidateDelegation,
-		checkNonZero:                 checkNonZero,
-		noCFA:                        noCFA,
-		auditReviewDates:             auditReviewDates,
-		checkEnumSync:                checkEnumSync,
-		suggestValidateAll:           suggestValidateAll,
+func shouldReportOverdueReviewFinding(state *flagState, findingID string) bool {
+	if state == nil {
+		return true
 	}
-	// Expand --check-all into individual supplementary checks.
-	// Deliberately excludes --audit-exceptions (config maintenance tool
-	// with per-package false positives). CFA is enabled by default
-	// (opt out via --no-cfa).
-	if rc.checkAll {
-		rc.checkValidate = true
-		rc.checkStringer = true
-		rc.checkConstructors = true
-		rc.checkConstructorSig = true
-		rc.checkFuncOptions = true
-		rc.checkImmutability = true
-		rc.checkStructValidate = true
-		rc.checkCastValidation = true
-		rc.checkValidateUsage = true
-		rc.checkConstructorErrUsage = true
-		rc.checkConstructorValidates = true
-		rc.checkValidateDelegation = true
-		rc.checkNonZero = true
+	state.overdueReviewMu.Lock()
+	defer state.overdueReviewMu.Unlock()
+	if state.overdueReviewSeen == nil {
+		state.overdueReviewSeen = make(map[string]bool)
 	}
-	return rc
-}
-
-func run(pass *analysis.Pass) (any, error) {
-	rc := newRunConfig()
-
-	cfg, err := loadConfig(rc.configPath)
-	if err != nil {
-		return nil, err
+	if state.overdueReviewSeen[findingID] {
+		return false
 	}
-
-	bl, err := loadBaseline(rc.baselinePath)
-	if err != nil {
-		return nil, err
-	}
-
-	insp := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-
-	// Determine which data needs to be collected based on active modes.
-	needConstructors := rc.checkConstructors || rc.checkConstructorSig || rc.checkFuncOptions || rc.checkImmutability || rc.checkStructValidate || rc.checkConstructorValidates
-	needStructFields := rc.checkFuncOptions || rc.checkImmutability
-	needOptionTypes := rc.checkFuncOptions
-	needWithFunctions := rc.checkFuncOptions
-
-	// Collectors for the supplementary check modes. Built during the
-	// same AST traversal as the primary primitive check and evaluated
-	// after the traversal completes.
-	var (
-		namedTypes         []namedTypeInfo                 // non-struct named types (for validate/stringer)
-		methodSeen         map[string]*methodInfo          // "TypeName.MethodName" → signature info
-		exportedStructs    []exportedStructInfo            // exported struct types (for constructors + structural)
-		constructorDetails map[string]*constructorFuncInfo // "NewTypeName" → details
-		optionTypes        map[string]string               // optionTypeName → targetStructName
-		withFunctions      map[string][]withFuncInfo        // targetStructName → [withFuncInfo, ...]
-	)
-
-	// constantOnlyTypes tracks type names annotated with //goplint:constant-only.
-	// These types have Validate() but are only ever instantiated from
-	// compile-time constants, so their constructors are intentionally
-	// exempt from --check-constructor-validates.
-	var constantOnlyTypes map[string]bool
-	if rc.checkConstructorValidates {
-		constantOnlyTypes = make(map[string]bool)
-	}
-
-	// Method tracking serves Validate/Stringer checks, error type detection
-	// for the missing-constructor check (skip structs implementing error),
-	// and struct Validate() verification.
-	needMethods := rc.checkValidate || rc.checkStringer || rc.checkConstructors || rc.checkStructValidate
-	if needMethods {
-		methodSeen = make(map[string]*methodInfo)
-	}
-	if needConstructors {
-		constructorDetails = make(map[string]*constructorFuncInfo)
-	}
-	if needOptionTypes {
-		optionTypes = make(map[string]string)
-	}
-	if needWithFunctions {
-		withFunctions = make(map[string][]withFuncInfo)
-	}
-
-	nodeFilter := []ast.Node{
-		(*ast.GenDecl)(nil),
-		(*ast.FuncDecl)(nil),
-	}
-
-	insp.Preorder(nodeFilter, func(n ast.Node) {
-		// Skip test files entirely — test data legitimately uses primitives.
-		if isTestFile(pass, n.Pos()) {
-			return
-		}
-
-		// Skip files matching exclude_paths from config.
-		filePath := pass.Fset.Position(n.Pos()).Filename
-		if cfg.isExcludedPath(filePath) {
-			return
-		}
-
-		switch n := n.(type) {
-		case *ast.GenDecl:
-			// Primary mode: check struct fields for primitives.
-			inspectStructFields(pass, n, cfg, bl)
-
-			// Supplementary: collect named types.
-			if rc.checkValidate || rc.checkStringer {
-				collectNamedTypes(pass, n, &namedTypes)
-			}
-
-			// Collect exported structs — use field-enriched version when
-			// structural checks need field metadata.
-			if needConstructors {
-				if needStructFields {
-					collectExportedStructsWithFields(pass, n, &exportedStructs)
-				} else {
-					collectExportedStructs(pass, n, &exportedStructs)
-				}
-			}
-
-			// Structural: collect option type definitions.
-			if needOptionTypes {
-				collectOptionTypes(pass, n, optionTypes)
-			}
-
-			// Collect types with //goplint:constant-only directive.
-			if constantOnlyTypes != nil {
-				collectConstantOnlyTypes(n, constantOnlyTypes)
-			}
-
-		case *ast.FuncDecl:
-			// Primary mode: check func params and returns for primitives.
-			inspectFuncDecl(pass, n, cfg, bl)
-
-			// Supplementary: track methods for validate/stringer and error detection.
-			if needMethods {
-				trackMethods(pass, n, methodSeen)
-			}
-
-			// Track constructors with return type and param details.
-			if constructorDetails != nil {
-				trackConstructorDetails(pass, n, constructorDetails)
-			}
-
-			// Structural: track WithXxx option functions.
-			if needWithFunctions {
-				trackWithFunctions(pass, n, optionTypes, withFunctions)
-			}
-
-			// Cast validation: detect unvalidated type conversions to DDD types.
-			// CFA (default) uses path-reachability analysis; --no-cfa falls
-			// back to AST name-based heuristic.
-			if rc.checkCastValidation {
-				if rc.noCFA {
-					inspectUnvalidatedCasts(pass, n, cfg, bl)
-				} else {
-					inspectUnvalidatedCastsCFA(pass, n, cfg, bl)
-				}
-			}
-
-			// Validate usage: detect discarded Validate() results.
-			if rc.checkValidateUsage {
-				inspectValidateUsage(pass, n, cfg, bl)
-			}
-
-			// Constructor error usage: detect blanked error returns.
-			if rc.checkConstructorErrUsage {
-				inspectConstructorErrorUsage(pass, n, cfg, bl)
-			}
-		}
-	})
-
-	// Post-traversal checks for supplementary modes.
-	if rc.checkValidate {
-		reportMissingValidate(pass, namedTypes, methodSeen, cfg, bl)
-	}
-	if rc.checkStringer {
-		reportMissingStringer(pass, namedTypes, methodSeen, cfg, bl)
-	}
-	if rc.checkConstructors {
-		reportMissingConstructors(pass, exportedStructs, constructorDetails, methodSeen, cfg, bl)
-	}
-
-	// Structural checks — all require constructorDetails.
-	if rc.checkConstructorSig {
-		reportWrongConstructorSig(pass, exportedStructs, constructorDetails, cfg, bl)
-	}
-	if rc.checkFuncOptions {
-		reportMissingFuncOptions(pass, exportedStructs, constructorDetails, optionTypes, withFunctions, cfg, bl)
-	}
-	if rc.checkImmutability {
-		reportMissingImmutability(pass, exportedStructs, constructorDetails, cfg, bl)
-	}
-	if rc.checkStructValidate {
-		reportMissingStructValidate(pass, exportedStructs, constructorDetails, methodSeen, cfg, bl)
-	}
-	if rc.checkConstructorValidates {
-		inspectConstructorValidates(pass, constructorDetails, constantOnlyTypes, cfg, bl)
-	}
-
-	// Validate delegation — opt-in via //goplint:validate-all.
-	if rc.checkValidateDelegation {
-		inspectValidateDelegation(pass, cfg, bl)
-	}
-
-	// Nonzero field checks — cross-package via analysis.Fact.
-	if rc.checkNonZero {
-		inspectNonZero(pass, cfg, bl)
-	}
-
-	if rc.auditExceptions {
-		reportStaleExceptionsInline(pass, cfg)
-	}
-
-	if rc.auditReviewDates {
-		reportOverdueExceptions(pass, cfg)
-	}
-
-	// Suggest validate-all: advisory mode for structs that may benefit from the directive.
-	// NOT included in --check-all — this is purely advisory.
-	if rc.suggestValidateAll {
-		inspectSuggestValidateAll(pass, cfg, bl)
-	}
-
-	// Enum sync: compare Go Validate() switch cases against CUE disjunctions.
-	if rc.checkEnumSync {
-		inspectEnumSync(pass, cfg, bl)
-	}
-
-	return nil, nil
+	state.overdueReviewSeen[findingID] = true
+	return true
 }
 
 // namedTypeInfo records a non-struct named type definition for
@@ -444,6 +119,7 @@ type namedTypeInfo struct {
 type exportedStructInfo struct {
 	name    string            // unqualified type name (e.g., "Config")
 	pos     token.Pos         // position for diagnostics
+	typeKey string            // package-qualified type identity key
 	fields  []structFieldMeta // field metadata, populated when structural checks are active
 	mutable bool              // has //goplint:mutable directive (immutability exemption)
 }
@@ -462,7 +138,9 @@ type structFieldMeta struct {
 type constructorFuncInfo struct {
 	pos                    token.Pos // position for diagnostics
 	returnTypeName         string    // resolved first non-error return type name (e.g., "Config")
+	returnTypeKey          string    // package-qualified type identity key for first non-error return
 	returnsInterface       bool      // first non-error return is an interface (skip sig check)
+	returnsError           bool      // last return type is error (e.g., func() (*Foo, error))
 	paramCount             int       // parameter count excluding trailing variadic option
 	hasVariadicOpt         bool      // last param is ...OptionType (func taking *TargetStruct)
 	variadicOptionTypeName string    // variadic option type name (e.g., "ConfigOption")
@@ -549,9 +227,15 @@ func collectExportedStructs(pass *analysis.Pass, node *ast.GenDecl, out *[]expor
 			continue
 		}
 
+		typeKey := ""
+		if obj := pass.TypesInfo.Defs[ts.Name]; obj != nil {
+			typeKey = typeIdentityKey(obj.Type())
+		}
+
 		*out = append(*out, exportedStructInfo{
-			name: ts.Name.Name,
-			pos:  ts.Name.Pos(),
+			name:    ts.Name.Name,
+			pos:     ts.Name.Pos(),
+			typeKey: typeKey,
 		})
 	}
 }
@@ -609,7 +293,7 @@ const expectedStringerSig = "string"
 // with //goplint:constant-only. These types have Validate() but are only
 // instantiated from compile-time constants, so constructors returning them
 // are exempt from --check-constructor-validates.
-func collectConstantOnlyTypes(node *ast.GenDecl, out map[string]bool) {
+func collectConstantOnlyTypes(pkgPath string, node *ast.GenDecl, out map[string]bool) {
 	if node.Tok != token.TYPE {
 		return
 	}
@@ -619,7 +303,7 @@ func collectConstantOnlyTypes(node *ast.GenDecl, out map[string]bool) {
 			continue
 		}
 		if hasDirectiveKey(node.Doc, ts.Doc, "constant-only") {
-			out[ts.Name.Name] = true
+			out[pkgPath+"."+ts.Name.Name] = true
 		}
 	}
 }
@@ -726,7 +410,7 @@ func reportMissingStringer(pass *analysis.Pass, namedTypes []namedTypeInfo, meth
 func reportMissingConstructors(pass *analysis.Pass, structs []exportedStructInfo, ctors map[string]*constructorFuncInfo, methods map[string]*methodInfo, cfg *ExceptionConfig, bl *BaselineConfig) {
 	pkgName := packageName(pass.Pkg)
 	for _, s := range structs {
-		if findConstructorForStruct(s.name, ctors) != nil {
+		if findConstructorForStruct(s, ctors) != nil {
 			continue
 		}
 
@@ -761,8 +445,8 @@ func reportMissingConstructors(pass *analysis.Pass, structs []exportedStructInfo
 // Selection is deterministic: exact match ("New" + structName) is preferred,
 // then the lexicographically first prefix match. This avoids non-deterministic
 // results from map iteration order when multiple variant constructors exist.
-func findConstructorForStruct(structName string, ctors map[string]*constructorFuncInfo) *constructorFuncInfo {
-	prefix := "New" + structName
+func findConstructorForStruct(structInfo exportedStructInfo, ctors map[string]*constructorFuncInfo) *constructorFuncInfo {
+	prefix := "New" + structInfo.name
 	exactName := prefix
 
 	var bestName string
@@ -772,7 +456,11 @@ func findConstructorForStruct(structName string, ctors map[string]*constructorFu
 		if !strings.HasPrefix(name, prefix) {
 			continue
 		}
-		if info.returnTypeName != structName && !info.returnsInterface {
+		typeMatch := info.returnTypeName == structInfo.name
+		if structInfo.typeKey != "" && info.returnTypeKey != "" {
+			typeMatch = sameStructTypeIdentity(structInfo.typeKey, info.returnTypeKey)
+		}
+		if !typeMatch && !info.returnsInterface {
 			continue
 		}
 		// Exact match always wins.
@@ -786,6 +474,26 @@ func findConstructorForStruct(structName string, ctors map[string]*constructorFu
 		}
 	}
 	return bestInfo
+}
+
+// sameStructTypeIdentity matches constructor return type keys to exported struct
+// keys, including generic instantiations (e.g. pkg.Box[T] vs pkg.Box).
+func sameStructTypeIdentity(structTypeKey, returnTypeKey string) bool {
+	if structTypeKey == "" || returnTypeKey == "" {
+		return false
+	}
+	if structTypeKey == returnTypeKey {
+		return true
+	}
+	structBase := structTypeKey
+	if idx := strings.Index(structBase, "["); idx >= 0 {
+		structBase = structBase[:idx]
+	}
+	returnBase := returnTypeKey
+	if idx := strings.Index(returnBase, "["); idx >= 0 {
+		returnBase = returnBase[:idx]
+	}
+	return structBase != "" && structBase == returnBase
 }
 
 // reportStaleExceptionsInline reports stale exceptions via pass.Reportf.
@@ -806,13 +514,16 @@ func reportStaleExceptionsInline(pass *analysis.Pass, cfg *ExceptionConfig) {
 			"stale exception: pattern %q matched no diagnostics (reason: %s)",
 			exc.Pattern, exc.Reason)
 		findingID := StableFindingID(CategoryStaleException, exc.Pattern)
-		reportDiagnostic(pass, pos, CategoryStaleException, findingID, msg)
+		reportDiagnosticWithMeta(pass, pos, CategoryStaleException, findingID, msg, map[string]string{
+			"pattern": exc.Pattern,
+		})
 	}
 }
 
 // reportOverdueExceptions reports exceptions with review_after dates that
-// have passed. Only runs once per analysis (first package).
-func reportOverdueExceptions(pass *analysis.Pass, cfg *ExceptionConfig) {
+// have passed. Findings are deduplicated by stable finding ID across package
+// passes in the current process.
+func reportOverdueExceptions(pass *analysis.Pass, cfg *ExceptionConfig, state *flagState) {
 	if len(pass.Files) == 0 {
 		return
 	}
@@ -830,6 +541,9 @@ func reportOverdueExceptions(pass *analysis.Pass, cfg *ExceptionConfig) {
 				"exception pattern %q has invalid review_after date %q: %v",
 				exc.Pattern, exc.ReviewAfter, err)
 			findingID := StableFindingID(CategoryOverdueReview, exc.Pattern, "invalid-date")
+			if !shouldReportOverdueReviewFinding(state, findingID) {
+				continue
+			}
 			reportDiagnostic(pass, pos, CategoryOverdueReview, findingID, msg)
 			continue
 		}
@@ -841,6 +555,9 @@ func reportOverdueExceptions(pass *analysis.Pass, cfg *ExceptionConfig) {
 				msg += fmt.Sprintf(" (blocked by: %s)", exc.BlockedBy)
 			}
 			findingID := StableFindingID(CategoryOverdueReview, exc.Pattern)
+			if !shouldReportOverdueReviewFinding(state, findingID) {
+				continue
+			}
 			reportDiagnostic(pass, pos, CategoryOverdueReview, findingID, msg)
 		}
 	}

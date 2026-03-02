@@ -2,7 +2,16 @@
 
 package castvalidation
 
-import "fmt"
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"log"
+	. "log/slog"
+	"slices"
+	"strconv"
+	"strings"
+)
 
 // --- DDD Value Types for testing ---
 
@@ -30,6 +39,19 @@ func (p PortNumber) Validate() error {
 
 func (p PortNumber) String() string { return fmt.Sprintf("%d", int(p)) }
 
+// ErrorCode is a DDD Value Type that also implements the error interface.
+// Used for errors.Is/errors.As auto-skip tests.
+type ErrorCode int
+
+func (e ErrorCode) Validate() error {
+	if e < 100 || e > 599 {
+		return fmt.Errorf("invalid error code: %d", int(e))
+	}
+	return nil
+}
+
+func (e ErrorCode) Error() string { return fmt.Sprintf("error code %d", int(e)) }
+
 // NoValidate has no Validate method — casts to this should NOT be flagged.
 type NoValidate string
 
@@ -37,6 +59,12 @@ func (n NoValidate) String() string { return string(n) }
 
 // AnotherNamedType wraps string — not a raw primitive.
 type AnotherNamedType string
+
+// errorFieldHolder exposes a field named Error to ensure we do not treat any
+// `.Error()` selector call as an error-message source.
+type errorFieldHolder struct {
+	Error func() string
+}
 
 // --- Helper functions providing runtime values without param-level findings ---
 
@@ -132,9 +160,43 @@ func UnassignedMapKey(input string) { // want `parameter "input" of castvalidati
 	_ = m[CommandName(input)] // NOT flagged — map lookup
 }
 
+// UnassignedMapKeyWrite — SHOULD be flagged (map assignment LHS key is a use).
+func UnassignedMapKeyWrite(input string) { // want `parameter "input" of castvalidation\.UnassignedMapKeyWrite uses primitive type string`
+	m := map[CommandName]bool{}
+	m[CommandName(input)] = true // want `type conversion to CommandName from non-constant without Validate\(\) check`
+}
+
+// UnassignedMapKeyParenLookup — should NOT be flagged (auto-skip with parens).
+func UnassignedMapKeyParenLookup(input string) { // want `parameter "input" of castvalidation\.UnassignedMapKeyParenLookup uses primitive type string`
+	m := map[CommandName]bool{}
+	_ = m[(CommandName(input))] // NOT flagged — map lookup with parenthesized cast
+}
+
+// UnassignedSliceIndexNotAutoSkip — SHOULD be flagged. Auto-skip for index
+// expressions only applies to map-key lookups.
+func UnassignedSliceIndexNotAutoSkip() {
+	items := []string{"run", "build"}
+	_ = items[PortNumber(runtimeInt())] // want `type conversion to PortNumber from non-constant without Validate\(\) check`
+}
+
 // UnassignedComparison — should NOT be flagged (auto-skip: comparison).
 func UnassignedComparison(input string, expected CommandName) bool { // want `parameter "input" of castvalidation\.UnassignedComparison uses primitive type string`
 	return CommandName(input) == expected // NOT flagged — comparison
+}
+
+// UnassignedComparisonParen — should NOT be flagged (comparison with parens).
+func UnassignedComparisonParen(input string, expected CommandName) bool { // want `parameter "input" of castvalidation\.UnassignedComparisonParen uses primitive type string`
+	return (CommandName(input)) == expected // NOT flagged — parenthesized comparison
+}
+
+// UnassignedSwitchParenTag — should NOT be flagged (switch tag with parens).
+func UnassignedSwitchParenTag(input string) bool { // want `parameter "input" of castvalidation\.UnassignedSwitchParenTag uses primitive type string`
+	switch CommandName(input) {
+	case CommandName("run"):
+		return true
+	default:
+		return false
+	}
 }
 
 // UnassignedFmtArg — should NOT be flagged (auto-skip: fmt argument).
@@ -185,6 +247,58 @@ func CastWithAssignOpValidated(input string) { // want `parameter "input" of cas
 	_ = name
 }
 
+// CastWithVarDeclValidated — var declaration assignment should be tracked.
+func CastWithVarDeclValidated(input string) { // want `parameter "input" of castvalidation\.CastWithVarDeclValidated uses primitive type string`
+	var name CommandName = CommandName(input)
+	if err := name.Validate(); err != nil {
+		return
+	}
+	_ = name
+}
+
+// CastWithParenAssignmentValidated — parenthesized RHS should still be tracked
+// as an assigned cast.
+func CastWithParenAssignmentValidated(input string) { // want `parameter "input" of castvalidation\.CastWithParenAssignmentValidated uses primitive type string`
+	name := (CommandName(input))
+	if err := name.Validate(); err != nil {
+		return
+	}
+	_ = name
+}
+
+// CastSelectorLHSValidated — selector assignment should be treated as assigned.
+func CastSelectorLHSValidated(input string) { // want `parameter "input" of castvalidation\.CastSelectorLHSValidated uses primitive type string`
+	cfg := struct {
+		Name CommandName
+	}{}
+	cfg.Name = CommandName(input)
+	if err := cfg.Name.Validate(); err != nil {
+		return
+	}
+	_ = cfg
+}
+
+// CastWithAddressOfValidateReceiver — should NOT be flagged. Address-of on the
+// Validate receiver must canonicalize to the assigned target.
+func CastWithAddressOfValidateReceiver(input string) { // want `parameter "input" of castvalidation\.CastWithAddressOfValidateReceiver uses primitive type string`
+	name := CommandName(input)
+	if err := (&name).Validate(); err != nil {
+		return
+	}
+	_ = name
+}
+
+// IndexedLHSParenCanonicalization — should NOT be flagged. Parentheses on
+// an indexed Validate receiver must canonicalize to the same cast target.
+func IndexedLHSParenCanonicalization() {
+	ports := []PortNumber{0}
+	ports[0] = PortNumber(runtimeInt())
+	if err := ports[(0)].Validate(); err != nil {
+		return
+	}
+	_ = ports
+}
+
 // --- Chained Validate tests (Issue 1 fix) ---
 
 // ChainedValidate — should NOT be flagged (validated directly on cast result).
@@ -208,10 +322,10 @@ func ChainedNonValidate(input string) { // want `parameter "input" of castvalida
 
 // --- Closure isolation tests (Issue 6 fix) ---
 
-// CastInsideClosure — closure casts are NOT analyzed (skipped).
+// CastInsideClosure — asynchronous closure casts are still checked.
 func CastInsideClosure(input string) { // want `parameter "input" of castvalidation\.CastInsideClosure uses primitive type string`
 	go func() {
-		name := CommandName(input) // NOT flagged — closure body skipped
+		name := CommandName(input) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 		_ = name
 	}()
 }
@@ -237,9 +351,31 @@ func CastFromFmtErrorf() {
 	_ = msg
 }
 
+// CastFromStrconvItoa — should NOT be flagged (source is strconv formatting).
+func CastFromStrconvItoa(v int) { // want `parameter "v" of castvalidation\.CastFromStrconvItoa uses primitive type int`
+	msg := CommandName(strconv.Itoa(v))
+	_ = msg
+}
+
+// CastFromStrconvFormatInt — should NOT be flagged (source is strconv formatting).
+func CastFromStrconvFormatInt(v int64) { // want `parameter "v" of castvalidation\.CastFromStrconvFormatInt uses primitive type int64`
+	msg := CommandName(strconv.FormatInt(v, 10))
+	_ = msg
+}
+
 // UnassignedCastFromError — should NOT be flagged (source is .Error()).
 func UnassignedCastFromError(err error) {
 	useCmd(CommandName(err.Error())) // NOT flagged — error-message source
+}
+
+// CastFromNonErrorErrorFieldCall — SHOULD be flagged. A selector call named
+// Error() is only auto-skipped when the receiver actually implements error.
+func CastFromNonErrorErrorFieldCall(input string) { // want `parameter "input" of castvalidation\.CastFromNonErrorErrorFieldCall uses primitive type string`
+	holder := errorFieldHolder{
+		Error: func() string { return input },
+	}
+	name := CommandName(holder.Error()) // want `type conversion to CommandName from non-constant without Validate\(\) check`
+	_ = name
 }
 
 // CastFromPlainVariableStillFlagged — SHOULD still be flagged.
@@ -284,4 +420,152 @@ func CastInCompositeLitFmtArg(input string) string { // want `parameter "input" 
 // CastInSliceFmtArg — should NOT be flagged (slice inside fmt call).
 func CastInSliceFmtArg(input string) string { // want `parameter "input" of castvalidation\.CastInSliceFmtArg uses primitive type string` `return value of castvalidation\.CastInSliceFmtArg uses primitive type string`
 	return fmt.Sprintf("items: %v", []CommandName{CommandName(input)})
+}
+
+// --- log/slog auto-skip: display-only logging sinks ---
+
+// LogPrintfAutoSkip — should NOT be flagged (log.Printf is display-only).
+func LogPrintfAutoSkip(input string) { // want `parameter "input" of castvalidation\.LogPrintfAutoSkip uses primitive type string`
+	log.Printf("cmd: %s", CommandName(input)) // NOT flagged — display only
+}
+
+// SlogInfoAutoSkip — should NOT be flagged (slog.Info is display-only).
+func SlogInfoAutoSkip(input string) { // want `parameter "input" of castvalidation\.SlogInfoAutoSkip uses primitive type string`
+	Info("cmd", "name", CommandName(input)) // NOT flagged — display only (dot import)
+}
+
+// LogPrintAutoSkip — should NOT be flagged (log.Print is display-only).
+func LogPrintAutoSkip(input string) { // want `parameter "input" of castvalidation\.LogPrintAutoSkip uses primitive type string`
+	log.Print("cmd: ", CommandName(input)) // NOT flagged — display only
+}
+
+// --- Ancestor depth limit tests (maxAncestorDepth = 5) ---
+
+// CastAtAncestorDepthWithinLimit — should NOT be flagged because the cast
+// is nested inside a 2-level composite literal chain within fmt.Sprintf.
+// The ancestor walk reaches fmt.Sprintf at hop 4 (within maxAncestorDepth=5):
+//
+//	start = KeyValueExpr(V: cast)
+//	hop 1 = CompositeLit(Inner{...})
+//	hop 2 = KeyValueExpr(V: Inner{...})
+//	hop 3 = CompositeLit(Outer{...})
+//	hop 4 = CallExpr(fmt.Sprintf) → found, auto-skip
+func CastAtAncestorDepthWithinLimit(input string) string { // want `parameter "input" of castvalidation\.CastAtAncestorDepthWithinLimit uses primitive type string` `return value of castvalidation\.CastAtAncestorDepthWithinLimit uses primitive type string`
+	type inner struct{ V CommandName }
+	type outer struct{ V inner }
+	return fmt.Sprintf("%v", outer{V: inner{V: CommandName(input)}})
+}
+
+// CastBeyondAncestorDepthLimit — SHOULD be flagged because the cast is
+// nested inside a 3-level composite literal chain within fmt.Sprintf.
+// The ancestor walk exhausts all 5 iterations before reaching fmt.Sprintf:
+//
+//	start = KeyValueExpr(V: cast)
+//	hop 1 = CompositeLit(L1{...})
+//	hop 2 = KeyValueExpr(V: L1{...})
+//	hop 3 = CompositeLit(L2{...})
+//	hop 4 = KeyValueExpr(V: L2{...})
+//	hop 5 = CompositeLit(L3{...}) — NOT a call, loop ends
+//	fmt.Sprintf would be at hop 6, beyond maxAncestorDepth
+func CastBeyondAncestorDepthLimit(input string) string { // want `parameter "input" of castvalidation\.CastBeyondAncestorDepthLimit uses primitive type string` `return value of castvalidation\.CastBeyondAncestorDepthLimit uses primitive type string`
+	type l1 struct{ V CommandName }
+	type l2 struct{ V l1 }
+	type l3 struct{ V l2 }
+	return fmt.Sprintf("%v", l3{V: l2{V: l1{V: CommandName(input)}}}) // want `type conversion to CommandName from non-constant without Validate\(\) check`
+}
+
+// --- strings.* comparison auto-skip tests ---
+
+// StringsContainsAutoSkip — should NOT be flagged (strings.Contains is
+// a comparison predicate — the cast value is tested, not used as domain input).
+func StringsContainsAutoSkip(input string) bool { // want `parameter "input" of castvalidation\.StringsContainsAutoSkip uses primitive type string`
+	return strings.Contains(string(CommandName(input)), "prefix") // NOT flagged — comparison
+}
+
+// StringsHasPrefixAutoSkip — should NOT be flagged.
+func StringsHasPrefixAutoSkip(input string) bool { // want `parameter "input" of castvalidation\.StringsHasPrefixAutoSkip uses primitive type string`
+	return strings.HasPrefix(string(CommandName(input)), "cmd") // NOT flagged — comparison
+}
+
+// StringsHasSuffixAutoSkip — should NOT be flagged.
+func StringsHasSuffixAutoSkip(input string) bool { // want `parameter "input" of castvalidation\.StringsHasSuffixAutoSkip uses primitive type string`
+	return strings.HasSuffix(string(CommandName(input)), "-run") // NOT flagged — comparison
+}
+
+// StringsEqualFoldAutoSkip — should NOT be flagged.
+func StringsEqualFoldAutoSkip(input string) bool { // want `parameter "input" of castvalidation\.StringsEqualFoldAutoSkip uses primitive type string`
+	return strings.EqualFold(string(CommandName(input)), "RUN") // NOT flagged — comparison
+}
+
+// StringsReplaceNotSkipped — SHOULD be flagged because strings.ReplaceAll
+// is not a comparison function — it processes the domain value.
+func StringsReplaceNotSkipped(input string) string { // want `parameter "input" of castvalidation\.StringsReplaceNotSkipped uses primitive type string` `return value of castvalidation\.StringsReplaceNotSkipped uses primitive type string`
+	return strings.ReplaceAll(string(CommandName(input)), "-", "_") // want `type conversion to CommandName from non-constant without Validate\(\) check`
+}
+
+// --- slices.* comparison auto-skip tests ---
+
+// SlicesContainsAutoSkip — should NOT be flagged (slices.Contains is
+// a membership predicate — the cast value is tested, not consumed).
+func SlicesContainsAutoSkip(input string) bool { // want `parameter "input" of castvalidation\.SlicesContainsAutoSkip uses primitive type string`
+	items := []CommandName{CommandName("run"), CommandName("build")}
+	return slices.Contains(items, CommandName(input)) // NOT flagged — comparison
+}
+
+// SlicesIndexAutoSkip — should NOT be flagged (slices.Index is
+// a lookup predicate — the cast value is tested for position, not consumed).
+func SlicesIndexAutoSkip(input string) int { // want `parameter "input" of castvalidation\.SlicesIndexAutoSkip uses primitive type string` `return value of castvalidation\.SlicesIndexAutoSkip uses primitive type int`
+	items := []CommandName{CommandName("run"), CommandName("build")}
+	return slices.Index(items, CommandName(input)) // NOT flagged — comparison
+}
+
+// SlicesSortNotSkipped — SHOULD be flagged because slices.SortFunc
+// is not a comparison function — it processes/mutates the domain values.
+func SlicesSortNotSkipped(input string) { // want `parameter "input" of castvalidation\.SlicesSortNotSkipped uses primitive type string`
+	items := []CommandName{CommandName(input)} // want `type conversion to CommandName from non-constant without Validate\(\) check`
+	slices.SortFunc(items, func(a, b CommandName) int { return 0 })
+	_ = items
+}
+
+// --- errors.Is/errors.As comparison auto-skip tests ---
+
+// ErrorsIsAutoSkip — should NOT be flagged (errors.Is is a type/identity
+// comparison operation — the cast value is used for error matching).
+func ErrorsIsAutoSkip(input int) bool { // want `parameter "input" of castvalidation\.ErrorsIsAutoSkip uses primitive type int`
+	err := errors.New("test")
+	return errors.Is(err, ErrorCode(input)) // NOT flagged — comparison
+}
+
+// ErrorsAsAutoSkip — should NOT be flagged (errors.As is a type-matching
+// comparison operation). The cast ErrorCode(runtimeInt()) appears as an
+// argument to errors.As, which is an auto-skip context.
+func ErrorsAsAutoSkip() bool {
+	err := errors.New("test")
+	return errors.As(err, ErrorCode(runtimeInt())) // NOT flagged — comparison
+}
+
+// --- bytes.Contains/HasPrefix/HasSuffix/EqualFold comparison auto-skip tests ---
+
+// BytesContainsAutoSkip — should NOT be flagged (bytes.Contains is
+// a comparison predicate — the cast value is tested for containment).
+func BytesContainsAutoSkip(input string) bool { // want `parameter "input" of castvalidation\.BytesContainsAutoSkip uses primitive type string`
+	return bytes.Contains([]byte(string(CommandName(input))), []byte("run")) // NOT flagged — comparison
+}
+
+// BytesHasPrefixAutoSkip — should NOT be flagged (bytes.HasPrefix is
+// a comparison predicate — the cast value is tested for prefix matching).
+func BytesHasPrefixAutoSkip(input string) bool { // want `parameter "input" of castvalidation\.BytesHasPrefixAutoSkip uses primitive type string`
+	return bytes.HasPrefix([]byte(string(CommandName(input))), []byte("cmd")) // NOT flagged — comparison
+}
+
+// BytesHasSuffixAutoSkip — should NOT be flagged (bytes.HasSuffix is
+// a comparison predicate — the cast value is tested for suffix matching).
+func BytesHasSuffixAutoSkip(input string) bool { // want `parameter "input" of castvalidation\.BytesHasSuffixAutoSkip uses primitive type string`
+	return bytes.HasSuffix([]byte(string(CommandName(input))), []byte("-run")) // NOT flagged — comparison
+}
+
+// BytesEqualFoldAutoSkip — should NOT be flagged (bytes.EqualFold is
+// a comparison predicate — the cast value is tested for case-insensitive equality).
+func BytesEqualFoldAutoSkip(input string) bool { // want `parameter "input" of castvalidation\.BytesEqualFoldAutoSkip uses primitive type string`
+	return bytes.EqualFold([]byte(string(CommandName(input))), []byte("RUN")) // NOT flagged — comparison
 }

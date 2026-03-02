@@ -82,11 +82,10 @@ make update-baseline
 
 - Named types (`type CommandName string`) -- these _are_ the DDD Value Types
 - `bool` -- exempt by design (marginal DDD value)
-- `[]byte` -- I/O boundary type
 - `error` -- interface, not a primitive
 - Interface method signatures
 - `String()`, `Error()`, `GoString()`, `MarshalText()`, `MarshalBinary()`, `MarshalJSON()` return types (interface contracts)
-- Test files (`_test.go`), `init()`, `main()`, `Test*`, `Benchmark*` functions
+- Test files (`_test.go`), `init()`, `main()`
 
 ## Exceptions
 
@@ -142,6 +141,15 @@ make build-goplint
 
 > Note: `--audit-exceptions` reports per-package (a `go/analysis` limitation). Pipe through `sort -u` for deduplicated results.
 
+For CI-friendly global stale detection:
+
+```bash
+make build-goplint
+./bin/goplint -audit-exceptions -global -config=tools/goplint/exceptions.toml ./...
+```
+
+`-global` aggregates stale patterns by package coverage and exits non-zero when globally stale patterns are found.
+
 ## Baseline Comparison
 
 The baseline prevents DDD compliance regressions. A committed `baseline.toml` records all accepted findings; only **new** findings trigger errors.
@@ -183,11 +191,11 @@ entries = [
 ```
 
 `id` is the stable semantic identity used for suppression; `message` is for human readability.  
-`messages = [...]` (v1 format) is still accepted for backward compatibility and used as fallback matching.
+`messages = [...]` (v1 format) is still accepted for backward compatibility, but ID matching is authoritative when diagnostics provide IDs.
 
 ### CI Integration
 
-The `goplint-baseline` job in `.github/workflows/lint.yml` runs `make check-baseline` on every PR. During rollout it is advisory (`continue-on-error: true`).
+The `goplint-baseline` job in `.github/workflows/lint.yml` runs `make check-baseline` on every PR as a required regression gate.
 
 ### Pre-commit Hook
 
@@ -246,6 +254,7 @@ Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constr
 | `-check-immutability` | bool | `false` | Report constructor-backed structs with exported mutable fields |
 | `-check-struct-validate` | bool | `false` | Report constructor-backed structs missing `Validate()` |
 | `-audit-exceptions` | bool | `false` | Report stale exception patterns |
+| `-global` | bool | `false` | Aggregate `-audit-exceptions` globally and fail on globally stale patterns |
 | `-update-baseline` | string | `""` | Generate baseline TOML at the given path |
 | `-json` | bool | `false` | JSON output (built-in from `go/analysis`) |
 
@@ -258,7 +267,11 @@ tools/goplint/
 ├── baseline.toml           # Accepted findings baseline (generated)
 ├── go.mod                  # Separate Go module (avoids polluting main go.mod)
 └── goplint/
-    ├── analyzer.go         # Analyzer definition, run() orchestration, supplementary modes
+    ├── analyzer.go         # Analyzer definition + shared supplementary-mode helpers
+    ├── flags.go            # Declarative mode flag table + registration/newRunConfig/check-all
+    ├── analyzer_run.go     # run() orchestration phases (inputs/traversal/post-checks)
+    ├── analyzer_cast_validation.go # AST cast-validation heuristics + auto-skip contexts
+    ├── cfa*.go             # CFA layer for path-sensitive cast and UBV checks
     ├── baseline.go         # Baseline TOML loading, matching, writing
     ├── config.go           # Exception TOML loading, pattern matching
     ├── inspect.go          # Struct/func AST visitors, diagnostic emission
@@ -268,6 +281,13 @@ tools/goplint/
 ```
 
 The tool is a **separate Go module** to avoid adding `golang.org/x/tools` and `github.com/BurntSushi/toml` to the main project's dependency tree.
+
+### CFA Notes
+
+- `--check-cast-validation`, `--check-constructor-validates`, and `--check-use-before-validate*` are CFA-only checks.
+- `--no-cfa` with any of those checks is rejected in run-config validation.
+- Auto-skip for index expressions is map-only (map lookups), not slice/array indexing.
+- UBV checks treat immediate IIFEs as synchronous ordering context; deferred `Validate()` does not suppress use-before-validate findings.
 
 ## Testing
 

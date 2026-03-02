@@ -14,6 +14,11 @@ type SkippedType struct {
 	Timeout int64 // no diagnostic — int64 is in skip_types for this test config
 }
 
+// SkippedMapKeyType verifies skip_types applies to map key primitives too.
+type SkippedMapKeyType struct {
+	Lookup map[int64]fakeModel // no diagnostic — int64 map key is in skip_types
+}
+
 // ExceptedFunc has a param excepted via TOML config.
 func ExceptedFunc(name string) { // no diagnostic — excepted via config
 	_ = name

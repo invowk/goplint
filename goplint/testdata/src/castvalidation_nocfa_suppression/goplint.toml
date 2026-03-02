@@ -1,0 +1,3 @@
+[[exceptions]]
+pattern = "castvalidation_nocfa_suppression.ConfigSuppressed.cast-validation"
+reason = "config suppression coverage"

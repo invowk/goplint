@@ -7,13 +7,13 @@ func init() {
 	var _ string = ""
 }
 
-// BenchmarkFoo is skipped — no diagnostic expected.
-func BenchmarkFoo(name string) {
+// BenchmarkFoo is no longer skipped by prefix; only _test.go files are skipped.
+func BenchmarkFoo(name string) { // want `parameter "name" of skipfuncs\.BenchmarkFoo uses primitive type string`
 	_ = name
 }
 
-// FuzzBar is skipped — no diagnostic expected.
-func FuzzBar(data string) {
+// FuzzBar is no longer skipped by prefix; only _test.go files are skipped.
+func FuzzBar(data string) { // want `parameter "data" of skipfuncs\.FuzzBar uses primitive type string`
 	_ = data
 }
 
@@ -22,8 +22,8 @@ func ExampleBaz() {
 	var _ string = ""
 }
 
-// TestSomething is skipped — no diagnostic expected.
-func TestSomething(name string) {
+// TestSomething is no longer skipped by prefix; only _test.go files are skipped.
+func TestSomething(name string) { // want `parameter "name" of skipfuncs\.TestSomething uses primitive type string`
 	_ = name
 }
 

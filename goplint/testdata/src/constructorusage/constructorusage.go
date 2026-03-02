@@ -68,6 +68,11 @@ func errorBlankedRegularAssign() {
 	_ = result
 }
 
+func errorBlankedVarDecl() {
+	var result, _ = NewFoo("test") // want `constructor NewFoo error return assigned to blank identifier`
+	_ = result
+}
+
 // --- FLAGGED: cross-package selector expression (simulated with local receiver func) ---
 
 // pkg is a helper type to simulate cross-package calls within analysistest.

@@ -25,6 +25,16 @@ type ExceptionConfig struct {
 	matchCounts map[int]int
 }
 
+type configCacheKey struct {
+	path          string
+	strictMissing bool
+}
+
+type configCacheEntry struct {
+	template *ExceptionConfig
+	err      error
+}
+
 // Settings configures global analyzer behavior.
 type Settings struct {
 	// SkipTypes lists type names that should never be flagged
@@ -33,6 +43,11 @@ type Settings struct {
 	// ExcludePaths lists path substrings that cause files to be skipped.
 	// If any substring matches the file path, the file is excluded.
 	ExcludePaths []string `toml:"exclude_paths"`
+	// IncludePackages restricts diagnostic emission to packages whose
+	// import path starts with one of these prefixes. Empty means no filter
+	// (all packages emit diagnostics). Third-party packages are still
+	// analyzed for fact export but their findings are suppressed.
+	IncludePackages []string `toml:"include_packages"`
 }
 
 // Exception represents a single exception rule for an intentional
@@ -54,9 +69,10 @@ type Exception struct {
 }
 
 // loadConfig reads and parses the exceptions TOML file.
-// Returns an empty config (no exceptions) if path is empty or the file
-// doesn't exist.
-func loadConfig(path string) (*ExceptionConfig, error) {
+// Returns an empty config (no exceptions) if path is empty.
+// If strictMissing is false, a missing file also yields an empty config.
+// If strictMissing is true, a missing file returns an error.
+func loadConfig(path string, strictMissing bool) (*ExceptionConfig, error) {
 	if path == "" {
 		return &ExceptionConfig{matchCounts: make(map[int]int)}, nil
 	}
@@ -64,19 +80,95 @@ func loadConfig(path string) (*ExceptionConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			if strictMissing {
+				return nil, fmt.Errorf("reading config: %w", err)
+			}
 			return &ExceptionConfig{matchCounts: make(map[int]int)}, nil
 		}
 		return nil, fmt.Errorf("reading config: %w", err)
 	}
 
 	var cfg ExceptionConfig
-	if err := toml.Unmarshal(data, &cfg); err != nil {
+	meta, err := toml.Decode(string(data), &cfg)
+	if err != nil {
 		return nil, fmt.Errorf("parsing config TOML: %w", err)
+	}
+	if undecoded := meta.Undecoded(); len(undecoded) > 0 {
+		return nil, fmt.Errorf("parsing config TOML: unknown keys: %s", joinTOMLKeys(undecoded))
+	}
+	if err := validateExceptionPatterns(cfg.Exceptions); err != nil {
+		return nil, err
 	}
 
 	cfg.matchCounts = make(map[int]int, len(cfg.Exceptions))
 
 	return &cfg, nil
+}
+
+// loadConfigCached reads exceptions config through a process-local cache.
+// The returned config is always a per-run clone with fresh match counters.
+func loadConfigCached(state *flagState, path string, strictMissing bool) (*ExceptionConfig, error) {
+	if state == nil {
+		return loadConfig(path, strictMissing)
+	}
+	key := configCacheKey{path: path, strictMissing: strictMissing}
+	if cached, ok := state.configCache.Load(key); ok {
+		entry := cached.(*configCacheEntry)
+		if entry.err != nil {
+			return nil, entry.err
+		}
+		return cloneExceptionConfig(entry.template), nil
+	}
+
+	cfg, err := loadConfig(path, strictMissing)
+	entry := &configCacheEntry{err: err}
+	if err == nil {
+		entry.template = configTemplate(cfg)
+	}
+	state.configCache.Store(key, entry)
+	if err != nil {
+		return nil, err
+	}
+
+	return cloneExceptionConfig(entry.template), nil
+}
+
+func configTemplate(cfg *ExceptionConfig) *ExceptionConfig {
+	if cfg == nil {
+		return &ExceptionConfig{}
+	}
+	return &ExceptionConfig{
+		Settings: Settings{
+			SkipTypes:       slices.Clone(cfg.Settings.SkipTypes),
+			ExcludePaths:    slices.Clone(cfg.Settings.ExcludePaths),
+			IncludePackages: slices.Clone(cfg.Settings.IncludePackages),
+		},
+		Exceptions: slices.Clone(cfg.Exceptions),
+	}
+}
+
+func cloneExceptionConfig(template *ExceptionConfig) *ExceptionConfig {
+	if template == nil {
+		return &ExceptionConfig{matchCounts: make(map[int]int)}
+	}
+	clone := &ExceptionConfig{
+		Settings: Settings{
+			SkipTypes:       slices.Clone(template.Settings.SkipTypes),
+			ExcludePaths:    slices.Clone(template.Settings.ExcludePaths),
+			IncludePackages: slices.Clone(template.Settings.IncludePackages),
+		},
+		Exceptions:  slices.Clone(template.Exceptions),
+		matchCounts: make(map[int]int, len(template.Exceptions)),
+	}
+	return clone
+}
+
+func joinTOMLKeys(keys []toml.Key) string {
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, key.String())
+	}
+	return strings.Join(parts, ", ")
 }
 
 // isExcepted checks whether a qualified name (e.g., "pkg.Type.Field")
@@ -111,8 +203,26 @@ func (c *ExceptionConfig) isSkippedType(typeName string) bool {
 // isExcludedPath checks whether a file path contains any of the
 // exclude_paths substrings.
 func (c *ExceptionConfig) isExcludedPath(filePath string) bool {
+	normalizedPath := strings.ReplaceAll(filepath.ToSlash(filePath), "\\", "/")
 	for _, ep := range c.Settings.ExcludePaths {
-		if strings.Contains(filePath, ep) {
+		normalizedExclude := strings.ReplaceAll(filepath.ToSlash(ep), "\\", "/")
+		if strings.Contains(normalizedPath, normalizedExclude) {
+			return true
+		}
+	}
+	return false
+}
+
+// ShouldAnalyzePackage reports whether diagnostics should be emitted for the
+// given package path. Returns true when include_packages is empty (no filter)
+// or when the path matches any prefix in include_packages. Non-matching
+// packages are still analyzed for fact export but their findings are suppressed.
+func (c *ExceptionConfig) ShouldAnalyzePackage(pkgPath string) bool {
+	if len(c.Settings.IncludePackages) == 0 {
+		return true
+	}
+	for _, prefix := range c.Settings.IncludePackages {
+		if strings.HasPrefix(pkgPath, prefix) {
 			return true
 		}
 	}
@@ -158,4 +268,32 @@ func matchPattern(pattern, name string) bool {
 		}
 	}
 	return true
+}
+
+func validateExceptionPatterns(exceptions []Exception) error {
+	for i, exc := range exceptions {
+		if err := validateExceptionPattern(exc.Pattern); err != nil {
+			return fmt.Errorf("parsing config TOML: exceptions[%d].pattern: %w", i, err)
+		}
+	}
+	return nil
+}
+
+func validateExceptionPattern(pattern string) error {
+	parts := strings.Split(pattern, ".")
+	if len(parts) == 0 {
+		return fmt.Errorf("must contain at least one segment")
+	}
+	for _, part := range parts {
+		if part == "" {
+			return fmt.Errorf("empty segment in pattern %q", pattern)
+		}
+		if part == "*" {
+			continue
+		}
+		if _, err := filepath.Match(part, "probe"); err != nil {
+			return fmt.Errorf("invalid glob %q: %w", part, err)
+		}
+	}
+	return nil
 }

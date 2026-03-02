@@ -17,30 +17,46 @@ import (
 // new regressions are reported. Use loadBaseline to parse from disk and
 // writeBaseline to generate from collected findings.
 type BaselineConfig struct {
-	Primitive              BaselineCategory `toml:"primitive"`
-	MissingValidate        BaselineCategory `toml:"missing-validate"`
-	MissingStringer        BaselineCategory `toml:"missing-stringer"`
-	MissingConstructor     BaselineCategory `toml:"missing-constructor"`
-	WrongConstructorSig    BaselineCategory `toml:"wrong-constructor-sig"`
-	WrongValidateSig       BaselineCategory `toml:"wrong-validate-sig"`
-	WrongStringerSig       BaselineCategory `toml:"wrong-stringer-sig"`
-	MissingFuncOptions     BaselineCategory `toml:"missing-func-options"`
-	MissingImmutability    BaselineCategory `toml:"missing-immutability"`
-	MissingStructValidate  BaselineCategory `toml:"missing-struct-validate"`
-	WrongStructValidateSig BaselineCategory `toml:"wrong-struct-validate-sig"`
-	UnvalidatedCast        BaselineCategory `toml:"unvalidated-cast"`
-	UnusedValidateResult   BaselineCategory `toml:"unused-validate-result"`
-	UnusedConstructorError      BaselineCategory `toml:"unused-constructor-error"`
-	MissingConstructorValidate     BaselineCategory `toml:"missing-constructor-validate"`
-	IncompleteValidateDelegation BaselineCategory `toml:"incomplete-validate-delegation"`
-	NonZeroValueField            BaselineCategory `toml:"nonzero-value-field"`
-	EnumCueMissingGo             BaselineCategory `toml:"enum-cue-missing-go"`
-	EnumCueExtraGo               BaselineCategory `toml:"enum-cue-extra-go"`
+	Primitive                     BaselineCategory `toml:"primitive"`
+	MissingValidate               BaselineCategory `toml:"missing-validate"`
+	MissingStringer               BaselineCategory `toml:"missing-stringer"`
+	MissingConstructor            BaselineCategory `toml:"missing-constructor"`
+	WrongConstructorSig           BaselineCategory `toml:"wrong-constructor-sig"`
+	WrongValidateSig              BaselineCategory `toml:"wrong-validate-sig"`
+	WrongStringerSig              BaselineCategory `toml:"wrong-stringer-sig"`
+	MissingFuncOptions            BaselineCategory `toml:"missing-func-options"`
+	MissingImmutability           BaselineCategory `toml:"missing-immutability"`
+	MissingStructValidate         BaselineCategory `toml:"missing-struct-validate"`
+	WrongStructValidateSig        BaselineCategory `toml:"wrong-struct-validate-sig"`
+	UnvalidatedCast               BaselineCategory `toml:"unvalidated-cast"`
+	UnusedValidateResult          BaselineCategory `toml:"unused-validate-result"`
+	UnusedConstructorError        BaselineCategory `toml:"unused-constructor-error"`
+	MissingConstructorValidate    BaselineCategory `toml:"missing-constructor-validate"`
+	IncompleteValidateDelegation  BaselineCategory `toml:"incomplete-validate-delegation"`
+	NonZeroValueField             BaselineCategory `toml:"nonzero-value-field"`
+	WrongFuncOptionType           BaselineCategory `toml:"wrong-func-option-type"`
+	EnumCueMissingGo              BaselineCategory `toml:"enum-cue-missing-go"`
+	EnumCueExtraGo                BaselineCategory `toml:"enum-cue-extra-go"`
+	UseBeforeValidate             BaselineCategory `toml:"use-before-validate"`
+	SuggestValidateAll            BaselineCategory `toml:"suggest-validate-all"`
+	MissingConstructorErrorReturn BaselineCategory `toml:"missing-constructor-error-return"`
+	RedundantConversion           BaselineCategory `toml:"redundant-conversion"`
+	MissingStructValidateFields   BaselineCategory `toml:"missing-struct-validate-fields"`
 
 	// lookupByID is an O(1) index keyed by category → finding ID.
 	lookupByID map[string]map[string]bool
 	// lookupByMessage is a legacy O(1) index keyed by category → message.
 	lookupByMessage map[string]map[string]bool
+}
+
+type baselineCacheKey struct {
+	path          string
+	strictMissing bool
+}
+
+type baselineCacheEntry struct {
+	config *BaselineConfig
+	err    error
 }
 
 // BaselineFinding holds a single accepted finding entry in baseline v2.
@@ -60,10 +76,10 @@ type BaselineCategory struct {
 // loadBaseline reads and parses a baseline TOML file, building an internal
 // lookup index for fast Contains checks.
 //
-// Returns an empty baseline (matches nothing) if path is empty or the file
-// does not exist. This graceful fallback lets old PRs without a baseline
-// file pass the check.
-func loadBaseline(path string) (*BaselineConfig, error) {
+// Returns an empty baseline (matches nothing) if path is empty.
+// If strictMissing is false, a missing file also yields an empty baseline.
+// If strictMissing is true, a missing file returns an error.
+func loadBaseline(path string, strictMissing bool) (*BaselineConfig, error) {
 	if path == "" {
 		return emptyBaseline(), nil
 	}
@@ -71,19 +87,44 @@ func loadBaseline(path string) (*BaselineConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			if strictMissing {
+				return nil, fmt.Errorf("reading baseline: %w", err)
+			}
 			return emptyBaseline(), nil
 		}
 		return nil, fmt.Errorf("reading baseline: %w", err)
 	}
 
 	var cfg BaselineConfig
-	if err := toml.Unmarshal(data, &cfg); err != nil {
+	meta, err := toml.Decode(string(data), &cfg)
+	if err != nil {
 		return nil, fmt.Errorf("parsing baseline TOML: %w", err)
+	}
+	if undecoded := meta.Undecoded(); len(undecoded) > 0 {
+		return nil, fmt.Errorf("parsing baseline TOML: unknown keys: %s", joinTOMLKeys(undecoded))
 	}
 
 	cfg.buildLookup()
 
 	return &cfg, nil
+}
+
+// loadBaselineCached reads baseline data through a process-local cache.
+// BaselineConfig is immutable after load/buildLookup and can be safely reused.
+func loadBaselineCached(state *flagState, path string, strictMissing bool) (*BaselineConfig, error) {
+	if state == nil {
+		return loadBaseline(path, strictMissing)
+	}
+	key := baselineCacheKey{path: path, strictMissing: strictMissing}
+	if cached, ok := state.baselineCache.Load(key); ok {
+		entry := cached.(*baselineCacheEntry)
+		return entry.config, entry.err
+	}
+
+	cfg, err := loadBaseline(path, strictMissing)
+	entry := &baselineCacheEntry{config: cfg, err: err}
+	state.baselineCache.Store(key, entry)
+	return cfg, err
 }
 
 // Contains reports whether a finding with the given category and message
@@ -103,6 +144,10 @@ func (b *BaselineConfig) ContainsFinding(category, findingID, message string) bo
 		if ids, ok := b.lookupByID[category]; ok && ids[findingID] {
 			return true
 		}
+		// Strict ID matching: when caller provides a finding ID, do not
+		// fall back to message matching, which can over-suppress distinct
+		// findings that share the same text.
+		return false
 	}
 	if message != "" && b.lookupByMessage != nil {
 		if msgs, ok := b.lookupByMessage[category]; ok && msgs[message] {
@@ -117,61 +162,23 @@ func (b *BaselineConfig) Count() int {
 	if b == nil {
 		return 0
 	}
-	return countCategory(b.Primitive) +
-		countCategory(b.MissingValidate) +
-		countCategory(b.MissingStringer) +
-		countCategory(b.MissingConstructor) +
-		countCategory(b.WrongConstructorSig) +
-		countCategory(b.WrongValidateSig) +
-		countCategory(b.WrongStringerSig) +
-		countCategory(b.MissingFuncOptions) +
-		countCategory(b.MissingImmutability) +
-		countCategory(b.MissingStructValidate) +
-		countCategory(b.WrongStructValidateSig) +
-		countCategory(b.UnvalidatedCast) +
-		countCategory(b.UnusedValidateResult) +
-		countCategory(b.UnusedConstructorError) +
-		countCategory(b.MissingConstructorValidate) +
-		countCategory(b.IncompleteValidateDelegation) +
-		countCategory(b.NonZeroValueField) +
-		countCategory(b.EnumCueMissingGo) +
-		countCategory(b.EnumCueExtraGo)
+	total := 0
+	for _, cat := range BaselinedCategoryNames() {
+		total += countCategory(b.categoryForName(cat))
+	}
+	return total
 }
 
 // buildLookup populates the internal lookup maps from the parsed TOML data.
 func (b *BaselineConfig) buildLookup() {
-	b.lookupByID = make(map[string]map[string]bool, 16)
-	b.lookupByMessage = make(map[string]map[string]bool, 16)
+	baselinedCats := BaselinedCategoryNames()
+	b.lookupByID = make(map[string]map[string]bool, len(baselinedCats))
+	b.lookupByMessage = make(map[string]map[string]bool, len(baselinedCats))
 
-	categoryData := []struct {
-		key string
-		cat BaselineCategory
-	}{
-		{CategoryPrimitive, b.Primitive},
-		{CategoryMissingValidate, b.MissingValidate},
-		{CategoryMissingStringer, b.MissingStringer},
-		{CategoryMissingConstructor, b.MissingConstructor},
-		{CategoryWrongConstructorSig, b.WrongConstructorSig},
-		{CategoryWrongValidateSig, b.WrongValidateSig},
-		{CategoryWrongStringerSig, b.WrongStringerSig},
-		{CategoryMissingFuncOptions, b.MissingFuncOptions},
-		{CategoryMissingImmutability, b.MissingImmutability},
-		{CategoryMissingStructValidate, b.MissingStructValidate},
-		{CategoryWrongStructValidateSig, b.WrongStructValidateSig},
-		{CategoryUnvalidatedCast, b.UnvalidatedCast},
-		{CategoryUnusedValidateResult, b.UnusedValidateResult},
-		{CategoryUnusedConstructorError, b.UnusedConstructorError},
-		{CategoryMissingConstructorValidate, b.MissingConstructorValidate},
-		{CategoryIncompleteValidateDelegation, b.IncompleteValidateDelegation},
-		{CategoryNonZeroValueField, b.NonZeroValueField},
-		{CategoryEnumCueMissingGo, b.EnumCueMissingGo},
-		{CategoryEnumCueExtraGo, b.EnumCueExtraGo},
-	}
-
-	for _, c := range categoryData {
-		ids, msgs := categorySets(c.cat)
-		b.lookupByID[c.key] = ids
-		b.lookupByMessage[c.key] = msgs
+	for _, cat := range baselinedCats {
+		ids, msgs := categorySets(b.categoryForName(cat))
+		b.lookupByID[cat] = ids
+		b.lookupByMessage[cat] = msgs
 	}
 }
 
@@ -195,41 +202,16 @@ func WriteBaseline(path string, findings map[string][]BaselineFinding) error {
 	}
 	sb.WriteString(fmt.Sprintf("# Total: %d findings\n", total))
 
-	// Write each category as a TOML section with sorted v2 entries.
-	// Order matches the diagnostic category constants for consistency.
-	categories := []struct {
-		key   string
-		label string
-	}{
-		{CategoryPrimitive, "Bare primitive type usage"},
-		{CategoryMissingValidate, "Named types missing Validate() method"},
-		{CategoryMissingStringer, "Named types missing String() method"},
-		{CategoryMissingConstructor, "Exported structs missing NewXxx() constructor"},
-		{CategoryWrongConstructorSig, "Constructors with wrong return type"},
-		{CategoryWrongValidateSig, "Named types with wrong Validate() signature"},
-		{CategoryWrongStringerSig, "Named types with wrong String() signature"},
-		{CategoryMissingFuncOptions, "Structs missing functional options pattern"},
-		{CategoryMissingImmutability, "Structs with constructor but exported mutable fields"},
-		{CategoryMissingStructValidate, "Structs with constructor but no Validate() method"},
-		{CategoryWrongStructValidateSig, "Structs with Validate() but wrong signature"},
-		{CategoryUnvalidatedCast, "Type conversions to DDD types without Validate() check"},
-		{CategoryUnusedValidateResult, "Validate() calls with result completely discarded"},
-		{CategoryUnusedConstructorError, "Constructor calls with error return assigned to blank identifier"},
-		{CategoryMissingConstructorValidate, "Constructors returning validatable types without calling Validate()"},
-		{CategoryIncompleteValidateDelegation, "Structs with validate-all missing field Validate() delegation"},
-		{CategoryNonZeroValueField, "Struct fields using nonzero types as value (non-pointer)"},
-		{CategoryEnumCueMissingGo, "CUE disjunction members missing from Go Validate() switch"},
-		{CategoryEnumCueExtraGo, "Go Validate() switch cases not present in CUE disjunction"},
-	}
-
-	for _, cat := range categories {
-		entries := normalizeBaselineFindings(cat.key, findings[cat.key])
+	// Write each suppressible category as a TOML section with sorted v2 entries.
+	// Order follows the canonical diagnostic category registry.
+	for _, cat := range suppressibleCategorySpecs() {
+		entries := normalizeBaselineFindings(cat.Name, findings[cat.Name])
 		if len(entries) == 0 {
 			continue
 		}
 
-		sb.WriteString(fmt.Sprintf("\n# %s\n", cat.label))
-		sb.WriteString(fmt.Sprintf("[%s]\n", cat.key))
+		sb.WriteString(fmt.Sprintf("\n# %s\n", cat.BaselineLabel))
+		sb.WriteString(fmt.Sprintf("[%s]\n", cat.Name))
 		sb.WriteString("entries = [\n")
 		for _, entry := range entries {
 			// quote() produces TOML-compatible basic strings.
@@ -240,6 +222,63 @@ func WriteBaseline(path string, findings map[string][]BaselineFinding) error {
 	}
 
 	return os.WriteFile(path, []byte(sb.String()), 0o644)
+}
+
+func (b *BaselineConfig) categoryForName(name string) BaselineCategory {
+	switch name {
+	case CategoryPrimitive:
+		return b.Primitive
+	case CategoryMissingValidate:
+		return b.MissingValidate
+	case CategoryMissingStringer:
+		return b.MissingStringer
+	case CategoryMissingConstructor:
+		return b.MissingConstructor
+	case CategoryWrongConstructorSig:
+		return b.WrongConstructorSig
+	case CategoryWrongValidateSig:
+		return b.WrongValidateSig
+	case CategoryWrongStringerSig:
+		return b.WrongStringerSig
+	case CategoryMissingFuncOptions:
+		return b.MissingFuncOptions
+	case CategoryMissingImmutability:
+		return b.MissingImmutability
+	case CategoryMissingStructValidate:
+		return b.MissingStructValidate
+	case CategoryWrongStructValidateSig:
+		return b.WrongStructValidateSig
+	case CategoryUnvalidatedCast:
+		return b.UnvalidatedCast
+	case CategoryUnusedValidateResult:
+		return b.UnusedValidateResult
+	case CategoryUnusedConstructorError:
+		return b.UnusedConstructorError
+	case CategoryMissingConstructorValidate:
+		return b.MissingConstructorValidate
+	case CategoryIncompleteValidateDelegation:
+		return b.IncompleteValidateDelegation
+	case CategoryNonZeroValueField:
+		return b.NonZeroValueField
+	case CategoryWrongFuncOptionType:
+		return b.WrongFuncOptionType
+	case CategoryEnumCueMissingGo:
+		return b.EnumCueMissingGo
+	case CategoryEnumCueExtraGo:
+		return b.EnumCueExtraGo
+	case CategoryUseBeforeValidate:
+		return b.UseBeforeValidate
+	case CategorySuggestValidateAll:
+		return b.SuggestValidateAll
+	case CategoryMissingConstructorErrorReturn:
+		return b.MissingConstructorErrorReturn
+	case CategoryRedundantConversion:
+		return b.RedundantConversion
+	case CategoryMissingStructValidateFields:
+		return b.MissingStructValidateFields
+	default:
+		return BaselineCategory{}
+	}
 }
 
 // emptyBaseline returns a baseline that matches nothing.
