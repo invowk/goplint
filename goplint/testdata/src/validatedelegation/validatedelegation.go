@@ -84,15 +84,15 @@ func (c *IncompleteConfig) Validate() error {
 	return nil
 }
 
-// --- No validate-all directive — should NOT be flagged even with missing delegation ---
+// --- No validate-all directive — still checked by universal delegation semantics ---
 
-type NoDirectiveConfig struct {
+type NoDirectiveConfig struct { // want `validatedelegation\.NoDirectiveConfig\.Validate\(\) does not delegate to field FieldMode which has Validate\(\)`
 	FieldName Name
 	FieldMode Mode
 }
 
 func (c *NoDirectiveConfig) Validate() error {
-	// Only validates FieldName, skips FieldMode — but no directive, so not checked.
+	// Only validates FieldName, skips FieldMode.
 	if err := c.FieldName.Validate(); err != nil {
 		return err
 	}

@@ -5,6 +5,7 @@ package goplint
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -329,6 +330,12 @@ func TestShouldAnalyzePackage(t *testing.T) {
 			pkgPath:         "github.com/invowk/invowk-other",
 			want:            true, // HasPrefix matches — "invowk-other" starts with "invowk"
 		},
+		{
+			name:            "empty prefixes are ignored",
+			includePackages: []string{""},
+			pkgPath:         "github.com/invowk/invowk",
+			want:            false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -368,6 +375,27 @@ include_packages = ["github.com/invowk/invowk", "github.com/other/pkg"]
 	}
 	if cfg.Settings.IncludePackages[1] != "github.com/other/pkg" {
 		t.Errorf("expected second prefix %q, got %q", "github.com/other/pkg", cfg.Settings.IncludePackages[1])
+	}
+}
+
+func TestLoadConfig_IncludePackagesRejectsEmptyPrefix(t *testing.T) {
+	t.Parallel()
+
+	content := `
+[settings]
+include_packages = ["github.com/invowk/invowk", ""]
+`
+	path := filepath.Join(t.TempDir(), "include-packages-invalid.toml")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	_, err := loadConfig(path, false)
+	if err == nil {
+		t.Fatal("expected empty include_packages prefix to fail")
+	}
+	if !strings.Contains(err.Error(), "settings.include_packages[1]: empty package prefix") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

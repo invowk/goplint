@@ -16,8 +16,8 @@ func TestParseAnalysisJSON(t *testing.T) {
 		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
-					{Category: "primitive", Message: "struct field pkg.Foo.Bar uses primitive type string"},
-					{Category: "missing-validate", Message: "named type pkg.MyType has no Validate() method"},
+					suppressibleDiagnostic("primitive", "struct field pkg.Foo.Bar uses primitive type string"),
+					suppressibleDiagnostic("missing-validate", "named type pkg.MyType has no Validate() method"),
 				},
 			},
 		})
@@ -38,17 +38,15 @@ func TestParseAnalysisJSON(t *testing.T) {
 	t.Run("deduplicates across packages", func(t *testing.T) {
 		t.Parallel()
 		// Simulate the same diagnostic appearing in both the package and its test variant.
-		diag := analysisDiagnostic{
-			Category: "primitive",
-			Message:  "struct field pkg.Foo.Bar uses primitive type string",
-		}
+		diag := suppressibleDiagnostic("primitive", "struct field pkg.Foo.Bar uses primitive type string")
 		pkg1 := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
 			"example.com/pkg": {"goplint": {diag}},
 		})
 		pkg2 := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
 			"example.com/pkg [example.com/pkg.test]": {"goplint": {diag}},
 		})
-		combined := append(pkg1, pkg2...)
+		combined := append([]byte{}, pkg1...)
+		combined = append(combined, pkg2...)
 
 		findings, err := parseAnalysisJSON(combined)
 		if err != nil {
@@ -62,7 +60,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("uses finding ID from diagnostic URL", func(t *testing.T) {
 		t.Parallel()
-		const findingID = "gpl1_deadbeef"
+		const findingID = "gpl3_deadbeef"
 		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
@@ -95,12 +93,12 @@ func TestParseAnalysisJSON(t *testing.T) {
 					{
 						Category: goplint.CategoryUnvalidatedCast,
 						Message:  "type conversion to pkg.CommandName from non-constant without Validate() check",
-						URL:      goplint.DiagnosticURLForFinding("gpl1_cfa_unvalidated"),
+						URL:      goplint.DiagnosticURLForFinding("gpl3_cfa_unvalidated"),
 					},
 					{
-						Category: goplint.CategoryUseBeforeValidate,
+						Category: goplint.CategoryUseBeforeValidateSameBlock,
 						Message:  "variable x of type pkg.CommandName used before Validate() in same block",
-						URL:      goplint.DiagnosticURLForFinding("gpl1_cfa_ubv"),
+						URL:      goplint.DiagnosticURLForFinding("gpl3_cfa_ubv"),
 					},
 				},
 			},
@@ -113,12 +111,12 @@ func TestParseAnalysisJSON(t *testing.T) {
 		if len(findings[goplint.CategoryUnvalidatedCast]) != 1 {
 			t.Fatalf("expected 1 %s finding, got %d", goplint.CategoryUnvalidatedCast, len(findings[goplint.CategoryUnvalidatedCast]))
 		}
-		if len(findings[goplint.CategoryUseBeforeValidate]) != 1 {
-			t.Fatalf("expected 1 %s finding, got %d", goplint.CategoryUseBeforeValidate, len(findings[goplint.CategoryUseBeforeValidate]))
+		if len(findings[goplint.CategoryUseBeforeValidateSameBlock]) != 1 {
+			t.Fatalf("expected 1 %s finding, got %d", goplint.CategoryUseBeforeValidateSameBlock, len(findings[goplint.CategoryUseBeforeValidateSameBlock]))
 		}
 	})
 
-	t.Run("falls back to derived ID when URL is missing", func(t *testing.T) {
+	t.Run("missing suppressible finding URL falls back to deterministic ID", func(t *testing.T) {
 		t.Parallel()
 		const (
 			category = "primitive"
@@ -134,18 +132,19 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 		findings, err := parseAnalysisJSON(input)
 		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+			t.Fatalf("unexpected error for missing finding URL: %v", err)
 		}
-		if len(findings[category]) != 1 {
-			t.Fatalf("expected 1 %s finding, got %d", category, len(findings[category]))
+		got := findings[category]
+		if len(got) != 1 {
+			t.Fatalf("expected 1 finding, got %d", len(got))
 		}
-		wantID := goplint.FallbackFindingIDForDiagnostic(category, "example.com/pkg", message)
-		if findings[category][0].ID != wantID {
-			t.Errorf("expected fallback ID %q, got %q", wantID, findings[category][0].ID)
+		wantID := goplint.StableFindingID(category, "", message)
+		if got[0].ID != wantID {
+			t.Fatalf("expected fallback id %q, got %q", wantID, got[0].ID)
 		}
 	})
 
-	t.Run("fallback ID uses position to keep repeated messages distinct", func(t *testing.T) {
+	t.Run("repeated messages with distinct finding IDs are preserved", func(t *testing.T) {
 		t.Parallel()
 		const (
 			category = goplint.CategoryUnusedValidateResult
@@ -154,8 +153,18 @@ func TestParseAnalysisJSON(t *testing.T) {
 		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
-					{Category: category, Posn: "pkg/file.go:10:2", Message: message},
-					{Category: category, Posn: "pkg/file.go:20:2", Message: message},
+					{
+						Category: category,
+						Posn:     "pkg/file.go:10:2",
+						Message:  message,
+						URL:      suppressibleDiagnosticWithSeed(category, message, "line-10").URL,
+					},
+					{
+						Category: category,
+						Posn:     "pkg/file.go:20:2",
+						Message:  message,
+						URL:      suppressibleDiagnosticWithSeed(category, message, "line-20").URL,
+					},
 				},
 			},
 		})
@@ -174,7 +183,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
-					{Category: "primitive", Message: "real finding"},
+					suppressibleDiagnostic("primitive", "real finding"),
 					{Category: goplint.CategoryStaleException, Message: "stale exception: pattern ..."},
 				},
 			},
@@ -199,8 +208,8 @@ func TestParseAnalysisJSON(t *testing.T) {
 			"example.com/pkg": {
 				"goplint": {
 					{Category: "", Message: "orphaned message"},
-					{Category: "primitive", Message: ""},
-					{Category: "primitive", Message: "valid finding"},
+					{Category: "primitive", Message: "", URL: suppressibleDiagnostic("primitive", "unused").URL},
+					suppressibleDiagnostic("primitive", "valid finding"),
 				},
 			},
 		})
@@ -221,7 +230,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			"example.com/pkg": {
 				"goplint": {
 					{Category: goplint.CategoryUnknownDirective, Message: "unknown directive key"},
-					{Category: "primitive", Message: "valid finding"},
+					suppressibleDiagnostic("primitive", "valid finding"),
 				},
 			},
 		})
@@ -265,11 +274,38 @@ func TestParseAnalysisJSON(t *testing.T) {
 		}
 	})
 
+	t.Run("whitespace-only input returns empty findings", func(t *testing.T) {
+		t.Parallel()
+		findings, err := parseAnalysisJSON([]byte(" \n\t "))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(findings) != 0 {
+			t.Errorf("expected 0 categories, got %d", len(findings))
+		}
+	})
+
 	t.Run("malformed JSON returns error", func(t *testing.T) {
 		t.Parallel()
 		_, err := parseAnalysisJSON([]byte("{invalid json"))
 		if err == nil {
 			t.Fatal("expected error for malformed JSON")
+		}
+	})
+
+	t.Run("truncated object after valid stream returns error", func(t *testing.T) {
+		t.Parallel()
+		good := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			"example.com/pkg": {
+				"goplint": {
+					suppressibleDiagnostic("primitive", "valid finding"),
+				},
+			},
+		})
+		input := append(append([]byte{}, good...), []byte(`{"example.com/bad":`)...)
+		_, err := parseAnalysisJSON(input)
+		if err == nil {
+			t.Fatal("expected error for truncated JSON stream")
 		}
 	})
 
@@ -281,7 +317,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 					{Category: "other", Message: "not our concern"},
 				},
 				"goplint": {
-					{Category: "primitive", Message: "our finding"},
+					suppressibleDiagnostic("primitive", "our finding"),
 				},
 			},
 		})
@@ -300,52 +336,15 @@ func TestParseAnalysisJSON(t *testing.T) {
 	})
 }
 
-func TestStableDiagnosticPosKey(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name string
-		posn string
-		want string
-	}{
-		{
-			name: "unix absolute path",
-			posn: "/tmp/work/pkg/file.go:10:2",
-			want: "example.com/pkg:file.go:10:2",
-		},
-		{
-			name: "windows path",
-			posn: `C:\work\pkg\file.go:10:2`,
-			want: "example.com/pkg:file.go:10:2",
-		},
-		{
-			name: "mixed separators",
-			posn: `C:/work/pkg\inner/file.go:22:9`,
-			want: "example.com/pkg:file.go:22:9",
-		},
-		{
-			name: "malformed token falls back to raw",
-			posn: "file.go:not-a-line",
-			want: "example.com/pkg:file.go:not-a-line",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := stableDiagnosticPosKey("example.com/pkg", tt.posn)
-			if got != tt.want {
-				t.Fatalf("stableDiagnosticPosKey() = %q, want %q", got, tt.want)
-			}
-		})
-	}
+func suppressibleDiagnostic(category, message string) analysisDiagnostic {
+	return suppressibleDiagnosticWithSeed(category, message, message)
 }
 
-func TestCanonicalPackagePath(t *testing.T) {
-	t.Parallel()
-
-	got := canonicalPackagePath("example.com/pkg [example.com/pkg.test]")
-	if got != "example.com/pkg" {
-		t.Fatalf("canonicalPackagePath() = %q, want %q", got, "example.com/pkg")
+func suppressibleDiagnosticWithSeed(category, message, seed string) analysisDiagnostic {
+	id := goplint.StableFindingID(category, "main_parse_test", seed)
+	return analysisDiagnostic{
+		Category: category,
+		Message:  message,
+		URL:      goplint.DiagnosticURLForFinding(id),
 	}
 }

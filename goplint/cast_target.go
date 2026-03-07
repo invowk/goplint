@@ -12,12 +12,18 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+// ssaAliasSet holds additional objectKeys that must-alias the primary cast
+// target variable. When y := x and x = Cast(raw), validating y via
+// y.Validate() discharges x's validation requirement.
+type ssaAliasSet map[string]bool
+
 // castTarget identifies the LHS target of a cast assignment.
 // It stores a canonical key so equivalent selector forms (for example
 // (*cfg).Name and cfg.Name) match consistently.
 type castTarget struct {
 	displayName string
 	targetKey   string
+	aliasKeys   ssaAliasSet // nil when SSA alias tracking is off
 }
 
 func newCastTargetFromName(name string) castTarget {
@@ -47,7 +53,18 @@ func (t castTarget) key() string {
 }
 
 func (t castTarget) matchesExpr(pass *analysis.Pass, expr ast.Expr) bool {
-	return t.targetKey != "" && targetKeyForExpr(pass, expr) == t.targetKey
+	if t.targetKey == "" {
+		return false
+	}
+	key := targetKeyForExpr(pass, expr)
+	if key == t.targetKey {
+		return true
+	}
+	// SSA alias set enrichment: check if expr's objectKey is a known alias.
+	if len(t.aliasKeys) > 0 && key != "" {
+		return t.aliasKeys[key]
+	}
+	return false
 }
 
 func objectForIdent(pass *analysis.Pass, ident *ast.Ident) types.Object {

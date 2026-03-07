@@ -80,6 +80,61 @@ func (c *Config) validateMaybe() error {
 	}
 }
 
+func TestCollectDelegationAliasBindingsParallelAssignment(t *testing.T) {
+	t.Parallel()
+
+	src := `package testpkg
+type Name string
+func (Name) Validate() error { return nil }
+
+type Config struct{
+	Primary Name
+	Secondary Name
+}
+
+func (c *Config) Validate() error {
+	aliasA := c.Primary
+	aliasB := c.Secondary
+	aliasA, aliasB = aliasB, aliasA
+	if err := aliasA.Validate(); err != nil { return err }
+	if err := aliasB.Validate(); err != nil { return err }
+	return nil
+}`
+
+	pass, file := buildTypedPassFromSource(t, src)
+	validateFn := findMethodDecl(t, file, "Config", "Validate")
+	bindings := collectDelegationAliasBindings(pass, validateFn.Body, "c")
+	callA := findAliasValidateCall(t, validateFn, "aliasA")
+	callB := findAliasValidateCall(t, validateFn, "aliasB")
+	selA, ok := callA.Fun.(*ast.SelectorExpr)
+	if !ok {
+		t.Fatal("expected selector call for aliasA.Validate")
+	}
+	selB, ok := callB.Fun.(*ast.SelectorExpr)
+	if !ok {
+		t.Fatal("expected selector call for aliasB.Validate")
+	}
+	keyA := targetKeyForExpr(pass, selA.X)
+	keyB := targetKeyForExpr(pass, selB.X)
+	if keyA == "" || keyB == "" {
+		t.Fatal("expected alias keys to resolve")
+	}
+	fieldA, ok := latestDelegationAliasFieldBefore(bindings[keyA], callA.Pos())
+	if !ok {
+		t.Fatal("expected aliasA binding to resolve")
+	}
+	fieldB, ok := latestDelegationAliasFieldBefore(bindings[keyB], callB.Pos())
+	if !ok {
+		t.Fatal("expected aliasB binding to resolve")
+	}
+	if fieldA != "Secondary" {
+		t.Fatalf("aliasA resolved field = %q, want %q", fieldA, "Secondary")
+	}
+	if fieldB != "Primary" {
+		t.Fatalf("aliasB resolved field = %q, want %q", fieldB, "Primary")
+	}
+}
+
 func findAliasValidateCall(t *testing.T, fn *ast.FuncDecl, alias string) *ast.CallExpr {
 	t.Helper()
 

@@ -18,7 +18,7 @@ import (
 const (
 	// findingIDVersion is part of the canonical ID preimage. Bump only
 	// for intentional, incompatible ID schema changes.
-	findingIDVersion = "1"
+	findingIDVersion = "3"
 
 	// DiagnosticURLPrefix is the prefix used in analysis.Diagnostic.URL to
 	// encode stable finding IDs in -json output.
@@ -50,24 +50,6 @@ func PackageScopedFindingID(pass *analysis.Pass, category string, parts ...strin
 	scopedParts = append(scopedParts, pkgPath)
 	scopedParts = append(scopedParts, parts...)
 	return StableFindingID(category, scopedParts...)
-}
-
-// FallbackFindingID derives an ID from category + message for diagnostics
-// that do not carry an explicit finding URL (legacy compatibility path).
-func FallbackFindingID(category, message string) string {
-	return StableFindingID(category, "legacy-message", message)
-}
-
-// FallbackFindingIDForDiagnostic derives an ID from category + diagnostic
-// position + message for analysis outputs that omit explicit finding URLs.
-//
-// The position component keeps repeated same-message diagnostics distinct
-// (for example, multiple discarded Validate() calls in one function).
-func FallbackFindingIDForDiagnostic(category, posn, message string) string {
-	if posn == "" {
-		return FallbackFindingID(category, message)
-	}
-	return StableFindingID(category, "legacy-diagnostic", posn, message)
 }
 
 func stablePosKey(pass *analysis.Pass, pos token.Pos) string {
@@ -163,7 +145,7 @@ func reportDiagnosticWithMeta(
 	category, findingID, message string,
 	meta map[string]string,
 ) {
-	writeFindingToSink(pass, pos, category, findingID, message)
+	writeFindingToSinkWithMeta(pass, pos, category, findingID, message, meta)
 	pass.Report(analysis.Diagnostic{
 		Pos:      pos,
 		Category: category,

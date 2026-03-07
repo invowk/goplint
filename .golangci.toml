@@ -23,6 +23,78 @@ enable = [
     # usetesting: Reports uses of functions with replacement inside the testing
     # package. [auto-fix]
     "usetesting",
+
+    # errcheck: Checks for unchecked errors.
+    "errcheck",
+
+    # errorlint: Finds code that can break Go 1.13+ error wrapping.
+    "errorlint",
+
+    # govet: Reports suspicious constructs in Go code.
+    "govet",
+
+    # staticcheck: Bug-finding and correctness checks.
+    "staticcheck",
+
+    # exhaustive: Ensures enum-style switches are exhaustive.
+    "exhaustive",
+
+    # unused: Finds unused constants, variables, functions, and types.
+    "unused",
+
+    # ineffassign: Detects ineffective assignments.
+    "ineffassign",
+
+    # copyloopvar: Detects loop variable capture mistakes.
+    "copyloopvar",
+
+    # unconvert: Reports unnecessary type conversions.
+    "unconvert",
+
+    # wastedassign: Finds assignments that are overwritten before being read.
+    "wastedassign",
+
+    # depguard: Restricts forbidden imports.
+    "depguard",
+
+    # gosec: Security-focused static analysis.
+    "gosec",
+
+    # gocheckcompilerdirectives: Validates //go: compiler directives.
+    "gocheckcompilerdirectives",
+
+    # noctx: Detects subprocess and API usage missing context-aware variants.
+    "noctx",
+
+    # nilnil: Detects simultaneous nil error and invalid value returns.
+    "nilnil",
+
+    # nolintlint: Validates //nolint directives.
+    "nolintlint",
+
+    # tparallel: Enforces t.Parallel usage patterns in tests.
+    "tparallel",
+
+    # decorder: Enforces declaration ordering consistency.
+    "decorder",
+
+    # funcorder: Enforces exported/unexported function ordering.
+    "funcorder",
+
+    # gocritic: Additional style and performance diagnostics.
+    "gocritic",
+
+    # perfsprint: Detects printf-style formatting that can be simplified.
+    "perfsprint",
+
+    # goconst: Suggests extracting repeated strings to constants.
+    "goconst",
+
+    # revive: Fast style and maintainability linter.
+    "revive",
+
+    # wrapcheck: Requires external errors to be wrapped at boundaries.
+    "wrapcheck",
 ]
 
 [linters.settings.forbidigo]
@@ -42,6 +114,76 @@ os-chdir = false
 context-background = true
 context-todo = true
 
+[linters.settings.errcheck]
+# Keep type assertion checks disabled to avoid noise in analyzer fixture code.
+check-type-assertions = false
+check-blank = true
+
+[linters.settings.staticcheck]
+# Keep bug-finding checks while avoiding quick-fix/style churn.
+checks = ["all", "-QF*"]
+
+[linters.settings.exhaustive]
+# Treat explicit default branches as intentionally exhaustive.
+default-signifies-exhaustive = true
+
+[linters.settings.gosec]
+excludes = [
+    "G104",  # Unhandled errors - covered by errcheck.
+    "G115",  # Integer conversion overflow - noisy for analyzer internals.
+    "G204",  # Subprocess with variable - required for self-reexec.
+    "G301",  # Directory permissions - module intentionally writes readable artifacts.
+    "G302",  # File permissions - same rationale as root policy.
+    "G304",  # File inclusion via variable - analyzer reads user-controlled files by design.
+    "G306",  # WriteFile permissions - same rationale as root policy.
+    "G702",  # Command execution taint - intentional in command analyzer context.
+    "G703",  # Path traversal taint - false positives on managed paths.
+    "G704",  # SSRF taint - false positives for local analysis flows.
+    "G705",  # XSS taint - not relevant to CLI output.
+]
+
+[linters.settings.gosec.config.global]
+tests = false
+
+[linters.settings.depguard]
+[linters.settings.depguard.rules.main]
+files = ["$all", "!$test"]
+list-mode = "lax"
+
+[[linters.settings.depguard.rules.main.deny]]
+pkg = "io/ioutil"
+desc = "deprecated since Go 1.16; use io and os packages"
+
+[linters.settings.depguard.rules.tests]
+files = ["$test"]
+list-mode = "lax"
+
+[[linters.settings.depguard.rules.tests.deny]]
+pkg = "github.com/stretchr/testify"
+desc = "project uses standard testing library"
+
+[linters.settings.nolintlint]
+require-specific = true
+
+[linters.settings.goconst]
+# Keep this conservative to avoid forcing constants for local test fixtures.
+min-occurrences = 20
+min-len = 8
+
+[linters.settings.wrapcheck]
+ignore-sigs = [
+    ".Errorf(",
+    "errors.New(",
+    ".Join(",
+]
+
+[linters.settings.revive]
+
+[[linters.settings.revive.rules]]
+name = "unused-parameter"
+severity = "warning"
+arguments = [{allowRegex = "^_"}]
+
 [linters.exclusions]
 generated = "lax"
 
@@ -50,7 +192,40 @@ generated = "lax"
 linters = ["forbidigo"]
 path = "_test\\.go$"
 
+# go/analysis analyzers intentionally return (nil, nil) when no result export is needed.
+[[linters.exclusions.rules]]
+linters = ["nilnil"]
+path = "goplint/analyzer_run\\.go$"
+
+# Repeated literal test fixtures are intentional for table readability.
+[[linters.exclusions.rules]]
+linters = ["goconst"]
+path = "_test\\.go$"
+
+# Test doubles frequently return raw external errors for assertion simplicity.
+[[linters.exclusions.rules]]
+linters = ["wrapcheck"]
+path = "_test\\.go$"
+
 [issues]
 max-issues-per-linter = 0
 max-same-issues = 0
 uniq-by-line = false
+
+[formatters]
+enable = [
+    # gofmt: Standard Go formatter.
+    "gofmt",
+
+    # gofumpt: Stricter gofmt-compatible formatter.
+    "gofumpt",
+
+    # goimports: Formats and fixes imports.
+    "goimports",
+]
+
+[formatters.settings.gofumpt]
+module-path = "github.com/invowk/invowk/tools/goplint"
+
+[formatters.exclusions]
+generated = "lax"

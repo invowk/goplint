@@ -1699,6 +1699,165 @@ pattern = "invowk.runModuleImport.*"
 reason = "Cobra args boundary — import path"
 
 # =============================================================================
+# Primitive Boundary Exceptions — Current Repo Scan Follow-Up
+# =============================================================================
+# Current primitive findings clustered around Cobra callback signatures, raw
+# bytes parser/IO handoff, raw exec output capture, fuzzy-match display
+# helpers, and validation path formatting helpers.
+#
+# Review cadence: re-evaluate when typed boundary adapters replace the
+# framework/IO helper signatures below.
+
+# Cobra RunE callback signatures with intentionally unused []string args
+[[exceptions]]
+pattern = "invowk.runInternalExecVirtual._"
+reason = "Cobra RunE signature boundary — unused []string args"
+review_after = "2027-03-01"
+blocked_by = "CLI typed handler adapter or Cobra callback API change"
+
+[[exceptions]]
+pattern = "invowk.runTuiInput._"
+reason = "Cobra RunE signature boundary — unused []string args"
+review_after = "2027-03-01"
+blocked_by = "CLI typed handler adapter or Cobra callback API change"
+
+[[exceptions]]
+pattern = "invowk.runTuiTable._"
+reason = "Cobra RunE signature boundary — unused []string args"
+review_after = "2027-03-01"
+blocked_by = "CLI typed handler adapter or Cobra callback API change"
+
+[[exceptions]]
+pattern = "invowk.runTuiWrite._"
+reason = "Cobra RunE signature boundary — unused []string args"
+review_after = "2027-03-01"
+blocked_by = "CLI typed handler adapter or Cobra callback API change"
+
+# Raw bytes parser/IO boundaries from os.ReadFile and embedded schema handoff
+[[exceptions]]
+pattern = "cueutil.CheckFileSize.data"
+reason = "raw bytes parser/IO boundary"
+review_after = "2027-03-01"
+blocked_by = "typed byte-source wrappers for CUE and dotenv parsing"
+
+[[exceptions]]
+pattern = "cueutil.ParseAndDecode.schema"
+reason = "raw bytes parser/IO boundary"
+review_after = "2027-03-01"
+blocked_by = "typed byte-source wrappers for CUE and dotenv parsing"
+
+[[exceptions]]
+pattern = "cueutil.ParseAndDecode.data"
+reason = "raw bytes parser/IO boundary"
+review_after = "2027-03-01"
+blocked_by = "typed byte-source wrappers for CUE and dotenv parsing"
+
+[[exceptions]]
+pattern = "cueutil.ParseAndDecodeString.data"
+reason = "raw bytes parser/IO boundary"
+review_after = "2027-03-01"
+blocked_by = "typed byte-source wrappers for CUE and dotenv parsing"
+
+[[exceptions]]
+pattern = "invowkfile.ParseBytes.data"
+reason = "raw bytes parser/IO boundary"
+review_after = "2027-03-01"
+blocked_by = "typed byte-source wrappers for CUE and dotenv parsing"
+
+[[exceptions]]
+pattern = "invowkfile.ParseInvowkmodBytes.data"
+reason = "raw bytes parser/IO boundary"
+review_after = "2027-03-01"
+blocked_by = "typed byte-source wrappers for CUE and dotenv parsing"
+
+[[exceptions]]
+pattern = "invowkmod.ParseInvowkmodBytes.data"
+reason = "raw bytes parser/IO boundary"
+review_after = "2027-03-01"
+blocked_by = "typed byte-source wrappers for CUE and dotenv parsing"
+
+[[exceptions]]
+pattern = "runtime.ParseEnvFile.content"
+reason = "raw bytes parser/IO boundary"
+review_after = "2027-03-01"
+blocked_by = "typed byte-source wrappers for CUE and dotenv parsing"
+
+# Raw exec output capture returned as []byte for shell/container passthrough
+[[exceptions]]
+pattern = "container.BaseCLIEngine.RunCommand.return.0"
+reason = "raw exec output []byte return"
+review_after = "2027-03-01"
+blocked_by = "typed exec output wrapper adoption"
+
+[[exceptions]]
+pattern = "container.BaseCLIEngine.RunCommandCombined.return.0"
+reason = "raw exec output []byte return"
+review_after = "2027-03-01"
+blocked_by = "typed exec output wrapper adoption"
+
+[[exceptions]]
+pattern = "tui.SpinWithCommand.return.0"
+reason = "raw exec output []byte return"
+review_after = "2027-03-01"
+blocked_by = "typed exec output wrapper adoption"
+
+# Fuzzy matching helpers intentionally operate on raw display strings/slices
+[[exceptions]]
+pattern = "tui.FuzzyMatch.pattern"
+reason = "fuzzy-match helper display string boundary"
+review_after = "2027-03-01"
+blocked_by = "typed fuzzy option/result API"
+
+[[exceptions]]
+pattern = "tui.FuzzyMatch.options"
+reason = "fuzzy-match helper display string boundary"
+review_after = "2027-03-01"
+blocked_by = "typed fuzzy option/result API"
+
+[[exceptions]]
+pattern = "tui.FuzzyMatch.return.0"
+reason = "fuzzy-match helper display string boundary"
+review_after = "2027-03-01"
+blocked_by = "typed fuzzy option/result API"
+
+[[exceptions]]
+pattern = "tui.FuzzyMatchWithScore.pattern"
+reason = "fuzzy-match helper display string boundary"
+review_after = "2027-03-01"
+blocked_by = "typed fuzzy option/result API"
+
+[[exceptions]]
+pattern = "tui.FuzzyMatchWithScore.options"
+reason = "fuzzy-match helper display string boundary"
+review_after = "2027-03-01"
+blocked_by = "typed fuzzy option/result API"
+
+# Validation path helper builds user-facing alternatives text from raw indices
+[[exceptions]]
+pattern = "invowkfile.buildAlternativesPath.prefix"
+reason = "buildAlternativesPath helper boundary — display path formatting"
+review_after = "2027-03-01"
+blocked_by = "typed validation-path segment builder"
+
+[[exceptions]]
+pattern = "invowkfile.buildAlternativesPath.depIndex"
+reason = "buildAlternativesPath helper boundary — display path formatting"
+review_after = "2027-03-01"
+blocked_by = "typed validation-path segment builder"
+
+[[exceptions]]
+pattern = "invowkfile.buildAlternativesPath.altIndex"
+reason = "buildAlternativesPath helper boundary — display path formatting"
+review_after = "2027-03-01"
+blocked_by = "typed validation-path segment builder"
+
+[[exceptions]]
+pattern = "invowkfile.buildAlternativesPath.return.0"
+reason = "buildAlternativesPath helper boundary — display path formatting"
+review_after = "2027-03-01"
+blocked_by = "typed validation-path segment builder"
+
+# =============================================================================
 # Mop-Up Exceptions (remaining low-value findings)
 # =============================================================================
 
@@ -2959,7 +3118,7 @@ reason = "DependencyMessage display-text casts from fmt.Sprintf — pre-formatte
 # invowkfile.ValidationSeverity, invowkfile.ValidatorName.
 
 # =============================================================================
-# Struct-Validate-Fields Exceptions (--check-validate-delegation-all)
+# Struct-Validate-Fields Exceptions (--check-validate-delegation)
 # =============================================================================
 # These structs intentionally do NOT have Validate() methods despite having
 # validatable fields. Grouped by reason.
@@ -3017,6 +3176,10 @@ reason = "service object; post-construction state (baseDir, WatchConfig)"
 
 # --- Internal / Unexported Structs ---
 # Unexported structs used as internal parse-tree or exec-prep state.
+
+[[exceptions]]
+pattern = "tui.componentViewParams.struct-validate-fields"
+reason = "transient rendering params for View(); not a domain type"
 
 [[exceptions]]
 pattern = "invowk.commandGroup.struct-validate-fields"

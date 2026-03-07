@@ -38,3 +38,13 @@ func FatalTerminator(raw string) { // want `parameter "raw" of cfa_no_return_ter
 	x := CommandName(raw)
 	log.Fatal(x)
 }
+
+// ExitAliasTerminator should not be flagged: aliasing os.Exit still terminates.
+func ExitAliasTerminator(raw string) { // want `parameter "raw" of cfa_no_return_terminator\.ExitAliasTerminator uses primitive type string`
+	x := CommandName(raw)
+	exit := os.Exit
+	if x == "" {
+		exit(1)
+	}
+	exit(2)
+}

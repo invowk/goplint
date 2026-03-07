@@ -486,9 +486,7 @@ func (m *MultiPath) Validate() error {
 }
 
 // NewMultiPath validates on only one path — CFA flags this because the
-// "fast" path returns without calling Validate(). In AST mode (--no-cfa),
-// this would NOT be flagged because bodyCallsValidateOnType finds the
-// Validate() call in the else branch.
+// "fast" path returns without calling Validate().
 func NewMultiPath(name string, fast bool) (*MultiPath, error) { // want `parameter "name" of constructorvalidates\.NewMultiPath uses primitive type string` `constructor constructorvalidates\.NewMultiPath returns constructorvalidates\.MultiPath which has Validate\(\) but never calls it`
 	m := &MultiPath{name: name}
 	if fast {

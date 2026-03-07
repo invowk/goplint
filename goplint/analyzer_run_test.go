@@ -44,19 +44,18 @@ entries = [
 	}
 }
 
-func TestValidateRunConfigRejectsMissionChecksWithoutCFA(t *testing.T) {
+func TestValidateRunConfigAllowsMissionChecks(t *testing.T) {
 	t.Parallel()
 
 	tests := []runConfig{
-		{checkCastValidation: true, noCFA: true},
-		{checkUseBeforeValidate: true, noCFA: true},
-		{checkUseBeforeValidateCross: true, noCFA: true},
-		{checkConstructorValidates: true, noCFA: true},
+		{checkCastValidation: true},
+		{checkUseBeforeValidate: true},
+		{checkConstructorValidates: true},
 	}
 
 	for _, rc := range tests {
-		if err := validateRunConfig(rc); err == nil {
-			t.Fatalf("expected %+v to fail validation", rc)
+		if err := validateRunConfig(rc); err != nil {
+			t.Fatalf("expected %+v to pass validation, got %v", rc, err)
 		}
 	}
 }

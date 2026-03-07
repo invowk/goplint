@@ -8,7 +8,7 @@ func (c CommandName) Validate() error { return nil }
 
 func consume(_ CommandName) {}
 
-// DeadBranchValidate documents AST fallback behavior: --no-cfa mode only
+// DeadBranchValidate documents historical AST fallback behavior.
 // checks for presence of Validate() in the function body, so this case is not
 // flagged even though the call is unreachable.
 func DeadBranchValidate(raw string) { // want `parameter "raw" of castvalidation_nocfa_dead_branch\.DeadBranchValidate uses primitive type string`

@@ -49,7 +49,7 @@ func inspectEnumSync(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConf
 		pkgName := packageName(pass.Pkg)
 		for _, ann := range annotations {
 			qualName := pkgName + "." + ann.typeName
-			excKey := fmt.Sprintf("%s.no-schema.enum-cue-missing-go", qualName)
+			excKey := qualName + ".no-schema.enum-cue-missing-go"
 			if cfg.isExcepted(excKey) {
 				continue
 			}
@@ -83,7 +83,7 @@ func inspectEnumSync(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConf
 		// Extract CUE disjunction members from the schema.
 		cueMembers, cueErr := extractCUEDisjunctionMembers(schemaBytes, schemaFilename, ann.cuePath)
 		if cueErr != nil {
-			excKey := fmt.Sprintf("%s.cue-error.enum-cue-missing-go", qualName)
+			excKey := qualName + ".cue-error.enum-cue-missing-go"
 			if cfg.isExcepted(excKey) {
 				continue
 			}
@@ -289,6 +289,8 @@ func extractLiteralString(expr ast.Expr) string {
 			return s
 		case token.INT:
 			return e.Value
+		default:
+			return ""
 		}
 	case *ast.ParenExpr:
 		return extractLiteralString(e.X)
@@ -402,7 +404,10 @@ func lookupWithOptional(root cue.Value, path string) (cue.Value, error) {
 		// Fall back to iterating fields with optional flag.
 		trimmed := strings.TrimSuffix(part, "?")
 		found := false
-		iter, _ := current.Fields(cue.Optional(true))
+		iter, err := current.Fields(cue.Optional(true))
+		if err != nil {
+			return cue.Value{}, fmt.Errorf("iterating CUE fields: %w", err)
+		}
 		for iter.Next() {
 			label := iter.Selector().String()
 			label = strings.TrimSuffix(label, "?")

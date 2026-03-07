@@ -1,4 +1,4 @@
 [unused-constructor-error]
 entries = [
-    { id = "gpl1_b96332733387c0ef71dcf12c52e49ab6776acd5423024a0689a64a8a714029ca", message = "constructor NewThing error return assigned to blank identifier" },
+    { id = "gpl3_98ffe144637e329717dda18781ce096b03e98fe4d4eb154b685b4018b4476bf6", message = "constructor NewThing error return assigned to blank identifier" },
 ]

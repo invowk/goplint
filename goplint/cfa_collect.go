@@ -234,16 +234,16 @@ func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) ma
 	}
 	bindings := make(map[string][]closureBindingEvent)
 
-	recordBinding := func(lhs *ast.Ident, rhs ast.Expr, atPos token.Pos) {
+	resolveBinding := func(lhs *ast.Ident, rhs ast.Expr, atPos token.Pos) (string, closureBindingEvent, bool) {
 		if lhs == nil || lhs.Name == "_" {
-			return
+			return "", closureBindingEvent{}, false
 		}
 		obj := objectForIdent(pass, lhs)
 		if obj == nil {
-			return
+			return "", closureBindingEvent{}, false
 		}
 		if _, isVar := obj.(*types.Var); !isVar {
-			return
+			return "", closureBindingEvent{}, false
 		}
 		lit, ok := exprFuncLit(rhs)
 		if !ok {
@@ -262,12 +262,17 @@ func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) ma
 		if ok {
 			event.lit = lit
 		}
-		bindings[key] = append(bindings[key], event)
+		return key, event, true
 	}
 
 	ast.Inspect(body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
+			type pendingBinding struct {
+				key   string
+				event closureBindingEvent
+			}
+			pending := make([]pendingBinding, 0, len(node.Rhs))
 			for i, rhs := range node.Rhs {
 				if i >= len(node.Lhs) {
 					break
@@ -276,14 +281,33 @@ func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) ma
 				if !ok {
 					continue
 				}
-				recordBinding(lhsIdent, rhs, lhsIdent.Pos())
+				key, event, ok := resolveBinding(lhsIdent, rhs, lhsIdent.Pos())
+				if !ok {
+					continue
+				}
+				pending = append(pending, pendingBinding{key: key, event: event})
+			}
+			for _, entry := range pending {
+				bindings[entry.key] = append(bindings[entry.key], entry.event)
 			}
 		case *ast.ValueSpec:
+			type pendingBinding struct {
+				key   string
+				event closureBindingEvent
+			}
+			pending := make([]pendingBinding, 0, len(node.Values))
 			for i, rhs := range node.Values {
 				if i >= len(node.Names) {
 					break
 				}
-				recordBinding(node.Names[i], rhs, node.Names[i].Pos())
+				key, event, ok := resolveBinding(node.Names[i], rhs, node.Names[i].Pos())
+				if !ok {
+					continue
+				}
+				pending = append(pending, pendingBinding{key: key, event: event})
+			}
+			for _, entry := range pending {
+				bindings[entry.key] = append(bindings[entry.key], entry.event)
 			}
 		}
 		return true
@@ -311,26 +335,26 @@ func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.Bloc
 	}
 	bindings := make(map[string][]validateMethodValueBindingEvent)
 
-	recordBinding := func(lhs ast.Expr, rhs ast.Expr, atPos token.Pos) {
+	resolveBinding := func(lhs ast.Expr, rhs ast.Expr, atPos token.Pos) (string, string, validateMethodValueBindingEvent, bool) {
 		if lhs == nil {
-			return
+			return "", "", validateMethodValueBindingEvent{}, false
 		}
 		lhsExpr := stripParens(lhs)
 		if ident, ok := lhsExpr.(*ast.Ident); ok {
 			if ident.Name == "_" {
-				return
+				return "", "", validateMethodValueBindingEvent{}, false
 			}
 			obj := objectForIdent(pass, ident)
 			if obj == nil {
-				return
+				return "", "", validateMethodValueBindingEvent{}, false
 			}
 			if _, isVar := obj.(*types.Var); !isVar {
-				return
+				return "", "", validateMethodValueBindingEvent{}, false
 			}
 		}
 		lhsKey := targetKeyForExpr(pass, lhsExpr)
 		if lhsKey == "" {
-			return
+			return "", "", validateMethodValueBindingEvent{}, false
 		}
 		receiver, isMethodExpr, ok := validateMethodReceiverFromExpr(pass, rhs)
 		if !ok {
@@ -349,27 +373,68 @@ func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.Bloc
 			event.receiver = receiver
 			event.isMethodExpr = isMethodExpr
 		}
-		bindings[lhsKey] = append(bindings[lhsKey], event)
-		if fallbackKey := targetKeyForExpr(nil, lhsExpr); fallbackKey != "" && fallbackKey != lhsKey {
-			bindings[fallbackKey] = append(bindings[fallbackKey], event)
+		fallbackKey := targetKeyForExpr(nil, lhsExpr)
+		if fallbackKey == lhsKey {
+			fallbackKey = ""
 		}
+		return lhsKey, fallbackKey, event, true
 	}
 
 	ast.Inspect(body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
+			type pendingBinding struct {
+				key         string
+				fallbackKey string
+				event       validateMethodValueBindingEvent
+			}
+			pending := make([]pendingBinding, 0, len(node.Rhs))
 			for i, rhs := range node.Rhs {
 				if i >= len(node.Lhs) {
 					break
 				}
-				recordBinding(node.Lhs[i], rhs, node.Lhs[i].Pos())
+				key, fallbackKey, event, ok := resolveBinding(node.Lhs[i], rhs, node.Lhs[i].Pos())
+				if !ok {
+					continue
+				}
+				pending = append(pending, pendingBinding{
+					key:         key,
+					fallbackKey: fallbackKey,
+					event:       event,
+				})
+			}
+			for _, entry := range pending {
+				bindings[entry.key] = append(bindings[entry.key], entry.event)
+				if entry.fallbackKey != "" {
+					bindings[entry.fallbackKey] = append(bindings[entry.fallbackKey], entry.event)
+				}
 			}
 		case *ast.ValueSpec:
+			type pendingBinding struct {
+				key         string
+				fallbackKey string
+				event       validateMethodValueBindingEvent
+			}
+			pending := make([]pendingBinding, 0, len(node.Values))
 			for i, rhs := range node.Values {
 				if i >= len(node.Names) {
 					break
 				}
-				recordBinding(node.Names[i], rhs, node.Names[i].Pos())
+				key, fallbackKey, event, ok := resolveBinding(node.Names[i], rhs, node.Names[i].Pos())
+				if !ok {
+					continue
+				}
+				pending = append(pending, pendingBinding{
+					key:         key,
+					fallbackKey: fallbackKey,
+					event:       event,
+				})
+			}
+			for _, entry := range pending {
+				bindings[entry.key] = append(bindings[entry.key], entry.event)
+				if entry.fallbackKey != "" {
+					bindings[entry.fallbackKey] = append(bindings[entry.fallbackKey], entry.event)
+				}
 			}
 		}
 		return true

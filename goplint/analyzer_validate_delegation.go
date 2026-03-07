@@ -3,11 +3,9 @@
 package goplint
 
 import (
-	"fmt"
 	"go/ast"
 	"go/token"
 	"go/types"
-	"strings"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -97,11 +95,17 @@ func findDelegatedFields(pass *analysis.Pass, typeName string) map[string]bool {
 			if len(fn.Recv.List[0].Names) > 0 {
 				recvVarName = fn.Recv.List[0].Names[0].Name
 			}
+			parentMap := buildParentMap(fn.Body)
 
 			// Pass 1: Direct receiver.Field.Validate() calls.
 			ast.Inspect(fn.Body, func(n ast.Node) bool {
 				call, ok := n.(*ast.CallExpr)
 				if !ok {
+					return true
+				}
+				if isConditionallyEvaluated(call, parentMap) &&
+					!isWithinIfInit(call, parentMap) &&
+					!isGuardedValidateCall(pass, call, parentMap) {
 					return true
 				}
 				sel, ok := call.Fun.(*ast.SelectorExpr)
@@ -129,6 +133,11 @@ func findDelegatedFields(pass *analysis.Pass, typeName string) map[string]bool {
 			ast.Inspect(fn.Body, func(n ast.Node) bool {
 				callExpr, ok := n.(*ast.CallExpr)
 				if !ok {
+					return true
+				}
+				if isConditionallyEvaluated(callExpr, parentMap) &&
+					!isWithinIfInit(callExpr, parentMap) &&
+					!isGuardedValidateCall(pass, callExpr, parentMap) {
 					return true
 				}
 				selExpr, ok := callExpr.Fun.(*ast.SelectorExpr)
@@ -236,6 +245,7 @@ func findDelegatedFields(pass *analysis.Pass, typeName string) map[string]bool {
 			// method's body for direct field delegations.
 			if recvVarName != "" {
 				findHelperMethodDelegations(pass, fn.Body, typeName, recvVarName, nil, 0, called)
+				findHelperFunctionDelegations(pass, fn.Body, recvVarName, aliasBindings, parentMap, called)
 			}
 		}
 	}
@@ -258,29 +268,28 @@ func collectDelegationAliasBindings(
 	}
 	bindings := make(map[string][]delegationAliasBindingEvent)
 
-	record := func(lhs ast.Expr, rhs ast.Expr, atPos token.Pos) {
+	resolve := func(lhs ast.Expr, rhs ast.Expr, atPos token.Pos) (string, delegationAliasBindingEvent, bool) {
 		lhsIdent, ok := stripParens(lhs).(*ast.Ident)
 		if !ok || lhsIdent.Name == "_" {
-			return
+			return "", delegationAliasBindingEvent{}, false
 		}
 		obj := objectForIdent(pass, lhsIdent)
 		if obj == nil {
-			return
+			return "", delegationAliasBindingEvent{}, false
 		}
 		if _, isVar := obj.(*types.Var); !isVar {
-			return
+			return "", delegationAliasBindingEvent{}, false
 		}
 		lhsKey := objectKey(obj)
 		if lhsKey == "" {
-			return
+			return "", delegationAliasBindingEvent{}, false
 		}
 
 		event := delegationAliasBindingEvent{pos: atPos}
 		if rhsSel, ok := stripParens(rhs).(*ast.SelectorExpr); ok {
 			if rhsIdent, idOK := rhsSel.X.(*ast.Ident); idOK && rhsIdent.Name == recvVarName {
 				event.fieldName = rhsSel.Sel.Name
-				bindings[lhsKey] = append(bindings[lhsKey], event)
-				return
+				return lhsKey, event, true
 			}
 		}
 
@@ -289,25 +298,78 @@ func collectDelegationAliasBindings(
 				event.fieldName = fieldName
 			}
 		}
-		bindings[lhsKey] = append(bindings[lhsKey], event)
+		return lhsKey, event, true
 	}
 
 	ast.Inspect(body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
+			type pendingBinding struct {
+				key   string
+				event delegationAliasBindingEvent
+			}
+			pending := make([]pendingBinding, 0, len(node.Rhs))
 			for i, rhs := range node.Rhs {
 				if i >= len(node.Lhs) {
 					break
 				}
-				record(node.Lhs[i], rhs, node.Lhs[i].Pos())
+				key, event, ok := resolve(node.Lhs[i], rhs, node.Lhs[i].Pos())
+				if !ok {
+					continue
+				}
+				pending = append(pending, pendingBinding{key: key, event: event})
+			}
+			for _, entry := range pending {
+				bindings[entry.key] = append(bindings[entry.key], entry.event)
 			}
 		case *ast.ValueSpec:
+			type pendingBinding struct {
+				key   string
+				event delegationAliasBindingEvent
+			}
+			pending := make([]pendingBinding, 0, len(node.Values))
 			for i, rhs := range node.Values {
 				if i >= len(node.Names) {
 					break
 				}
-				record(node.Names[i], rhs, node.Names[i].Pos())
+				key, event, ok := resolve(node.Names[i], rhs, node.Names[i].Pos())
+				if !ok {
+					continue
+				}
+				pending = append(pending, pendingBinding{key: key, event: event})
 			}
+			for _, entry := range pending {
+				bindings[entry.key] = append(bindings[entry.key], entry.event)
+			}
+		case *ast.RangeStmt:
+			// Track range value aliases: for _, v := range recv.Field { v.Validate() }.
+			sel, ok := stripParens(node.X).(*ast.SelectorExpr)
+			if !ok {
+				break
+			}
+			recvIdent, ok := stripParens(sel.X).(*ast.Ident)
+			if !ok || recvIdent.Name != recvVarName {
+				break
+			}
+			valueIdent, ok := node.Value.(*ast.Ident)
+			if !ok || valueIdent.Name == "_" {
+				break
+			}
+			obj := objectForIdent(pass, valueIdent)
+			if obj == nil {
+				break
+			}
+			if _, isVar := obj.(*types.Var); !isVar {
+				break
+			}
+			key := objectKey(obj)
+			if key == "" {
+				break
+			}
+			bindings[key] = append(bindings[key], delegationAliasBindingEvent{
+				pos:       valueIdent.Pos(),
+				fieldName: sel.Sel.Name,
+			})
 		}
 		return true
 	})
@@ -326,6 +388,124 @@ func latestDelegationAliasFieldBefore(events []delegationAliasBindingEvent, atPo
 		return events[i].fieldName, true
 	}
 	return "", false
+}
+
+func isGuardedValidateCall(
+	pass *analysis.Pass,
+	call *ast.CallExpr,
+	parentMap map[ast.Node]ast.Node,
+) bool {
+	if pass == nil || call == nil || parentMap == nil {
+		return false
+	}
+	sel, ok := stripParens(call.Fun).(*ast.SelectorExpr)
+	if !ok || sel.Sel.Name != "Validate" {
+		return false
+	}
+	receiverKey := targetKeyForExpr(pass, sel.X)
+	if receiverKey == "" {
+		return false
+	}
+
+	child := ast.Node(call)
+	for {
+		parent := parentMap[child]
+		if parent == nil {
+			return false
+		}
+		if ifStmt, ok := parent.(*ast.IfStmt); ok {
+			bodyNonZero, elseNonZero, hasGuard := branchValueGuardForTarget(pass, ifStmt.Cond, receiverKey)
+			if hasGuard {
+				if bodyNonZero && isDescendantOrSelf(child, ifStmt.Body, parentMap) {
+					return true
+				}
+				if elseNonZero && ifStmt.Else != nil && isDescendantOrSelf(child, ifStmt.Else, parentMap) {
+					return true
+				}
+			}
+		}
+		child = parent
+	}
+}
+
+func branchValueGuardForTarget(pass *analysis.Pass, cond ast.Expr, receiverKey string) (bodyNonZero bool, elseNonZero bool, ok bool) {
+	bin, ok := stripParens(cond).(*ast.BinaryExpr)
+	if !ok || (bin.Op != token.NEQ && bin.Op != token.EQL) {
+		return false, false, false
+	}
+	leftZero := isZeroValueExpr(bin.X)
+	rightZero := isZeroValueExpr(bin.Y)
+	if leftZero == rightZero {
+		return false, false, false
+	}
+	targetExpr := bin.X
+	if leftZero {
+		targetExpr = bin.Y
+	}
+	if targetKeyForExpr(pass, targetExpr) != receiverKey {
+		return false, false, false
+	}
+	if bin.Op == token.NEQ {
+		return true, false, true
+	}
+	return false, true, true
+}
+
+func isZeroValueExpr(expr ast.Expr) bool {
+	expr = stripParens(expr)
+	if isNilIdent(expr) {
+		return true
+	}
+	if lit, ok := expr.(*ast.BasicLit); ok {
+		switch lit.Kind {
+		case token.STRING:
+			return lit.Value == `""`
+		case token.INT, token.FLOAT:
+			return lit.Value == "0" || lit.Value == "0.0"
+		default:
+			return false
+		}
+	}
+	ident, ok := expr.(*ast.Ident)
+	return ok && ident.Name == "false"
+}
+
+func isNilIdent(expr ast.Expr) bool {
+	ident, ok := stripParens(expr).(*ast.Ident)
+	return ok && ident.Name == "nil"
+}
+
+func isDescendantOrSelf(node ast.Node, ancestor ast.Node, parentMap map[ast.Node]ast.Node) bool {
+	if node == nil || ancestor == nil || parentMap == nil {
+		return false
+	}
+	current := node
+	for current != nil {
+		if current == ancestor {
+			return true
+		}
+		current = parentMap[current]
+	}
+	return false
+}
+
+func isWithinIfInit(node ast.Node, parentMap map[ast.Node]ast.Node) bool {
+	if node == nil || parentMap == nil {
+		return false
+	}
+	child := node
+	for {
+		parent := parentMap[child]
+		if parent == nil {
+			return false
+		}
+		if ifStmt, ok := parent.(*ast.IfStmt); ok && ifStmt.Init != nil {
+			if isDescendantOrSelf(child, ifStmt.Init, parentMap) {
+				return true
+			}
+		}
+		child = parent
+	}
 }
 
 // maxHelperMethodDepth bounds recursion in multi-level helper method
@@ -393,11 +573,68 @@ func findHelperMethodDelegations(
 		// Walk the helper for direct receiver.Field.Validate() patterns.
 		helperParentMap := buildParentMap(helperBody)
 		ast.Inspect(helperBody, func(n ast.Node) bool {
+			rangeStmt, ok := n.(*ast.RangeStmt)
+			if ok {
+				sel, ok := rangeStmt.X.(*ast.SelectorExpr)
+				if !ok || helperRecvVar == "" {
+					return true
+				}
+				ident, ok := sel.X.(*ast.Ident)
+				if !ok || ident.Name != helperRecvVar {
+					return true
+				}
+
+				fieldName := sel.Sel.Name
+				valueVar := ""
+				if vi, ok := rangeStmt.Value.(*ast.Ident); ok {
+					valueVar = vi.Name
+				}
+				keyVar := ""
+				if ki, ok := rangeStmt.Key.(*ast.Ident); ok {
+					keyVar = ki.Name
+				}
+
+				ast.Inspect(rangeStmt.Body, func(inner ast.Node) bool {
+					call, ok := inner.(*ast.CallExpr)
+					if !ok {
+						return true
+					}
+					sel, ok := call.Fun.(*ast.SelectorExpr)
+					if !ok || sel.Sel.Name != "Validate" {
+						return true
+					}
+
+					if valueVar != "" {
+						if vi, ok := sel.X.(*ast.Ident); ok && vi.Name == valueVar {
+							out[fieldName] = true
+							return true
+						}
+					}
+					if keyVar != "" {
+						if indexExpr, ok := sel.X.(*ast.IndexExpr); ok {
+							if innerSel, ok := indexExpr.X.(*ast.SelectorExpr); ok {
+								if innerIdent, ok := innerSel.X.(*ast.Ident); ok &&
+									innerIdent.Name == helperRecvVar &&
+									innerSel.Sel.Name == fieldName {
+									if ki, ok := indexExpr.Index.(*ast.Ident); ok && ki.Name == keyVar {
+										out[fieldName] = true
+									}
+								}
+							}
+						}
+					}
+					return true
+				})
+				return true
+			}
+
 			call, ok := n.(*ast.CallExpr)
 			if !ok {
 				return true
 			}
-			if isConditionallyEvaluated(call, helperParentMap) {
+			if isConditionallyEvaluated(call, helperParentMap) &&
+				!isWithinIfInit(call, helperParentMap) &&
+				!isGuardedValidateCall(pass, call, helperParentMap) {
 				return true
 			}
 			sel, ok := call.Fun.(*ast.SelectorExpr)
@@ -420,6 +657,178 @@ func findHelperMethodDelegations(
 		// contain field delegations.
 		findHelperMethodDelegations(pass, helperBody, typeName, helperRecvVar, visited, depth+1, out)
 	}
+}
+
+func findHelperFunctionDelegations(
+	pass *analysis.Pass,
+	body *ast.BlockStmt,
+	recvVarName string,
+	aliasBindings map[string][]delegationAliasBindingEvent,
+	parentMap map[ast.Node]ast.Node,
+	out map[string]bool,
+) {
+	if pass == nil || pass.TypesInfo == nil || body == nil || recvVarName == "" {
+		return
+	}
+
+	ast.Inspect(body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if isConditionallyEvaluated(call, parentMap) && !isWithinIfInit(call, parentMap) {
+			return true
+		}
+
+		helperName := calledFunctionName(call.Fun)
+		if helperName == "" {
+			return true
+		}
+
+		helperBody, paramNames := findFunctionBody(pass, helperName)
+		if helperBody == nil {
+			return true
+		}
+
+		delegatedParams := collectDelegatedHelperParams(helperBody, paramNames)
+		for _, paramIndex := range delegatedParams {
+			if paramIndex >= len(call.Args) {
+				continue
+			}
+			fieldName, ok := delegatedFieldNameForArg(pass, call.Args[paramIndex], recvVarName, aliasBindings, call.Pos())
+			if ok {
+				out[fieldName] = true
+			}
+		}
+		return true
+	})
+}
+
+func calledFunctionName(expr ast.Expr) string {
+	switch node := stripParens(expr).(type) {
+	case *ast.Ident:
+		return node.Name
+	case *ast.IndexExpr:
+		if ident, ok := stripParens(node.X).(*ast.Ident); ok {
+			return ident.Name
+		}
+	case *ast.IndexListExpr:
+		if ident, ok := stripParens(node.X).(*ast.Ident); ok {
+			return ident.Name
+		}
+	}
+	return ""
+}
+
+func collectDelegatedHelperParams(body *ast.BlockStmt, paramNames []string) []int {
+	if body == nil || len(paramNames) == 0 {
+		return nil
+	}
+
+	paramIndexes := make(map[string]int, len(paramNames))
+	for i, name := range paramNames {
+		paramIndexes[name] = i
+	}
+
+	delegated := make(map[int]bool)
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.CallExpr:
+			sel, ok := node.Fun.(*ast.SelectorExpr)
+			if !ok || sel.Sel.Name != "Validate" {
+				return true
+			}
+			if ident, ok := stripParens(sel.X).(*ast.Ident); ok {
+				if index, ok := paramIndexes[ident.Name]; ok {
+					delegated[index] = true
+				}
+			}
+			if indexExpr, ok := stripParens(sel.X).(*ast.IndexExpr); ok {
+				if ident, ok := stripParens(indexExpr.X).(*ast.Ident); ok {
+					if index, ok := paramIndexes[ident.Name]; ok {
+						delegated[index] = true
+					}
+				}
+			}
+		case *ast.RangeStmt:
+			rangeIdent, ok := stripParens(node.X).(*ast.Ident)
+			if !ok {
+				return true
+			}
+			paramIndex, ok := paramIndexes[rangeIdent.Name]
+			if !ok {
+				return true
+			}
+
+			valueVar := ""
+			if ident, ok := node.Value.(*ast.Ident); ok {
+				valueVar = ident.Name
+			}
+			keyVar := ""
+			if ident, ok := node.Key.(*ast.Ident); ok {
+				keyVar = ident.Name
+			}
+
+			ast.Inspect(node.Body, func(inner ast.Node) bool {
+				call, ok := inner.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok || sel.Sel.Name != "Validate" {
+					return true
+				}
+				if valueVar != "" {
+					if ident, ok := stripParens(sel.X).(*ast.Ident); ok && ident.Name == valueVar {
+						delegated[paramIndex] = true
+					}
+				}
+				if keyVar != "" {
+					if indexExpr, ok := stripParens(sel.X).(*ast.IndexExpr); ok {
+						if ident, ok := stripParens(indexExpr.X).(*ast.Ident); ok && ident.Name == rangeIdent.Name {
+							if keyIdent, ok := stripParens(indexExpr.Index).(*ast.Ident); ok && keyIdent.Name == keyVar {
+								delegated[paramIndex] = true
+							}
+						}
+					}
+				}
+				return true
+			})
+		}
+		return true
+	})
+
+	var result []int
+	for i := range len(paramNames) {
+		if delegated[i] {
+			result = append(result, i)
+		}
+	}
+	return result
+}
+
+func delegatedFieldNameForArg(
+	pass *analysis.Pass,
+	arg ast.Expr,
+	recvVarName string,
+	aliasBindings map[string][]delegationAliasBindingEvent,
+	atPos token.Pos,
+) (string, bool) {
+	if recvVarName == "" {
+		return "", false
+	}
+
+	if sel, ok := stripParens(arg).(*ast.SelectorExpr); ok {
+		if ident, ok := stripParens(sel.X).(*ast.Ident); ok && ident.Name == recvVarName {
+			return sel.Sel.Name, true
+		}
+	}
+
+	aliasKey := targetKeyForExpr(pass, stripParens(arg))
+	if aliasKey == "" {
+		return "", false
+	}
+	return latestDelegationAliasFieldBefore(aliasBindings[aliasKey], atPos)
 }
 
 // findMethodBody searches the package for a method with the given receiver
@@ -445,6 +854,33 @@ func findMethodBody(pass *analysis.Pass, typeName, methodName string) (*ast.Bloc
 	return nil, ""
 }
 
+func findFunctionBody(pass *analysis.Pass, funcName string) (*ast.BlockStmt, []string) {
+	for _, file := range pass.Files {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv != nil || fn.Body == nil || fn.Name.Name != funcName {
+				continue
+			}
+			return fn.Body, functionParamNames(fn.Type.Params)
+		}
+	}
+	return nil, nil
+}
+
+func functionParamNames(fields *ast.FieldList) []string {
+	if fields == nil {
+		return nil
+	}
+
+	var names []string
+	for _, field := range fields.List {
+		for _, name := range field.Names {
+			names = append(names, name.Name)
+		}
+	}
+	return names
+}
+
 // embeddedFieldTypeName extracts the type name from an anonymous embedded
 // field's type expression. Returns the simple type name for same-package
 // types (*ast.Ident), qualified name for imported types (*ast.SelectorExpr),
@@ -462,303 +898,4 @@ func embeddedFieldTypeName(expr ast.Expr) string {
 		return e.Sel.Name
 	}
 	return ""
-}
-
-// hasValidateAllDirective checks whether a type declaration has the
-// //goplint:validate-all directive.
-func hasValidateAllDirective(genDoc *ast.CommentGroup, specDoc *ast.CommentGroup) bool {
-	return hasDirectiveKey(genDoc, nil, "validate-all") || hasDirectiveKey(specDoc, nil, "validate-all")
-}
-
-// inspectSuggestValidateAll reports structs that have Validate() and at least
-// one field whose type also has Validate(), but are not annotated with
-// //goplint:validate-all. This is an advisory mode to help identify candidates
-// for the directive — it does not block CI.
-func inspectSuggestValidateAll(
-	pass *analysis.Pass,
-	cfg *ExceptionConfig,
-	bl *BaselineConfig,
-) {
-	pkgName := packageName(pass.Pkg)
-
-	// Build a set of type names with Validate() methods in this package.
-	validatableTypes := make(map[string]bool)
-	for _, obj := range pass.TypesInfo.Defs {
-		if obj == nil {
-			continue
-		}
-		named := resolveNamedType(obj.Type())
-		if named == nil {
-			continue
-		}
-		if hasValidateMethod(named) {
-			validatableTypes[obj.Name()] = true
-		}
-	}
-
-	for _, file := range pass.Files {
-		if isTestFile(pass, file.Pos()) {
-			continue
-		}
-		for _, decl := range file.Decls {
-			gd, ok := decl.(*ast.GenDecl)
-			if !ok || gd.Tok != token.TYPE {
-				continue
-			}
-			for _, spec := range gd.Specs {
-				ts, ok := spec.(*ast.TypeSpec)
-				if !ok {
-					continue
-				}
-				st, ok := ts.Type.(*ast.StructType)
-				if !ok || st.Fields == nil {
-					continue
-				}
-
-				// Skip if already annotated.
-				if hasValidateAllDirective(gd.Doc, ts.Doc) {
-					continue
-				}
-
-				// Skip if the struct itself doesn't have Validate().
-				if !validatableTypes[ts.Name.Name] {
-					continue
-				}
-
-				// Count fields whose types have Validate().
-				validatableFieldCount := 0
-				for _, field := range st.Fields.List {
-					fieldType := pass.TypesInfo.TypeOf(field.Type)
-					if fieldType == nil {
-						continue
-					}
-					named := resolveNamedType(fieldType)
-					if named != nil && hasValidateMethod(named) {
-						if len(field.Names) > 0 {
-							validatableFieldCount += len(field.Names)
-						} else {
-							validatableFieldCount++
-						}
-					}
-				}
-
-				if validatableFieldCount == 0 {
-					continue
-				}
-
-				qualName := fmt.Sprintf("%s.%s", pkgName, ts.Name.Name)
-				excKey := qualName + ".suggest-validate-all"
-				if cfg.isExcepted(excKey) {
-					continue
-				}
-
-				msg := fmt.Sprintf(
-					"struct %s has Validate() and %d validatable field(s) but no //goplint:validate-all directive",
-					qualName, validatableFieldCount)
-				findingID := StableFindingID(CategorySuggestValidateAll, qualName)
-				if bl.ContainsFinding(CategorySuggestValidateAll, findingID, msg) {
-					continue
-				}
-
-				reportDiagnostic(pass, ts.Name.Pos(), CategorySuggestValidateAll, findingID, msg)
-			}
-		}
-	}
-}
-
-// collectValidatableFieldKeys collects field names (or embedded type names)
-// whose types have Validate() or validatable elements (slice/map with
-// Validate() element type), skipping fields with //goplint:no-delegate.
-func collectValidatableFieldKeys(pass *analysis.Pass, st *ast.StructType) []string {
-	var keys []string
-	for _, field := range st.Fields.List {
-		fieldType := pass.TypesInfo.TypeOf(field.Type)
-		if fieldType == nil {
-			continue
-		}
-		if !hasValidateMethod(fieldType) && !hasValidatableElements(fieldType) {
-			continue
-		}
-		if hasNoDelegateDirective(field.Doc, field.Comment) {
-			continue
-		}
-		if len(field.Names) > 0 {
-			for _, name := range field.Names {
-				keys = append(keys, name.Name)
-			}
-		} else {
-			// Anonymous embedded field — use the type name as the key.
-			if embName := embeddedFieldTypeName(field.Type); embName != "" {
-				keys = append(keys, embName)
-			}
-		}
-	}
-	return keys
-}
-
-// reportIncompleteDelegation checks which validatable fields are delegated in
-// the struct's Validate() method and reports any that are missing.
-func reportIncompleteDelegation(
-	pass *analysis.Pass,
-	structName string,
-	structPos token.Pos,
-	validatableKeys []string,
-	cfg *ExceptionConfig,
-	bl *BaselineConfig,
-) {
-	pkgName := packageName(pass.Pkg)
-	qualName := fmt.Sprintf("%s.%s", pkgName, structName)
-	calledFields := findDelegatedFields(pass, structName)
-	for _, fieldName := range validatableKeys {
-		if calledFields[fieldName] {
-			continue
-		}
-
-		excKey := fmt.Sprintf("%s.%s.validate-delegation", qualName, fieldName)
-		if cfg.isExcepted(excKey) {
-			continue
-		}
-
-		msg := fmt.Sprintf(
-			"%s.Validate() does not delegate to field %s which has Validate()",
-			qualName, fieldName)
-		findingID := PackageScopedFindingID(pass, CategoryIncompleteValidateDelegation, qualName, fieldName)
-		if bl.ContainsFinding(CategoryIncompleteValidateDelegation, findingID, msg) {
-			continue
-		}
-
-		reportDiagnostic(pass, structPos, CategoryIncompleteValidateDelegation, findingID, msg)
-	}
-}
-
-// inspectValidateDelegationAll is the universal version of
-// inspectValidateDelegation. It checks ALL structs (not just those with
-// //goplint:validate-all) for two conditions:
-//
-//  1. Struct has validatable fields but no Validate() method → reports
-//     missing-struct-validate-fields.
-//  2. Struct has Validate() and validatable fields but does not delegate
-//     to all of them → reports incomplete-validate-delegation.
-//
-// Error-type structs (name ending in "Error" or implementing the error
-// interface) are excluded, consistent with --check-constructors and
-// --check-struct-validate.
-func inspectValidateDelegationAll(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConfig) {
-	pkgName := packageName(pass.Pkg)
-
-	// Build the set of type names with Validate() in this package.
-	validatableTypes := buildValidatableStructs(pass)
-
-	for _, file := range pass.Files {
-		if isTestFile(pass, file.Pos()) {
-			continue
-		}
-		for _, decl := range file.Decls {
-			gd, ok := decl.(*ast.GenDecl)
-			if !ok || gd.Tok != token.TYPE {
-				continue
-			}
-			for _, spec := range gd.Specs {
-				ts, ok := spec.(*ast.TypeSpec)
-				if !ok {
-					continue
-				}
-				st, ok := ts.Type.(*ast.StructType)
-				if !ok || st.Fields == nil {
-					continue
-				}
-				structName := ts.Name.Name
-
-				// Skip structs with //goplint:validate-all — those are handled
-				// by the opt-in --check-validate-delegation mode. This avoids
-				// duplicate findings when both modes are active.
-				if hasValidateAllDirective(gd.Doc, ts.Doc) {
-					continue
-				}
-
-				// Skip error types — they typically don't need Validate().
-				if isErrorStructByAST(pass, structName) {
-					continue
-				}
-
-				validatableKeys := collectValidatableFieldKeys(pass, st)
-				if len(validatableKeys) == 0 {
-					continue
-				}
-
-				qualName := fmt.Sprintf("%s.%s", pkgName, structName)
-
-				// Sub-case 1: struct has validatable fields but no Validate() at all.
-				if !validatableTypes[structName] {
-					excKey := qualName + ".struct-validate-fields"
-					if cfg.isExcepted(excKey) {
-						continue
-					}
-
-					msg := fmt.Sprintf(
-						"struct %s has %d validatable field(s) but no Validate() method",
-						qualName, len(validatableKeys))
-					findingID := PackageScopedFindingID(pass, CategoryMissingStructValidateFields, qualName)
-					if bl.ContainsFinding(CategoryMissingStructValidateFields, findingID, msg) {
-						continue
-					}
-
-					reportDiagnostic(pass, ts.Name.Pos(), CategoryMissingStructValidateFields, findingID, msg)
-					continue
-				}
-
-				// Sub-case 2: struct has Validate() — check delegation completeness.
-				reportIncompleteDelegation(pass, structName, ts.Name.Pos(), validatableKeys, cfg, bl)
-			}
-		}
-	}
-}
-
-// isErrorStructByAST reports whether the given struct name represents an error
-// type. Uses both naming convention (suffix "Error") and method set checking
-// (has an Error() string method) via the type checker. Consistent with the
-// error-type exclusion in reportMissingConstructors and reportMissingStructValidate.
-func isErrorStructByAST(pass *analysis.Pass, structName string) bool {
-	if strings.HasSuffix(structName, "Error") {
-		return true
-	}
-	obj := pass.Pkg.Scope().Lookup(structName)
-	if obj == nil {
-		return false
-	}
-	// Unalias before Named assertion — required for Go 1.22+ type aliases.
-	named, ok := types.Unalias(obj.Type()).(*types.Named)
-	if !ok {
-		return false
-	}
-	// Check pointer receiver method set (superset of value receiver).
-	mset := types.NewMethodSet(types.NewPointer(named))
-	for method := range mset.Methods() {
-		if method.Obj().Name() != "Error" {
-			continue
-		}
-		sig, sigOK := method.Obj().Type().(*types.Signature)
-		if !sigOK {
-			continue
-		}
-		if sig.Params().Len() == 0 && sig.Results().Len() == 1 {
-			if isStringType(sig.Results().At(0).Type()) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-
-// resolveNamedType dereferences pointers and aliases to find the underlying
-// *types.Named type. Returns nil if the type is not a named type.
-func resolveNamedType(t types.Type) *types.Named {
-	// Dereference pointers.
-	if ptr, ok := t.(*types.Pointer); ok {
-		t = ptr.Elem()
-	}
-	t = types.Unalias(t)
-	named, _ := t.(*types.Named)
-	return named
 }

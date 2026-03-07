@@ -1,7 +1,7 @@
-# Test baseline — suppresses specific known findings.
+# Test baseline - suppresses specific known findings.
 
 [primitive]
 entries = [
-    { id = "gpl1_2d6adf3c87734a48525b9ffe7af97bc3e87576858f36091c6fdb7842f0407d01", message = "struct field baseline.BaselinedStruct.Known uses primitive type string" },
-    { id = "gpl1_92e906a244a58f2ab121a83799f78f3d72323becf0853990f1c0b690080d106d", message = "parameter \"known\" of baseline.BaselinedFunc uses primitive type string" },
+    { id = "gpl3_71af4d27c00fd9c7e819ad13acbe47c765de4eb7e76149986c0b6268f5fe0e0b", message = "struct field baseline.BaselinedStruct.Known uses primitive type string" },
+    { id = "gpl3_baeba9059b87ab33044221bca8de843583ecb5794fbe3f5f84f2aa6e14b08f1a", message = "parameter \"known\" of baseline.BaselinedFunc uses primitive type string" },
 ]

@@ -157,6 +157,92 @@ func use() {
 	}
 }
 
+func TestCollectValidateMethodValueBindingEventsParallelAssignment(t *testing.T) {
+	t.Parallel()
+
+	src := `package testpkg
+type Val string
+func (v Val) Validate() error { return nil }
+type Holder struct {
+	A Val
+	B Val
+	F func() error
+	G func() error
+}
+func use() {
+	var h Holder
+	h.F = h.A.Validate
+	h.G = h.B.Validate
+	h.F, h.G = h.G, h.F
+	_ = h.F()
+	_ = h.G()
+}`
+
+	pass, file := buildTypedPassFromSource(t, src)
+	useFn := findFuncDecl(t, file, "use")
+	bindings := collectValidateMethodValueBindingEvents(pass, useFn.Body)
+	callsF := findSelectorCallsInFunc(t, useFn, "h", "F")
+	callsG := findSelectorCallsInFunc(t, useFn, "h", "G")
+	if len(callsF) != 1 || len(callsG) != 1 {
+		t.Fatalf("expected one h.F() and one h.G() call, got F=%d G=%d", len(callsF), len(callsG))
+	}
+	recvF, okF := validateMethodReceiverForCall(pass, callsF[0], bindings)
+	if !okF {
+		t.Fatal("expected h.F() receiver binding to resolve")
+	}
+	recvG, okG := validateMethodReceiverForCall(pass, callsG[0], bindings)
+	if !okG {
+		t.Fatal("expected h.G() receiver binding to resolve")
+	}
+	if got := types.ExprString(recvF); got != "h.B" {
+		t.Fatalf("h.F() receiver = %q, want %q", got, "h.B")
+	}
+	if got := types.ExprString(recvG); got != "h.A" {
+		t.Fatalf("h.G() receiver = %q, want %q", got, "h.A")
+	}
+}
+
+func TestCollectClosureVarBindingEventsParallelAssignment(t *testing.T) {
+	t.Parallel()
+
+	src := `package testpkg
+func A() {}
+func B() {}
+func use() {
+	f := func() { A() }
+	g := func() { B() }
+	f, g = g, f
+	f()
+	g()
+}`
+
+	pass, file := buildTypedPassFromSource(t, src)
+	useFn := findFuncDecl(t, file, "use")
+	parentMap := buildParentMap(useFn.Body)
+	bindings := collectClosureVarBindingEvents(pass, useFn.Body)
+	callsF := findDirectIdentCallsInFunc(t, useFn, "f")
+	callsG := findDirectIdentCallsInFunc(t, useFn, "g")
+	if len(callsF) != 1 || len(callsG) != 1 {
+		t.Fatalf("expected one f() and one g() call, got f=%d g=%d", len(callsF), len(callsG))
+	}
+
+	litF, _, ok := executableClosureVarCall(pass, callsF[0], bindings, parentMap)
+	if !ok || litF == nil {
+		t.Fatal("expected f() call to resolve to a closure literal")
+	}
+	litG, _, ok := executableClosureVarCall(pass, callsG[0], bindings, parentMap)
+	if !ok || litG == nil {
+		t.Fatal("expected g() call to resolve to a closure literal")
+	}
+
+	if got := firstCalledFuncName(t, litF); got != "B" {
+		t.Fatalf("f() closure first call = %q, want %q", got, "B")
+	}
+	if got := firstCalledFuncName(t, litG); got != "A" {
+		t.Fatalf("g() closure first call = %q, want %q", got, "A")
+	}
+}
+
 func clonePassTypesInfo(pass *analysis.Pass) *analysis.Pass {
 	clone := &analysis.Pass{
 		Fset:      pass.Fset,
@@ -202,37 +288,6 @@ func findSelectorExprInFunc(t *testing.T, fn *ast.FuncDecl, xName, selName strin
 	return found
 }
 
-func findSelectorCallInFunc(t *testing.T, fn *ast.FuncDecl, xName, selName string, occurrence int) *ast.CallExpr {
-	t.Helper()
-
-	count := 0
-	var found *ast.CallExpr
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		sel, ok := stripParens(call.Fun).(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != selName {
-			return true
-		}
-		ident, ok := stripParens(sel.X).(*ast.Ident)
-		if !ok || ident.Name != xName {
-			return true
-		}
-		if count == occurrence {
-			found = call
-			return false
-		}
-		count++
-		return true
-	})
-	if found == nil {
-		t.Fatalf("selector call %s.%s occurrence %d not found", xName, selName, occurrence)
-	}
-	return found
-}
-
 func findSelectorCallsInFunc(t *testing.T, fn *ast.FuncDecl, xName, selName string) []*ast.CallExpr {
 	t.Helper()
 
@@ -254,4 +309,24 @@ func findSelectorCallsInFunc(t *testing.T, fn *ast.FuncDecl, xName, selName stri
 		return true
 	})
 	return calls
+}
+
+func firstCalledFuncName(t *testing.T, lit *ast.FuncLit) string {
+	t.Helper()
+	if lit == nil || lit.Body == nil || len(lit.Body.List) == 0 {
+		t.Fatal("closure literal has empty body")
+	}
+	exprStmt, ok := lit.Body.List[0].(*ast.ExprStmt)
+	if !ok {
+		t.Fatalf("first statement is %T, want *ast.ExprStmt", lit.Body.List[0])
+	}
+	call, ok := stripParens(exprStmt.X).(*ast.CallExpr)
+	if !ok {
+		t.Fatalf("first expression is %T, want *ast.CallExpr", exprStmt.X)
+	}
+	ident, ok := stripParens(call.Fun).(*ast.Ident)
+	if !ok {
+		t.Fatalf("first call target is %T, want *ast.Ident", call.Fun)
+	}
+	return ident.Name
 }

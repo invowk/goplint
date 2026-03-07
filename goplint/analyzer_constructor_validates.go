@@ -149,15 +149,6 @@ func matchNamedTypePkgPath(tuple *types.Tuple, typeName, pkgAlias string) string
 	return ""
 }
 
-// constructorValidateInfo records a constructor function and whether
-// its body calls Validate() on the returned value.
-type constructorValidateInfo struct {
-	name           string   // function name (e.g., "NewConfig")
-	pos            ast.Node // position of the function declaration
-	returnTypeName string   // resolved first non-error return type name
-	callsValidate  bool     // body contains a .Validate() selector call
-}
-
 // inspectConstructorValidates checks whether NewXxx() constructors call
 // Validate() on the type they construct. Constructors returning types with
 // a Validate() method should call it before returning to enforce invariants.
@@ -174,8 +165,19 @@ func inspectConstructorValidates(
 	constantOnlyTypes map[string]bool,
 	cfg *ExceptionConfig,
 	bl *BaselineConfig,
-) {
+	cfgBackend string,
+	cfgInterprocEngine string,
+	cfgMaxStates int,
+	cfgMaxDepth int,
+	cfgInconclusivePolicy string,
+	cfgWitnessMaxSteps int,
+	phaseC cfgPhaseCOptions,
+) error {
 	pkgName := packageName(pass.Pkg)
+	solver := newInterprocSolver(pass, cfgBackend, cfgInterprocEngine)
+	compatTracker := newInterprocCompatTracker(cfgInterprocEngine)
+	refiner := newCFGRefinementController(phaseC)
+	constructorUnsafeByIdentity := make(map[string]bool)
 
 	// Build a set of struct names that have Validate() methods.
 	validatableStructs := buildValidatableStructs(pass)
@@ -242,12 +244,6 @@ func inspectConstructorValidates(
 				continue
 			}
 
-			// Check whether constructor paths validate the returned type.
-			// CFA mode is required for constructor-validates.
-			if !constructorHasUnvalidatedReturnPath(pass, fn, returnType, returnTypePkgPath, returnTypeKey) {
-				continue
-			}
-
 			// Check for ignore directive on the function.
 			if hasIgnoreDirective(fn.Doc, nil) {
 				continue
@@ -259,36 +255,117 @@ func inspectConstructorValidates(
 				continue
 			}
 
+			effectiveBudget := blockVisitBudget{
+				maxStates: cfgMaxStates,
+				maxDepth:  cfgMaxDepth,
+			}
+			if backendCFG := buildFuncCFGForBackend(pass, fn.Body, cfgBackend); backendCFG != nil {
+				effectiveBudget = adaptiveBlockVisitBudget(backendCFG, effectiveBudget)
+			}
+
+			// Check whether constructor paths validate the returned type.
+			// CFA mode is required for constructor-validates.
+			pathInput := interprocConstructorPathInput{
+				Decl:              fn,
+				ReturnTypeKey:     returnTypeKey,
+				ReturnTypePkgPath: returnTypePkgPath,
+				Constructor:       qualName,
+				ReturnType:        returnType,
+				MaxStates:         effectiveBudget.maxStates,
+				MaxDepth:          effectiveBudget.maxDepth,
+				CallChain:         []string{qualName},
+			}
+			pathLegacy := solver.EvaluateConstructorPathLegacy(pathInput)
+			pathResult := solver.EvaluateConstructorPath(pathInput)
+			identity := qualName + "|" + returnTypeKey
+			if pathResult.Class == interprocOutcomeUnsafe {
+				constructorUnsafeByIdentity[identity] = true
+			}
+			compatTracker.Check(
+				CategoryMissingConstructorValidate,
+				PackageScopedFindingID(pass, CategoryMissingConstructorValidate, qualName, returnType),
+				pathLegacy,
+				pathResult,
+				constructorUnsafeByIdentity[identity],
+			)
+			pathResult = refiner.Refine(cfgRefinementRequest{
+				Pass:      pass,
+				Position:  fn.Name.Pos(),
+				CFG:       buildFuncCFGForBackend(pass, fn.Body, cfgBackend),
+				Result:    pathResult,
+				Category:  CategoryMissingConstructorValidate,
+				FindingID: PackageScopedFindingID(pass, CategoryMissingConstructorValidate, qualName, returnType),
+				CallChain: []string{qualName},
+				Rerun: func(override cfgRefinementOverride) interprocPathResult {
+					next := pathInput
+					if override.MaxStates > 0 {
+						next.MaxStates = override.MaxStates
+					}
+					if override.MaxDepth > 0 {
+						next.MaxDepth = override.MaxDepth
+					}
+					next.DischargedWitnesses = override.DischargedWitnesses
+					if override.RefineRecursion {
+						next.SummaryStack = summaryStackWithRecursionFallback(next.SummaryStack)
+					}
+					refined := solver.EvaluateConstructorPath(next)
+					if override.ResolveTargets &&
+						refined.Class == interprocOutcomeInconclusive &&
+						refined.Reason == pathOutcomeReasonUnresolvedTarget {
+						refined = mergeResolvedTargetRefinement(refined, solver.EvaluateConstructorPathLegacy(next))
+					}
+					return refined
+				},
+			})
+			writeRefinementTraceToSink(pass, fn.Name.Pos(), pathResult)
+			pathOutcome := pathResult.toPathOutcome()
+			pathReason := pathResult.Reason
+			pathWitness := pathResult.Witness
+			if pathOutcome == pathOutcomeSafe {
+				continue
+			}
+
+			if pathOutcome == pathOutcomeInconclusive {
+				msg := constructorValidateInconclusiveMessage(qualName, returnTypePkg, returnType)
+				findingID := PackageScopedFindingID(
+					pass,
+					CategoryMissingConstructorValidateInc,
+					qualName,
+					returnType,
+					"inconclusive",
+					string(pathReason),
+				)
+				meta := cfgOutcomeMetaWithWitness(cfgBackend, effectiveBudget.maxStates, effectiveBudget.maxDepth, pathReason, pathWitness, cfgWitnessMaxSteps)
+				addCFGWitnessCallChainMeta(meta, []string{qualName}, cfgWitnessMaxSteps)
+				meta = appendPhaseCMeta(meta, pathResult)
+				reportInconclusiveFindingWithMetaIfNotBaselined(
+					pass,
+					bl,
+					cfgInconclusivePolicy,
+					fn.Name.Pos(),
+					CategoryMissingConstructorValidateInc,
+					findingID,
+					msg,
+					meta,
+				)
+				continue
+			}
+
 			msg := fmt.Sprintf(
 				"constructor %s returns %s.%s which has Validate() but never calls it",
 				qualName, returnTypePkg, returnType)
 			findingID := PackageScopedFindingID(pass, CategoryMissingConstructorValidate, qualName, returnType)
-			if bl.ContainsFinding(CategoryMissingConstructorValidate, findingID, msg) {
-				continue
+			var meta map[string]string
+			if pathResult.PhaseC.Enabled {
+				meta = appendPhaseCMeta(nil, pathResult)
+				addCFGWitnessMeta(meta, pathWitness, cfgWitnessMaxSteps)
+				addCFGWitnessCallChainMeta(meta, []string{qualName}, cfgWitnessMaxSteps)
 			}
-
-			reportDiagnostic(pass, fn.Name.Pos(), CategoryMissingConstructorValidate, findingID, msg)
+			reportFindingWithMetaIfNotBaselined(pass, bl, fn.Name.Pos(), CategoryMissingConstructorValidate, findingID, msg, meta)
 		}
 	}
-}
 
-// bodyCallsValidateOnType walks a function body looking for a .Validate()
-// selector call where the receiver's type matches the constructor's return type.
-// This avoids the false-negative pattern where cfg.Validate() (on a Config
-// parameter) satisfies the heuristic even though the returned Server is never
-// validated.
-//
-// Accepted patterns:
-//   - Direct: s := &Server{...}; s.Validate()
-//   - Delegated: s, err := helperNewServer(); s.Validate()
-//   - Any .Validate() call on an expression whose resolved type matches returnTypeName
-//
-// Note: this does not handle deferred closures or IIFEs — it is a quick
-// pre-check before CFA. The full path-sensitive analysis in
-// constructorHasUnvalidatedReturnPath handles those cases.
-func bodyCallsValidateOnType(pass *analysis.Pass, body *ast.BlockStmt, returnTypeKey string) bool {
-	methodCalls := collectMethodValueValidateCalls(pass, body)
-	return containsValidateOnReceiver(pass, body, typeKeyMatcher(returnTypeKey), nil, nil, methodCalls)
+	return compatTracker.Err()
 }
 
 // methodCallTarget identifies a method call on the constructor's return type
@@ -376,7 +453,7 @@ func bodyCallsValidateTransitive(
 			bareFuncCallees = append(bareFuncCallees, fun.Name)
 
 		case *ast.SelectorExpr:
-			// Skip Validate() itself — already handled by bodyCallsValidateOnType.
+			// Skip direct Validate() calls in this transitive helper walk.
 			if fun.Sel.Name == "Validate" {
 				return true
 			}
@@ -385,21 +462,19 @@ func bodyCallsValidateTransitive(
 			// with a validates-type fact.
 			if ident, ok := fun.X.(*ast.Ident); ok {
 				obj := pass.TypesInfo.Uses[ident]
-				if obj != nil {
-					if _, isPkgName := obj.(*types.PkgName); isPkgName {
-						// This is a qualified call: pkg.Func(...)
-						selObj := pass.TypesInfo.Uses[fun.Sel]
-						if selObj != nil {
-							if callee, ok := selObj.(*types.Func); ok {
-								var fact ValidatesTypeFact
-								if pass.ImportObjectFact(callee, &fact) && factMatchesReturnType(fact, returnTypeName, returnTypePkgPath) {
-									crossPkgValidates = true
-									return false
-								}
+				if _, isPkgName := obj.(*types.PkgName); isPkgName {
+					// This is a qualified call: pkg.Func(...)
+					selObj := pass.TypesInfo.Uses[fun.Sel]
+					if selObj != nil {
+						if callee, ok := selObj.(*types.Func); ok {
+							var fact ValidatesTypeFact
+							if pass.ImportObjectFact(callee, &fact) && factMatchesReturnType(fact, returnTypeName, returnTypePkgPath) {
+								crossPkgValidates = true
+								return false
 							}
 						}
-						return true
 					}
+					return true
 				}
 			}
 

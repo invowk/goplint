@@ -132,6 +132,8 @@ func TestBuildSubprocessArgs(t *testing.T) {
 }
 
 func TestDispatch(t *testing.T) {
+	t.Parallel()
+
 	t.Run("update-baseline missing path returns usage error", func(t *testing.T) {
 		t.Parallel()
 		var stderr bytes.Buffer
@@ -153,7 +155,7 @@ func TestDispatch(t *testing.T) {
 	t.Run("update-baseline success delegates to handler", func(t *testing.T) {
 		called := false
 		deps := dispatchDeps{
-			generateBaseline: func(outputPath string, originalArgs []string) error {
+			generateBaseline: func(outputPath string, _ []string) error {
 				called = true
 				if outputPath != "out.toml" {
 					t.Fatalf("outputPath = %q, want %q", outputPath, "out.toml")
@@ -384,6 +386,20 @@ func TestAggregateGlobalStalePatterns(t *testing.T) {
 	t.Run("no packages analyzed returns zero counts", func(t *testing.T) {
 		t.Parallel()
 		patterns, totalPatterns, totalPackages, err := aggregateGlobalStalePatterns(nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(patterns) != 0 {
+			t.Fatalf("expected no patterns, got %v", patterns)
+		}
+		if totalPatterns != 0 || totalPackages != 0 {
+			t.Fatalf("expected zero counts, got patterns=%d packages=%d", totalPatterns, totalPackages)
+		}
+	})
+
+	t.Run("whitespace-only stream returns zero counts", func(t *testing.T) {
+		t.Parallel()
+		patterns, totalPatterns, totalPackages, err := aggregateGlobalStalePatterns([]byte(" \n\t "))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -710,7 +726,13 @@ func TestGenerateBaseline(t *testing.T) {
 			if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
 				"example.com/pkg": {
 					"goplint": {
-						{Category: "primitive", Message: "struct field pkg.A.B uses primitive type string"},
+						{
+							Category: "primitive",
+							Message:  "struct field pkg.A.B uses primitive type string",
+							URL: goplint.DiagnosticURLForFinding(
+								goplint.StableFindingID("primitive", "main_test", "empty-stream-check"),
+							),
+						},
 					},
 				},
 			})); err != nil {

@@ -9,6 +9,8 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
+const validateMethodName = "Validate"
+
 // isPrimitive reports whether t is a bare primitive type that should be
 // replaced with a DDD Value Type. Named types wrapping primitives (e.g.,
 // type CommandName string) return false — they ARE the Value Types.
@@ -352,7 +354,7 @@ func hasValidateMethod(t types.Type) bool {
 		types.NewMethodSet(types.NewPointer(named)),
 	} {
 		for method := range mset.Methods() {
-			if method.Obj().Name() != "Validate" {
+			if method.Obj().Name() != validateMethodName {
 				continue
 			}
 			sig, ok := method.Obj().Type().(*types.Signature)

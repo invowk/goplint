@@ -22,7 +22,7 @@ func TestLoadBaseline(t *testing.T) {
 			t.Errorf("expected 0 entries, got %d", bl.Count())
 		}
 		// Empty baseline should match nothing.
-		if bl.Contains(CategoryPrimitive, "anything") {
+		if bl.ContainsFinding(CategoryPrimitive, "anything", "") {
 			t.Error("empty baseline should not match anything")
 		}
 	})
@@ -42,19 +42,19 @@ func TestLoadBaseline(t *testing.T) {
 		t.Parallel()
 		content := `
 [primitive]
-messages = [
-    "struct field pkg.Foo.Bar uses primitive type string",
-    "parameter \"name\" of pkg.Func uses primitive type string",
+entries = [
+    { id = "primitive-1", message = "struct field pkg.Foo.Bar uses primitive type string" },
+    { id = "primitive-2", message = "parameter \"name\" of pkg.Func uses primitive type string" },
 ]
 
 [missing-validate]
-messages = [
-    "named type pkg.MyType has no Validate() method",
+entries = [
+    { id = "missing-validate-1", message = "named type pkg.MyType has no Validate() method" },
 ]
 
 [missing-constructor]
-messages = [
-    "exported struct pkg.Config has no NewConfig() constructor",
+entries = [
+    { id = "missing-constructor-1", message = "exported struct pkg.Config has no NewConfig() constructor" },
 ]
 `
 		path := writeTempFile(t, "baseline.toml", content)
@@ -65,6 +65,12 @@ messages = [
 
 		if bl.Count() != 4 {
 			t.Errorf("expected 4 entries, got %d", bl.Count())
+		}
+		if !bl.ContainsFinding(CategoryPrimitive, "primitive-1", "") {
+			t.Error("expected primitive-1 to be present")
+		}
+		if !bl.ContainsFinding(CategoryMissingValidate, "missing-validate-1", "") {
+			t.Error("expected missing-validate-1 to be present")
 		}
 	})
 
@@ -86,6 +92,51 @@ entries = [
 		}
 		if !bl.ContainsFinding(CategoryPrimitive, "id-primitive-1", "") {
 			t.Error("expected id-based lookup to match v2 entry")
+		}
+	})
+
+	t.Run("legacy messages key rejected", func(t *testing.T) {
+		t.Parallel()
+		content := `
+[primitive]
+messages = [
+    "struct field pkg.Foo.Bar uses primitive type string",
+]
+`
+		path := writeTempFile(t, "legacy-messages.toml", content)
+		_, err := loadBaseline(path, false)
+		if err == nil {
+			t.Fatal("expected error for legacy messages baseline schema")
+		}
+	})
+
+	t.Run("empty id in entry returns error", func(t *testing.T) {
+		t.Parallel()
+		content := `
+[primitive]
+entries = [
+    { id = "", message = "x" },
+]
+`
+		path := writeTempFile(t, "empty-id.toml", content)
+		_, err := loadBaseline(path, false)
+		if err == nil {
+			t.Fatal("expected error for empty baseline entry ID")
+		}
+	})
+
+	t.Run("empty message in entry returns error", func(t *testing.T) {
+		t.Parallel()
+		content := `
+[primitive]
+entries = [
+    { id = "id-1", message = "" },
+]
+`
+		path := writeTempFile(t, "empty-message.toml", content)
+		_, err := loadBaseline(path, false)
+		if err == nil {
+			t.Fatal("expected error for empty baseline entry message")
 		}
 	})
 
@@ -206,64 +257,64 @@ entries = [
 	}
 }
 
-func TestBaselineContains(t *testing.T) {
+func TestBaselineContainsFinding(t *testing.T) {
 	t.Parallel()
 
 	content := `
 [primitive]
-messages = [
-    "struct field pkg.Foo.Bar uses primitive type string",
-    "return value of pkg.Func uses primitive type int",
+entries = [
+    { id = "primitive-1", message = "struct field pkg.Foo.Bar uses primitive type string" },
+    { id = "primitive-2", message = "return value of pkg.Func uses primitive type int" },
 ]
 
 [missing-validate]
-messages = [
-    "named type pkg.MyType has no Validate() method",
+entries = [
+    { id = "missing-validate-1", message = "named type pkg.MyType has no Validate() method" },
 ]
 
 [missing-stringer]
-messages = [
-    "named type pkg.MyType has no String() method",
+entries = [
+    { id = "missing-stringer-1", message = "named type pkg.MyType has no String() method" },
 ]
 
 [missing-constructor]
-messages = [
-    "exported struct pkg.Config has no NewConfig() constructor",
+entries = [
+    { id = "missing-constructor-1", message = "exported struct pkg.Config has no NewConfig() constructor" },
 ]
 
 [wrong-constructor-sig]
-messages = [
-    "constructor NewFoo() for pkg.Foo returns Bar, expected Foo",
+entries = [
+    { id = "wrong-constructor-sig-1", message = "constructor NewFoo() for pkg.Foo returns Bar, expected Foo" },
 ]
 
 [wrong-validate-sig]
-messages = [
-    "named type pkg.BadValid has Validate() but wrong signature (want func() error)",
+entries = [
+    { id = "wrong-validate-sig-1", message = "named type pkg.BadValid has Validate() but wrong signature (want func() error)" },
 ]
 
 [wrong-stringer-sig]
-messages = [
-    "named type pkg.BadStr has String() but wrong signature (want func() string)",
+entries = [
+    { id = "wrong-stringer-sig-1", message = "named type pkg.BadStr has String() but wrong signature (want func() string)" },
 ]
 
 [missing-func-options]
-messages = [
-    "constructor NewBig() for pkg.Big has 5 non-option parameters; consider using functional options",
+entries = [
+    { id = "missing-func-options-1", message = "constructor NewBig() for pkg.Big has 5 non-option parameters; consider using functional options" },
 ]
 
 [missing-immutability]
-messages = [
-    "struct pkg.Svc has NewSvc() constructor but field Addr is exported",
+entries = [
+    { id = "missing-immutability-1", message = "struct pkg.Svc has NewSvc() constructor but field Addr is exported" },
 ]
 
 [missing-struct-validate]
-messages = [
-    "struct pkg.Svc has constructor but no Validate() method",
+entries = [
+    { id = "missing-struct-validate-1", message = "struct pkg.Svc has constructor but no Validate() method" },
 ]
 
 [wrong-struct-validate-sig]
-messages = [
-    "struct pkg.BadSvc has Validate() but wrong signature (want func() error)",
+entries = [
+    { id = "wrong-struct-validate-sig-1", message = "struct pkg.BadSvc has Validate() but wrong signature (want func() error)" },
 ]
 `
 	path := writeTempFile(t, "baseline.toml", content)
@@ -275,91 +326,97 @@ messages = [
 	tests := []struct {
 		name     string
 		category string
-		message  string
+		id       string
 		want     bool
 	}{
 		{
 			name:     "primitive match",
 			category: CategoryPrimitive,
-			message:  "struct field pkg.Foo.Bar uses primitive type string",
+			id:       "primitive-1",
 			want:     true,
 		},
 		{
 			name:     "primitive no match",
 			category: CategoryPrimitive,
-			message:  "struct field pkg.Foo.Baz uses primitive type string",
+			id:       "primitive-unknown",
 			want:     false,
 		},
 		{
 			name:     "wrong category",
 			category: CategoryMissingValidate,
-			message:  "struct field pkg.Foo.Bar uses primitive type string",
+			id:       "primitive-1",
 			want:     false,
 		},
 		{
 			name:     "missing-validate match",
 			category: CategoryMissingValidate,
-			message:  "named type pkg.MyType has no Validate() method",
+			id:       "missing-validate-1",
 			want:     true,
 		},
 		{
 			name:     "missing-stringer match",
 			category: CategoryMissingStringer,
-			message:  "named type pkg.MyType has no String() method",
+			id:       "missing-stringer-1",
 			want:     true,
 		},
 		{
 			name:     "missing-constructor match",
 			category: CategoryMissingConstructor,
-			message:  "exported struct pkg.Config has no NewConfig() constructor",
+			id:       "missing-constructor-1",
 			want:     true,
 		},
 		{
 			name:     "wrong-constructor-sig match",
 			category: CategoryWrongConstructorSig,
-			message:  "constructor NewFoo() for pkg.Foo returns Bar, expected Foo",
+			id:       "wrong-constructor-sig-1",
 			want:     true,
 		},
 		{
 			name:     "wrong-validate-sig match",
 			category: CategoryWrongValidateSig,
-			message:  "named type pkg.BadValid has Validate() but wrong signature (want func() error)",
+			id:       "wrong-validate-sig-1",
 			want:     true,
 		},
 		{
 			name:     "wrong-stringer-sig match",
 			category: CategoryWrongStringerSig,
-			message:  "named type pkg.BadStr has String() but wrong signature (want func() string)",
+			id:       "wrong-stringer-sig-1",
 			want:     true,
 		},
 		{
 			name:     "missing-func-options match",
 			category: CategoryMissingFuncOptions,
-			message:  "constructor NewBig() for pkg.Big has 5 non-option parameters; consider using functional options",
+			id:       "missing-func-options-1",
 			want:     true,
 		},
 		{
 			name:     "missing-immutability match",
 			category: CategoryMissingImmutability,
-			message:  "struct pkg.Svc has NewSvc() constructor but field Addr is exported",
+			id:       "missing-immutability-1",
 			want:     true,
 		},
 		{
 			name:     "missing-struct-validate match",
 			category: CategoryMissingStructValidate,
-			message:  "struct pkg.Svc has constructor but no Validate() method",
+			id:       "missing-struct-validate-1",
 			want:     true,
 		},
 		{
 			name:     "wrong-struct-validate-sig match",
 			category: CategoryWrongStructValidateSig,
-			message:  "struct pkg.BadSvc has Validate() but wrong signature (want func() error)",
+			id:       "wrong-struct-validate-sig-1",
 			want:     true,
+		},
+		{
+			name:     "empty ID never matches",
+			category: CategoryPrimitive,
+			id:       "",
+			want:     false,
 		},
 		{
 			name:     "nil baseline",
 			category: CategoryPrimitive,
-			message:  "anything",
+			id:       "anything",
 			want:     false,
 		},
 	}
@@ -371,9 +428,9 @@ messages = [
 			if tt.name != "nil baseline" {
 				target = bl
 			}
-			got := target.Contains(tt.category, tt.message)
+			got := target.ContainsFinding(tt.category, tt.id, "ignored")
 			if got != tt.want {
-				t.Errorf("Contains(%q, %q) = %v, want %v", tt.category, tt.message, got, tt.want)
+				t.Errorf("ContainsFinding(%q, %q) = %v, want %v", tt.category, tt.id, got, tt.want)
 			}
 		})
 	}
@@ -384,8 +441,8 @@ func TestContainsFinding_StrictIDNoMessageFallback(t *testing.T) {
 
 	content := `
 [primitive]
-messages = [
-    "struct field pkg.Foo.Bar uses primitive type string",
+entries = [
+    { id = "primitive-1", message = "struct field pkg.Foo.Bar uses primitive type string" },
 ]
 `
 	path := writeTempFile(t, "baseline.toml", content)
@@ -396,6 +453,9 @@ messages = [
 
 	if bl.ContainsFinding(CategoryPrimitive, "non-matching-id", "struct field pkg.Foo.Bar uses primitive type string") {
 		t.Fatal("expected non-matching ID to fail without message fallback")
+	}
+	if bl.ContainsFinding(CategoryPrimitive, "", "struct field pkg.Foo.Bar uses primitive type string") {
+		t.Fatal("expected empty ID to fail without message fallback")
 	}
 }
 
@@ -453,7 +513,7 @@ func TestWriteBaseline(t *testing.T) {
 		outPath := filepath.Join(t.TempDir(), "baseline.toml")
 		findings := map[string][]BaselineFinding{
 			CategoryMissingValidate: {
-				{Message: "named type pkg.MyType has no Validate() method"},
+				{ID: "mv-1", Message: "named type pkg.MyType has no Validate() method"},
 			},
 		}
 
@@ -474,6 +534,37 @@ func TestWriteBaseline(t *testing.T) {
 			t.Error("non-empty [missing-validate] section should be present")
 		}
 	})
+
+	t.Run("invalid entries are dropped", func(t *testing.T) {
+		t.Parallel()
+		outPath := filepath.Join(t.TempDir(), "baseline.toml")
+		findings := map[string][]BaselineFinding{
+			CategoryPrimitive: {
+				{ID: "", Message: "struct field pkg.Foo.Bar uses primitive type string"},
+				{ID: "id-2", Message: ""},
+				{ID: "id-3", Message: "struct field pkg.Foo.Baz uses primitive type int"},
+			},
+		}
+
+		if err := WriteBaseline(outPath, findings); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		data, err := os.ReadFile(outPath)
+		if err != nil {
+			t.Fatalf("reading output: %v", err)
+		}
+		content := string(data)
+		if containsStr(content, `id = ""`) {
+			t.Error("entries with empty IDs should be dropped")
+		}
+		if !containsStr(content, `id = "id-3"`) {
+			t.Error("expected valid entry to be retained")
+		}
+		if !containsStr(content, "Total: 1 findings") {
+			t.Error("expected only one valid finding to be counted")
+		}
+	})
 }
 
 func TestBaselineRoundTrip(t *testing.T) {
@@ -481,41 +572,41 @@ func TestBaselineRoundTrip(t *testing.T) {
 
 	findings := map[string][]BaselineFinding{
 		CategoryPrimitive: {
-			{Message: "struct field pkg.Foo.Bar uses primitive type string"},
-			{Message: `parameter "name" of pkg.Func uses primitive type string`},
+			{ID: "primitive-1", Message: "struct field pkg.Foo.Bar uses primitive type string"},
+			{ID: "primitive-2", Message: `parameter "name" of pkg.Func uses primitive type string`},
 		},
 		CategoryMissingValidate: {
-			{Message: "named type pkg.MyType has no Validate() method"},
+			{ID: "missing-validate-1", Message: "named type pkg.MyType has no Validate() method"},
 		},
 		CategoryMissingStringer: {
-			{Message: "named type pkg.MyType has no String() method"},
+			{ID: "missing-stringer-1", Message: "named type pkg.MyType has no String() method"},
 		},
 		CategoryMissingConstructor: {
-			{Message: "exported struct pkg.Config has no NewConfig() constructor"},
+			{ID: "missing-constructor-1", Message: "exported struct pkg.Config has no NewConfig() constructor"},
 		},
 		CategoryWrongConstructorSig: {
-			{Message: "constructor NewFoo() for pkg.Foo returns Bar, expected Foo"},
+			{ID: "wrong-constructor-sig-1", Message: "constructor NewFoo() for pkg.Foo returns Bar, expected Foo"},
 		},
 		CategoryWrongValidateSig: {
-			{Message: "named type pkg.BadValid has Validate() but wrong signature (want func() error)"},
+			{ID: "wrong-validate-sig-1", Message: "named type pkg.BadValid has Validate() but wrong signature (want func() error)"},
 		},
 		CategoryWrongStringerSig: {
-			{Message: "named type pkg.BadStr has String() but wrong signature (want func() string)"},
+			{ID: "wrong-stringer-sig-1", Message: "named type pkg.BadStr has String() but wrong signature (want func() string)"},
 		},
 		CategoryMissingFuncOptions: {
-			{Message: "constructor NewBig() for pkg.Big has 5 non-option parameters; consider using functional options"},
+			{ID: "missing-func-options-1", Message: "constructor NewBig() for pkg.Big has 5 non-option parameters; consider using functional options"},
 		},
 		CategoryMissingImmutability: {
-			{Message: "struct pkg.Svc has NewSvc() constructor but field Addr is exported"},
+			{ID: "missing-immutability-1", Message: "struct pkg.Svc has NewSvc() constructor but field Addr is exported"},
 		},
 		CategoryMissingStructValidate: {
-			{Message: "struct pkg.Svc has constructor but no Validate() method"},
+			{ID: "missing-struct-validate-1", Message: "struct pkg.Svc has constructor but no Validate() method"},
 		},
 		CategoryWrongStructValidateSig: {
-			{Message: "struct pkg.BadSvc has Validate() but wrong signature (want func() error)"},
+			{ID: "wrong-struct-validate-sig-1", Message: "struct pkg.BadSvc has Validate() but wrong signature (want func() error)"},
 		},
 		CategoryNonZeroValueField: {
-			{Message: "struct field pkg.Foo.Bar uses nonzero type X as value; use *X for optional fields"},
+			{ID: "nonzero-1", Message: "struct field pkg.Foo.Bar uses nonzero type X as value; use *X for optional fields"},
 		},
 	}
 
@@ -532,12 +623,8 @@ func TestBaselineRoundTrip(t *testing.T) {
 	// Verify all original findings are present.
 	for cat, entries := range findings {
 		for _, entry := range entries {
-			if !bl.Contains(cat, entry.Message) {
-				t.Errorf("round-trip lost: category=%q, message=%q", cat, entry.Message)
-			}
-			fallbackID := FallbackFindingID(cat, entry.Message)
-			if !bl.ContainsFinding(cat, fallbackID, "") {
-				t.Errorf("round-trip lost id match: category=%q, id=%q", cat, fallbackID)
+			if !bl.ContainsFinding(cat, entry.ID, entry.Message) {
+				t.Errorf("round-trip lost: category=%q, id=%q", cat, entry.ID)
 			}
 		}
 	}
@@ -595,9 +682,6 @@ func TestBaselineCategoryCompleteness(t *testing.T) {
 		if _, ok := bl.lookupByID[cat]; !ok {
 			t.Errorf("buildLookup() missing ID entry for category %q", cat)
 		}
-		if _, ok := bl.lookupByMessage[cat]; !ok {
-			t.Errorf("buildLookup() missing message entry for category %q", cat)
-		}
 	}
 
 	// Verify no extra entries in lookup beyond our list + zero unexpected.
@@ -610,17 +694,12 @@ func TestBaselineCategoryCompleteness(t *testing.T) {
 			t.Errorf("buildLookup() ID map has unexpected category %q not in baselinedCategories", cat)
 		}
 	}
-	for cat := range bl.lookupByMessage {
-		if !expectedSet[cat] {
-			t.Errorf("buildLookup() message map has unexpected category %q not in baselinedCategories", cat)
-		}
-	}
 
 	// Verify WriteBaseline handles every category by checking that
 	// a baseline with one entry per category round-trips correctly.
 	findings := make(map[string][]BaselineFinding, len(baselinedCategories))
 	for _, cat := range baselinedCategories {
-		findings[cat] = []BaselineFinding{{Message: "test message for " + cat}}
+		findings[cat] = []BaselineFinding{{ID: "id-" + cat, Message: "test message for " + cat}}
 	}
 
 	outPath := writeTempFile(t, "completeness.toml", "")
@@ -633,8 +712,8 @@ func TestBaselineCategoryCompleteness(t *testing.T) {
 	}
 
 	for _, cat := range baselinedCategories {
-		msg := "test message for " + cat
-		if !loaded.Contains(cat, msg) {
+		id := "id-" + cat
+		if !loaded.ContainsFinding(cat, id, "test message for "+cat) {
 			t.Errorf("WriteBaseline/loadBaseline round-trip failed for category %q", cat)
 		}
 	}

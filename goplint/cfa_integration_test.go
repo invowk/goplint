@@ -128,13 +128,13 @@ func TestCheckUseBeforeValidateCFA(t *testing.T) {
 	h := newAnalyzerHarness()
 	setFlag(t, h.Analyzer, "check-cast-validation", "true")
 	setFlag(t, h.Analyzer, "check-use-before-validate", "true")
+	setFlag(t, h.Analyzer, "ubv-mode", ubvModeOrder)
 
 	runAnalysisTest(t, testdata, h.Analyzer, "use_before_validate")
 }
 
-// TestCheckUseBeforeValidateCrossCFA exercises the --check-use-before-validate
-// and --check-use-before-validate-cross modes against the
-// use_before_validate_cross fixture. Verifies that cross-block UBV detection
+// TestCheckUseBeforeValidateCrossCFA exercises --check-use-before-validate
+// against the use_before_validate_cross fixture. Verifies that cross-block UBV detection
 // correctly flags variables used in successor blocks before Validate() is
 // called on any path from the cast, while same-block UBV takes priority.
 //
@@ -146,7 +146,7 @@ func TestCheckUseBeforeValidateCrossCFA(t *testing.T) {
 	h := newAnalyzerHarness()
 	setFlag(t, h.Analyzer, "check-cast-validation", "true")
 	setFlag(t, h.Analyzer, "check-use-before-validate", "true")
-	setFlag(t, h.Analyzer, "check-use-before-validate-cross", "true")
+	setFlag(t, h.Analyzer, "ubv-mode", ubvModeOrder)
 
 	runAnalysisTest(t, testdata, h.Analyzer, "use_before_validate_cross")
 }
@@ -163,7 +163,7 @@ func TestCheckUseBeforeValidateClosureCFA(t *testing.T) {
 	h := newAnalyzerHarness()
 	setFlag(t, h.Analyzer, "check-cast-validation", "true")
 	setFlag(t, h.Analyzer, "check-use-before-validate", "true")
-	setFlag(t, h.Analyzer, "check-use-before-validate-cross", "true")
+	setFlag(t, h.Analyzer, "ubv-mode", ubvModeOrder)
 
 	runAnalysisTest(t, testdata, h.Analyzer, "use_before_validate_closure")
 }
@@ -236,6 +236,7 @@ func TestCheckUseBeforeValidateClosureVarCall(t *testing.T) {
 	h := newAnalyzerHarness()
 	setFlag(t, h.Analyzer, "check-cast-validation", "true")
 	setFlag(t, h.Analyzer, "check-use-before-validate", "true")
+	setFlag(t, h.Analyzer, "ubv-mode", ubvModeOrder)
 
 	runAnalysisTest(t, testdata, h.Analyzer, "use_before_validate_closure_var_call")
 }
@@ -251,6 +252,7 @@ func TestCheckUseBeforeValidateMethodValue(t *testing.T) {
 	h := newAnalyzerHarness()
 	setFlag(t, h.Analyzer, "check-cast-validation", "true")
 	setFlag(t, h.Analyzer, "check-use-before-validate", "true")
+	setFlag(t, h.Analyzer, "ubv-mode", ubvModeOrder)
 
 	runAnalysisTest(t, testdata, h.Analyzer, "use_before_validate_method_value")
 }
@@ -269,18 +271,18 @@ func TestCheckCastValidationCFANoReturnTerminator(t *testing.T) {
 	runAnalysisTest(t, testdata, h.Analyzer, "cfa_no_return_terminator")
 }
 
-// TestCFAEnabledByDefault verifies that CFA is enabled by default when
-// --check-cast-validation is active.
+// TestCheckAllEnablesCFABackedCastValidation verifies --check-all activates
+// cast validation, which is always CFA-backed.
 //
 // NOT parallel: shares Analyzer.Flags state.
-func TestCFAEnabledByDefault(t *testing.T) {
+func TestCheckAllEnablesCFABackedCastValidation(t *testing.T) {
 	t.Parallel()
 
 	h := newAnalyzerHarness()
 	setFlag(t, h.Analyzer, "check-all", "true")
 
 	rc := newRunConfigForState(h.state)
-	if rc.noCFA {
-		t.Error("expected noCFA = false (CFA enabled) when --check-all is set")
+	if !rc.checkCastValidation {
+		t.Error("expected checkCastValidation = true when --check-all is set")
 	}
 }

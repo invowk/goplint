@@ -11,24 +11,22 @@ import (
 	gocfg "golang.org/x/tools/go/cfg"
 )
 
-// constructorHasUnvalidatedReturnPath builds a CFG for the constructor body
-// and checks whether any path from entry to a return block lacks a .Validate()
-// call on the return type. Unlike the cast-validation CFA which starts from a
-// specific cast site, this starts from the function entry (block 0) and checks
-// all return paths.
-//
-// Returns true if any return path lacks Validate() on the return type.
-func constructorHasUnvalidatedReturnPath(
+func constructorReturnPathOutcomeWithWitness(
 	pass *analysis.Pass,
 	fn *ast.FuncDecl,
 	returnTypeName string,
 	returnTypePkgPath string,
 	returnTypeKey string,
-) bool {
-	funcCFG := buildFuncCFGForPass(pass, fn.Body)
+	cfgBackend string,
+	cfgMaxStates int,
+	cfgMaxDepth int,
+	summaryStack map[string]bool,
+) (pathOutcome, pathOutcomeReason, []int32) {
+	funcCFG := buildFuncCFGForBackend(pass, fn.Body, cfgBackend)
 	if funcCFG == nil || len(funcCFG.Blocks) == 0 {
-		return false
+		return pathOutcomeSafe, pathOutcomeReasonNone, nil
 	}
+	noReturnAliases := collectNoReturnFuncAliasEvents(pass, fn.Body)
 	parentMap := buildParentMap(fn.Body)
 	_, _, closureCalls, methodValueCalls := collectCFACasts(
 		pass,
@@ -39,13 +37,27 @@ func constructorHasUnvalidatedReturnPath(
 	syncLits := collectSynchronousClosureLits(fn.Body)
 	syncCalls := collectSynchronousClosureVarCalls(closureCalls)
 	methodCalls := collectMethodValueValidateCallSet(methodValueCalls)
+	methodCalls = mergeMethodValueValidateCallSets(
+		methodCalls,
+		collectCalleeValidatedCalls(pass, fn.Body, stackScopeFromMap(summaryStack)),
+	)
 	bareReturnIncludesTarget := constructorBareReturnIncludesType(pass, fn, returnTypeKey)
 	returnTargetKeys := collectConstructorReturnTargetKeys(pass, fn, returnTypeKey, bareReturnIncludesTarget)
 	matcher := constructorReturnTargetMatcher(returnTypeKey, returnTargetKeys)
 
 	// DFS from the entry block (index 0).
-	visited := make(map[int32]bool)
-	return dfsConstructorUnvalidated(
+	ctx := newCFGTraversalContext(
+		cfgTraversalModeConstructorPath,
+		returnTypeKey,
+		cfgValidationStateNeedsValidate,
+		funcCFG,
+	)
+	seenStates := 0
+	budget := adaptiveBlockVisitBudget(
+		funcCFG,
+		blockVisitBudget{maxStates: cfgMaxStates, maxDepth: cfgMaxDepth},
+	)
+	return dfsConstructorUnvalidatedOutcome(
 		pass,
 		funcCFG.Blocks[0:1],
 		returnTypeName,
@@ -53,18 +65,21 @@ func constructorHasUnvalidatedReturnPath(
 		returnTypeKey,
 		matcher,
 		bareReturnIncludesTarget,
-		visited,
+		ctx,
+		cfgVisitAnyPredecessor,
 		syncLits,
 		syncCalls,
 		methodCalls,
+		noReturnAliases,
+		summaryStack,
+		0,
+		nil,
+		&seenStates,
+		budget,
 	)
 }
 
-// dfsConstructorUnvalidated recursively checks whether any path through the
-// given CFG blocks reaches a return block without encountering a .Validate()
-// call on the constructor's return type. Delegates to the shared
-// dfsUnvalidatedBlocks engine with a type-identity matcher.
-func dfsConstructorUnvalidated(
+func dfsConstructorUnvalidatedOutcome(
 	pass *analysis.Pass,
 	blocks []*gocfg.Block,
 	returnTypeName string,
@@ -72,13 +87,21 @@ func dfsConstructorUnvalidated(
 	returnTypeKey string,
 	matcher validateReceiverMatcher,
 	bareReturnIncludesTarget bool,
-	visited map[int32]bool,
+	ctx *cfgTraversalContext,
+	predecessor int32,
 	syncLits map[*ast.FuncLit]bool,
 	syncCalls closureVarCallSet,
 	methodCalls methodValueValidateCallSet,
-) bool {
+	noReturnAliases noReturnAliasSet,
+	summaryStack map[string]bool,
+	depth int,
+	path []int32,
+	seenStates *int,
+	budget blockVisitBudget,
+) (pathOutcome, pathOutcomeReason, []int32) {
+	inconclusiveReason := pathOutcomeReasonNone
 	checker := func(block *gocfg.Block) bool {
-		if blockTerminatesWithoutReturn(pass, block) {
+		if blockTerminatesWithoutReturn(pass, block, noReturnAliases) {
 			return true
 		}
 		// Return blocks that do not return the constructor target type
@@ -90,6 +113,11 @@ func dfsConstructorUnvalidated(
 		for _, node := range block.Nodes {
 			if containsValidateOnReceiver(pass, node, matcher, syncLits, syncCalls, methodCalls) {
 				return true
+			}
+			if validated, reason := nodeUsesCalleeSummaryForType(pass, node, returnTypeKey, summaryStack); validated {
+				return true
+			} else if reason != pathOutcomeReasonNone {
+				inconclusiveReason = reason
 			}
 			if stmt, ok := node.(ast.Stmt); ok {
 				// Consider transitive helper validation for this statement.
@@ -104,7 +132,68 @@ func dfsConstructorUnvalidated(
 		}
 		return false
 	}
-	return dfsUnvalidatedBlocks(blocks, visited, checker)
+	outcome, reason, witness := dfsUnvalidatedBlocksOutcomeWithWitness(
+		blocks,
+		predecessor,
+		ctx,
+		checker,
+		depth,
+		path,
+		seenStates,
+		budget,
+	)
+	if outcome == pathOutcomeUnsafe && inconclusiveReason != pathOutcomeReasonNone {
+		return pathOutcomeInconclusive, inconclusiveReason, witness
+	}
+	return outcome, reason, witness
+}
+
+func nodeUsesCalleeSummaryForType(
+	pass *analysis.Pass,
+	node ast.Node,
+	returnTypeKey string,
+	summaryStack map[string]bool,
+) (bool, pathOutcomeReason) {
+	if pass == nil || node == nil || returnTypeKey == "" {
+		return false, pathOutcomeReasonNone
+	}
+	bestReason := pathOutcomeReasonNone
+	foundValidated := false
+	scope := stackScopeFromMap(summaryStack)
+	ast.Inspect(node, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		for _, candidate := range allCallTargetSlots(call) {
+			if !exprReturnsType(pass, candidate.expr, returnTypeKey) {
+				continue
+			}
+			summary, ok, reason := callCalleeSummaryForSlotWithStack(
+				pass,
+				call,
+				candidate.slot,
+				scope,
+			)
+			if ok && summary.AlwaysValidatesTarget && !summary.EscapesTargetBeforeValidate {
+				foundValidated = true
+				return false
+			}
+			if !ok && reason == pathOutcomeReasonRecursionCycle && summaryStackHasRecursionFallback(summaryStack) {
+				continue
+			}
+			if !ok && (reason == pathOutcomeReasonRecursionCycle ||
+				reason == pathOutcomeReasonStateBudget ||
+				reason == pathOutcomeReasonDepthBudget) {
+				bestReason = reason
+			}
+		}
+		return true
+	})
+	if foundValidated {
+		return true, pathOutcomeReasonNone
+	}
+	return false, bestReason
 }
 
 func blockReturnsTargetType(pass *analysis.Pass, block *gocfg.Block, returnTypeKey string, bareReturnIncludesTarget bool) bool {
@@ -291,9 +380,10 @@ func helperBodyAlwaysValidatesType(pass *analysis.Pass, body *ast.BlockStmt, ret
 	syncLits := collectSynchronousClosureLits(body)
 	syncCalls := collectSynchronousClosureVarCalls(closureCalls)
 	methodCalls := collectMethodValueValidateCallSet(methodValueCalls)
+	noReturnAliases := collectNoReturnFuncAliasEvents(pass, body)
 	matcher := typeKeyMatcher(returnTypeKey)
 	checker := func(block *gocfg.Block) bool {
-		if blockTerminatesWithoutReturn(pass, block) {
+		if blockTerminatesWithoutReturn(pass, block, noReturnAliases) {
 			return true
 		}
 		for _, node := range block.Nodes {
@@ -303,8 +393,7 @@ func helperBodyAlwaysValidatesType(pass *analysis.Pass, body *ast.BlockStmt, ret
 		}
 		return false
 	}
-	visited := make(map[int32]bool)
-	return !dfsUnvalidatedBlocks(cfg.Blocks[0:1], visited, checker)
+	return !dfsUnvalidatedBlocks(cfg.Blocks[0:1], nil, checker)
 }
 
 func exprReturnsType(pass *analysis.Pass, expr ast.Expr, returnTypeKey string) bool {

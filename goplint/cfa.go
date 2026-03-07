@@ -11,8 +11,16 @@ import (
 	gocfg "golang.org/x/tools/go/cfg"
 )
 
-type closureVarCallSet map[*ast.CallExpr]*ast.FuncLit
-type methodValueValidateCallSet map[*ast.CallExpr]ast.Expr
+type (
+	closureVarCallSet          map[*ast.CallExpr]*ast.FuncLit
+	methodValueValidateCallSet map[*ast.CallExpr]ast.Expr
+	noReturnAliasSet           map[string][]noReturnFuncAliasEvent
+)
+
+type noReturnFuncAliasEvent struct {
+	pos      token.Pos
+	noReturn bool
+}
 
 func collectMethodValueValidateCallSet(calls []methodValueValidateCall) methodValueValidateCallSet {
 	if len(calls) == 0 {
@@ -24,6 +32,29 @@ func collectMethodValueValidateCallSet(calls []methodValueValidateCall) methodVa
 			continue
 		}
 		out[call.call] = call.receiver
+	}
+	return out
+}
+
+func mergeMethodValueValidateCallSets(sets ...methodValueValidateCallSet) methodValueValidateCallSet {
+	total := 0
+	for _, set := range sets {
+		total += len(set)
+	}
+	if total == 0 {
+		return nil
+	}
+	out := make(methodValueValidateCallSet, total)
+	for _, set := range sets {
+		for call, receiver := range set {
+			if call == nil || receiver == nil {
+				continue
+			}
+			out[call] = receiver
+		}
+	}
+	if len(out) == 0 {
+		return nil
 	}
 	return out
 }
@@ -205,12 +236,13 @@ func buildFuncCFGForPass(pass *analysis.Pass, body *ast.BlockStmt) *gocfg.CFG {
 	if pass == nil || pass.TypesInfo == nil {
 		return buildFuncCFG(body)
 	}
+	noReturnAliases := collectNoReturnFuncAliasEvents(pass, body)
 	return gocfg.New(body, func(call *ast.CallExpr) bool {
-		return callMayReturn(pass, call)
+		return callMayReturn(pass, call, noReturnAliases)
 	})
 }
 
-func callMayReturn(pass *analysis.Pass, call *ast.CallExpr) bool {
+func callMayReturn(pass *analysis.Pass, call *ast.CallExpr, noReturnAliases noReturnAliasSet) bool {
 	if pass == nil || pass.TypesInfo == nil || call == nil {
 		return true
 	}
@@ -224,11 +256,17 @@ func callMayReturn(pass *analysis.Pass, call *ast.CallExpr) bool {
 		if obj == nil {
 			return true
 		}
-		fn, ok := obj.(*types.Func)
-		if !ok {
-			return true
+		if fn, ok := obj.(*types.Func); ok {
+			return !isKnownNoReturnFunc(fn.Pkg(), fn.Name())
 		}
-		return !isKnownNoReturnFunc(fn.Pkg(), fn.Name())
+		if variable, ok := obj.(*types.Var); ok {
+			key := objectKey(variable)
+			if key == "" {
+				return true
+			}
+			return !latestNoReturnAliasBefore(noReturnAliases[key], call.Pos())
+		}
+		return true
 	case *ast.SelectorExpr:
 		obj := objectForIdent(pass, fun.Sel)
 		if obj == nil {
@@ -242,6 +280,124 @@ func callMayReturn(pass *analysis.Pass, call *ast.CallExpr) bool {
 	default:
 		return true
 	}
+}
+
+func collectNoReturnFuncAliasEvents(pass *analysis.Pass, body *ast.BlockStmt) noReturnAliasSet {
+	if pass == nil || pass.TypesInfo == nil || body == nil {
+		return nil
+	}
+	aliases := make(noReturnAliasSet)
+
+	resolve := func(lhs ast.Expr, rhs ast.Expr, atPos token.Pos) (string, noReturnFuncAliasEvent, bool) {
+		lhsIdent, ok := stripParens(lhs).(*ast.Ident)
+		if !ok || lhsIdent.Name == "_" {
+			return "", noReturnFuncAliasEvent{}, false
+		}
+		obj := objectForIdent(pass, lhsIdent)
+		if obj == nil {
+			return "", noReturnFuncAliasEvent{}, false
+		}
+		variable, ok := obj.(*types.Var)
+		if !ok {
+			return "", noReturnFuncAliasEvent{}, false
+		}
+		key := objectKey(variable)
+		if key == "" {
+			return "", noReturnFuncAliasEvent{}, false
+		}
+		return key, noReturnFuncAliasEvent{
+			pos:      atPos,
+			noReturn: exprIsNoReturnFunc(pass, rhs, aliases, atPos),
+		}, true
+	}
+
+	ast.Inspect(body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.AssignStmt:
+			type pendingBinding struct {
+				key   string
+				event noReturnFuncAliasEvent
+			}
+			pending := make([]pendingBinding, 0, len(node.Rhs))
+			for i, rhs := range node.Rhs {
+				if i >= len(node.Lhs) {
+					break
+				}
+				key, event, ok := resolve(node.Lhs[i], rhs, node.Lhs[i].Pos())
+				if !ok {
+					continue
+				}
+				pending = append(pending, pendingBinding{key: key, event: event})
+			}
+			for _, entry := range pending {
+				aliases[entry.key] = append(aliases[entry.key], entry.event)
+			}
+		case *ast.ValueSpec:
+			type pendingBinding struct {
+				key   string
+				event noReturnFuncAliasEvent
+			}
+			pending := make([]pendingBinding, 0, len(node.Values))
+			for i, rhs := range node.Values {
+				if i >= len(node.Names) {
+					break
+				}
+				key, event, ok := resolve(node.Names[i], rhs, node.Names[i].Pos())
+				if !ok {
+					continue
+				}
+				pending = append(pending, pendingBinding{key: key, event: event})
+			}
+			for _, entry := range pending {
+				aliases[entry.key] = append(aliases[entry.key], entry.event)
+			}
+		}
+		return true
+	})
+
+	return aliases
+}
+
+func exprIsNoReturnFunc(pass *analysis.Pass, expr ast.Expr, aliases noReturnAliasSet, atPos token.Pos) bool {
+	if pass == nil || pass.TypesInfo == nil || expr == nil {
+		return false
+	}
+	switch e := stripParens(expr).(type) {
+	case *ast.Ident:
+		if e.Name == "panic" {
+			return true
+		}
+		obj := objectForIdent(pass, e)
+		if obj == nil {
+			return false
+		}
+		if fn, ok := obj.(*types.Func); ok {
+			return isKnownNoReturnFunc(fn.Pkg(), fn.Name())
+		}
+		if variable, ok := obj.(*types.Var); ok {
+			key := objectKey(variable)
+			if key == "" {
+				return false
+			}
+			return latestNoReturnAliasBefore(aliases[key], atPos)
+		}
+	case *ast.SelectorExpr:
+		obj := objectForIdent(pass, e.Sel)
+		if fn, ok := obj.(*types.Func); ok {
+			return isKnownNoReturnFunc(fn.Pkg(), fn.Name())
+		}
+	}
+	return false
+}
+
+func latestNoReturnAliasBefore(events []noReturnFuncAliasEvent, atPos token.Pos) bool {
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i].pos > atPos {
+			continue
+		}
+		return events[i].noReturn
+	}
+	return false
 }
 
 func isKnownNoReturnFunc(pkg *types.Package, name string) bool {
@@ -344,7 +500,7 @@ func containsValidateCallTarget(
 // using castTarget.matchesExpr. This bridges the castTarget API into
 // the generic matcher interface.
 func castTargetMatcher(pass *analysis.Pass, target castTarget) validateReceiverMatcher {
-	return func(p *analysis.Pass, expr ast.Expr) bool {
+	return func(_ *analysis.Pass, expr ast.Expr) bool {
 		return target.matchesExpr(pass, expr)
 	}
 }
@@ -550,7 +706,7 @@ func blockContainsValidateCall(
 // known no-return call (for example, panic/os.Exit/log.Fatal). Such blocks do
 // not represent function return paths and must not trigger "missing Validate on
 // path-to-return" diagnostics.
-func blockTerminatesWithoutReturn(pass *analysis.Pass, block *gocfg.Block) bool {
+func blockTerminatesWithoutReturn(pass *analysis.Pass, block *gocfg.Block, noReturnAliases noReturnAliasSet) bool {
 	if block == nil || len(block.Succs) != 0 || len(block.Nodes) == 0 {
 		return false
 	}
@@ -568,7 +724,7 @@ func blockTerminatesWithoutReturn(pass *analysis.Pass, block *gocfg.Block) bool 
 	if !ok {
 		return false
 	}
-	return !callMayReturn(pass, call)
+	return !callMayReturn(pass, call, noReturnAliases)
 }
 
 // blockValidateChecker is a predicate that reports whether a CFG block
@@ -577,107 +733,261 @@ func blockTerminatesWithoutReturn(pass *analysis.Pass, block *gocfg.Block) bool 
 // and constructor-validates (type-identity) use cases.
 type blockValidateChecker func(block *gocfg.Block) bool
 
-// hasPathToReturnWithoutValidate performs a depth-first search from the
-// defining block (starting after defIdx) through CFG successors. Returns
-// true if any path from the cast definition to a return block never passes
-// through a Validate() call on varName.
-//
-// Closures in syncLits are recognized as containing Validate
-// calls when applicable (their execution before return is guaranteed).
-//
-// Algorithm:
-//  1. Check remainder of defBlock.Nodes[defIdx+1:] for Validate call.
-//     If found, all paths through this block are validated → return false.
-//  2. If defBlock has zero successors (return block) and no Validate in
-//     remainder → return true (unvalidated path to return).
-//  3. DFS over successors: for each unvisited live block, if it contains
-//     Validate → prune (validated). If it's a return block (zero succs) →
-//     return true. Otherwise recurse into its successors.
-func hasPathToReturnWithoutValidate(
+// blockVisitBudget controls DFS exploration depth/state limits.
+type blockVisitBudget struct {
+	maxStates int
+	maxDepth  int
+}
+
+func hasPathToReturnWithoutValidateOutcome(
 	pass *analysis.Pass,
-	g *gocfg.CFG,
+	_ *gocfg.CFG,
 	defBlock *gocfg.Block,
 	defIdx int,
 	target castTarget,
 	syncLits map[*ast.FuncLit]bool,
 	syncCalls closureVarCallSet,
 	methodCalls methodValueValidateCallSet,
-) bool {
+	noReturnAliases noReturnAliasSet,
+	maxStates int,
+	maxDepth int,
+) (pathOutcome, pathOutcomeReason) {
+	outcome, reason, _ := hasPathToReturnWithoutValidateOutcomeWithWitness(
+		pass,
+		nil,
+		defBlock,
+		defIdx,
+		target,
+		syncLits,
+		syncCalls,
+		methodCalls,
+		noReturnAliases,
+		maxStates,
+		maxDepth,
+	)
+	return outcome, reason
+}
+
+func hasPathToReturnWithoutValidateOutcomeWithWitness(
+	pass *analysis.Pass,
+	cfg *gocfg.CFG,
+	defBlock *gocfg.Block,
+	defIdx int,
+	target castTarget,
+	syncLits map[*ast.FuncLit]bool,
+	syncCalls closureVarCallSet,
+	methodCalls methodValueValidateCallSet,
+	noReturnAliases noReturnAliasSet,
+	maxStates int,
+	maxDepth int,
+) (pathOutcome, pathOutcomeReason, []int32) {
+	if defBlock == nil {
+		return pathOutcomeInconclusive, pathOutcomeReasonUnresolvedTarget, nil
+	}
+
 	// Check the remainder of the defining block after the cast.
 	remainder := defBlock.Nodes[defIdx+1:]
 	if nodeSliceContainsValidateCall(pass, remainder, target, syncLits, syncCalls, methodCalls) {
-		return false // validated in same block after cast
+		return pathOutcomeSafe, pathOutcomeReasonNone, nil // validated in same block after cast
 	}
 
 	// If no successors, this is a return block — unvalidated path exists.
 	if len(defBlock.Succs) == 0 {
-		return !blockTerminatesWithoutReturn(pass, defBlock)
+		if blockTerminatesWithoutReturn(pass, defBlock, noReturnAliases) {
+			return pathOutcomeSafe, pathOutcomeReasonNone, nil
+		}
+		return pathOutcomeUnsafe, pathOutcomeReasonNone, []int32{defBlock.Index}
 	}
 
-	// DFS from successors.
-	visited := make(map[int32]bool)
-	visited[defBlock.Index] = true
+	ctx := newCFGTraversalContext(
+		cfgTraversalModeCastPath,
+		target.key(),
+		cfgValidationStateNeedsValidate,
+		cfg,
+	)
+	ctx.markVisitState(defBlock.Index, cfgVisitAnyPredecessor)
+	seenStates := 1
+	budget := adaptiveBlockVisitBudget(cfg, blockVisitBudget{maxStates: maxStates, maxDepth: maxDepth})
 
-	return dfsUnvalidatedPath(pass, defBlock.Succs, target, visited, syncLits, syncCalls, methodCalls)
+	return dfsUnvalidatedPathOutcomeWithWitness(
+		pass,
+		defBlock.Succs,
+		target,
+		defBlock.Index,
+		ctx,
+		syncLits,
+		syncCalls,
+		methodCalls,
+		noReturnAliases,
+		0,
+		[]int32{defBlock.Index},
+		&seenStates,
+		budget,
+	)
 }
 
-// dfsUnvalidatedPath recursively checks whether any path through the given
-// successor blocks reaches a return block without encountering a Validate()
-// call on varName. Closures in syncLits are descended into.
-func dfsUnvalidatedPath(
+func dfsUnvalidatedPathOutcomeWithWitness(
 	pass *analysis.Pass,
 	succs []*gocfg.Block,
 	target castTarget,
-	visited map[int32]bool,
+	predecessor int32,
+	ctx *cfgTraversalContext,
 	syncLits map[*ast.FuncLit]bool,
 	syncCalls closureVarCallSet,
 	methodCalls methodValueValidateCallSet,
-) bool {
+	noReturnAliases noReturnAliasSet,
+	depth int,
+	path []int32,
+	seenStates *int,
+	budget blockVisitBudget,
+) (pathOutcome, pathOutcomeReason, []int32) {
 	checker := func(block *gocfg.Block) bool {
-		if blockTerminatesWithoutReturn(pass, block) {
+		if blockTerminatesWithoutReturn(pass, block, noReturnAliases) {
 			return true
 		}
 		return blockContainsValidateCall(pass, block, target, syncLits, syncCalls, methodCalls)
 	}
-	return dfsUnvalidatedBlocks(succs, visited, checker)
+	return dfsUnvalidatedBlocksOutcomeWithWitness(
+		succs,
+		predecessor,
+		ctx,
+		checker,
+		depth,
+		path,
+		seenStates,
+		budget,
+	)
 }
 
 // dfsUnvalidatedBlocks performs a depth-first search through CFG blocks,
 // returning true if any path from the given blocks reaches a return block
 // (zero successors) without passing through a block where blockHasValidate
-// returns true. This is the shared DFS engine used by both cast-validation
-// (via dfsUnvalidatedPath) and constructor-validates (via
-// dfsConstructorUnvalidated). The blockHasValidate predicate abstracts the
-// validate-matching strategy.
+// returns true. The blockHasValidate predicate abstracts the validate-matching
+// strategy.
 func dfsUnvalidatedBlocks(blocks []*gocfg.Block, visited map[int32]bool, blockHasValidate blockValidateChecker) bool {
+	ctx := newCFGTraversalContext(
+		cfgTraversalModeLegacy,
+		"",
+		cfgValidationStateNeedsValidate,
+		nil,
+	)
+	ctx.visited = cfgVisitStateFromBlockVisited(
+		visited,
+		cfgTraversalModeLegacy,
+		"",
+		cfgValidationStateNeedsValidate,
+	)
+	outcome, _, _ := dfsUnvalidatedBlocksOutcomeWithWitness(
+		blocks,
+		cfgVisitAnyPredecessor,
+		ctx,
+		blockHasValidate,
+		0,
+		nil,
+		nil,
+		blockVisitBudget{
+			maxStates: defaultCFGMaxStates,
+			maxDepth:  defaultCFGMaxDepth,
+		},
+	)
+	return outcome != pathOutcomeSafe
+}
+
+func dfsUnvalidatedBlocksOutcomeWithWitness(
+	blocks []*gocfg.Block,
+	predecessor int32,
+	ctx *cfgTraversalContext,
+	blockHasValidate blockValidateChecker,
+	depth int,
+	path []int32,
+	seenStates *int,
+	budget blockVisitBudget,
+) (pathOutcome, pathOutcomeReason, []int32) {
+	if budget.maxDepth > 0 && depth > budget.maxDepth {
+		return pathOutcomeInconclusive, pathOutcomeReasonDepthBudget, cloneCFGPath(path)
+	}
 	for _, block := range blocks {
-		if visited[block.Index] {
+		if block == nil {
 			continue
 		}
-		visited[block.Index] = true
+		if entry, ok := ctx.memoLookup(block.Index, predecessor); ok {
+			if entry.outcome == pathOutcomeSafe {
+				continue
+			}
+			return entry.outcome, entry.reason, mergeCFGWitness(path, entry.witness)
+		}
+		if ctx.shouldSkip(block.Index, predecessor) {
+			continue
+		}
+		ctx.markVisitState(block.Index, predecessor)
+		activeKey := ctx.pushActive(block.Index, predecessor)
+		nextPath := appendCFGPath(path, block.Index)
+		if seenStates != nil {
+			*seenStates++
+			if budget.maxStates > 0 && *seenStates > budget.maxStates {
+				ctx.memoStore(block.Index, predecessor, pathOutcomeInconclusive, pathOutcomeReasonStateBudget, nextPath)
+				ctx.popActive(activeKey)
+				return pathOutcomeInconclusive, pathOutcomeReasonStateBudget, nextPath
+			}
+		}
 
 		// Skip dead blocks — unreachable code can't constitute a
 		// real execution path.
 		if !block.Live {
+			ctx.memoStore(block.Index, predecessor, pathOutcomeSafe, pathOutcomeReasonNone, nil)
+			ctx.popActive(activeKey)
 			continue
 		}
 
 		// If this block contains Validate(), this path is safe.
 		if blockHasValidate(block) {
+			ctx.memoStore(block.Index, predecessor, pathOutcomeSafe, pathOutcomeReasonNone, nil)
+			ctx.popActive(activeKey)
 			continue
 		}
 
 		// If this is a return block (no successors), we have an
 		// unvalidated path.
 		if len(block.Succs) == 0 {
-			return true
+			ctx.memoStore(block.Index, predecessor, pathOutcomeUnsafe, pathOutcomeReasonNone, nextPath)
+			ctx.popActive(activeKey)
+			return pathOutcomeUnsafe, pathOutcomeReasonNone, nextPath
 		}
 
 		// Recurse into successors.
-		if dfsUnvalidatedBlocks(block.Succs, visited, blockHasValidate) {
-			return true
+		outcome, reason, witness := dfsUnvalidatedBlocksOutcomeWithWitness(
+			block.Succs,
+			block.Index,
+			ctx,
+			blockHasValidate,
+			depth+1,
+			nextPath,
+			seenStates,
+			budget,
+		)
+		if outcome != pathOutcomeSafe {
+			ctx.memoStore(block.Index, predecessor, outcome, reason, witness)
+			ctx.popActive(activeKey)
+			return outcome, reason, witness
 		}
+		ctx.memoStore(block.Index, predecessor, pathOutcomeSafe, pathOutcomeReasonNone, nil)
+		ctx.popActive(activeKey)
 	}
-	return false
+	return pathOutcomeSafe, pathOutcomeReasonNone, nil
 }
 
+func appendCFGPath(path []int32, blockIndex int32) []int32 {
+	out := make([]int32, len(path)+1)
+	copy(out, path)
+	out[len(path)] = blockIndex
+	return out
+}
+
+func cloneCFGPath(path []int32) []int32 {
+	if len(path) == 0 {
+		return nil
+	}
+	out := make([]int32, len(path))
+	copy(out, path)
+	return out
+}

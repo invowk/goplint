@@ -2,8 +2,10 @@
 
 package goplint
 
-import "go/ast"
-import "testing"
+import (
+	"go/ast"
+	"testing"
+)
 
 func TestIsKnownInterfaceContractMethod(t *testing.T) {
 	t.Parallel()

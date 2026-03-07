@@ -137,7 +137,7 @@ func isVarUseTargetSeen(
 		if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
 			if target.matchesExpr(pass, sel.X) {
 				switch sel.Sel.Name {
-				case "Validate", "String", "Error", "GoString":
+				case validateMethodName, "String", "Error", "GoString":
 					return true // display-only or validation — not a use
 				default:
 					found = true
@@ -249,7 +249,7 @@ func isValidateCallNode(
 		return !isConditionallyEvaluated(call, parentMap)
 	}
 	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || sel.Sel.Name != "Validate" {
+	if !ok || sel.Sel.Name != validateMethodName {
 		return false
 	}
 	if !target.matchesExpr(pass, sel.X) {
@@ -298,7 +298,7 @@ func isUseNode(
 	case *ast.CallExpr:
 		if sel, ok := node.Fun.(*ast.SelectorExpr); ok && target.matchesExpr(pass, sel.X) {
 			switch sel.Sel.Name {
-			case "Validate", "String", "Error", "GoString":
+			case validateMethodName, "String", "Error", "GoString":
 				return false
 			default:
 				return true
@@ -315,6 +315,8 @@ func isUseNode(
 			case ubvOrderValidateBeforeUse:
 				validateSeen = true
 				continue
+			case ubvOrderNone:
+				// Continue with additional direct checks below.
 			}
 			if target.matchesExpr(pass, arg) || isVarUseTarget(pass, arg, target, syncLits, syncCalls, methodCalls) {
 				if !validateSeen {
@@ -350,39 +352,72 @@ func hasUseBeforeValidateInBlock(
 	syncCalls closureVarCallSet,
 	methodCalls methodValueValidateCallSet,
 ) bool {
-	for i := startIdx; i < len(nodes); i++ {
-		node := nodes[i]
-		switch firstUseValidateOrderInNode(pass, node, target, syncLits, syncCalls, methodCalls) {
-		case ubvOrderUseBeforeValidate:
-			return true
-		case ubvOrderValidateBeforeUse:
-			return false
-		}
-		if isVarUseTarget(pass, node, target, syncLits, syncCalls, methodCalls) {
-			return true // use before Validate() — flagged
-		}
-	}
-	return false
+	return hasUseBeforeValidateInBlockMode(pass, nodes, startIdx, target, syncLits, syncCalls, methodCalls, ubvModeOrder)
 }
 
-// hasUseBeforeValidateCrossBlock performs a DFS from the defining block
-// through CFG successors to detect uses of varName that occur before
-// any Validate() call on that path. Unlike hasUseBeforeValidateInBlock
-// which only checks within the defining block, this function checks
-// across block boundaries.
-//
-// The function is only called when hasPathToReturnWithoutValidate returns
-// false (all paths DO validate) — the question is whether any path
-// uses the variable before reaching the Validate() call.
-//
-// Algorithm:
-//  1. Start from defBlock.Succs (the cast's defining block has already
-//     been checked by hasUseBeforeValidateInBlock).
-//  2. For each live, unvisited successor block:
-//     a. Scan nodes in order: if a use is found before Validate → flag.
-//     b. If Validate is found first → prune this path (validated).
-//     c. If neither is found → continue DFS to successors.
-func hasUseBeforeValidateCrossBlock(
+func hasUseBeforeValidateInBlockMode(
+	pass *analysis.Pass,
+	nodes []ast.Node,
+	startIdx int,
+	target castTarget,
+	syncLits map[*ast.FuncLit]bool,
+	syncCalls closureVarCallSet,
+	methodCalls methodValueValidateCallSet,
+	ubvMode string,
+) bool {
+	outcome, _ := hasUseBeforeValidateInBlockOutcomeModeWithSummaryStack(
+		pass,
+		nodes,
+		startIdx,
+		target,
+		syncLits,
+		syncCalls,
+		methodCalls,
+		ubvMode,
+		nil,
+	)
+	return outcome != pathOutcomeSafe
+}
+
+func hasUseBeforeValidateInBlockOutcomeModeWithSummaryStack(
+	pass *analysis.Pass,
+	nodes []ast.Node,
+	startIdx int,
+	target castTarget,
+	syncLits map[*ast.FuncLit]bool,
+	syncCalls closureVarCallSet,
+	methodCalls methodValueValidateCallSet,
+	ubvMode string,
+	summaryStack map[string]bool,
+) (pathOutcome, pathOutcomeReason) {
+	for i := startIdx; i < len(nodes); i++ {
+		node := nodes[i]
+		if ubvMode == ubvModeEscape {
+			if containsValidateCallTarget(pass, node, target, syncLits, syncCalls, methodCalls) {
+				return pathOutcomeSafe, pathOutcomeReasonNone
+			}
+			outcome, reason := isVarEscapeTargetOutcomeWithSummaryStack(pass, node, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack)
+			if outcome != pathOutcomeSafe {
+				return outcome, reason
+			}
+			continue
+		}
+		switch firstUseValidateOrderInNode(pass, node, target, syncLits, syncCalls, methodCalls) {
+		case ubvOrderUseBeforeValidate:
+			return pathOutcomeUnsafe, pathOutcomeReasonNone
+		case ubvOrderValidateBeforeUse:
+			return pathOutcomeSafe, pathOutcomeReasonNone
+		case ubvOrderNone:
+			// Continue scanning subsequent checks in this block.
+		}
+		if isVarUseTarget(pass, node, target, syncLits, syncCalls, methodCalls) {
+			return pathOutcomeUnsafe, pathOutcomeReasonNone // use before Validate() — flagged
+		}
+	}
+	return pathOutcomeSafe, pathOutcomeReasonNone
+}
+
+func hasUseBeforeValidateCrossBlockOutcomeModeWithWitness(
 	pass *analysis.Pass,
 	defBlock *gocfg.Block,
 	defIdx int,
@@ -390,46 +425,171 @@ func hasUseBeforeValidateCrossBlock(
 	syncLits map[*ast.FuncLit]bool,
 	syncCalls closureVarCallSet,
 	methodCalls methodValueValidateCallSet,
-) bool {
+	ubvMode string,
+	maxStates int,
+	maxDepth int,
+) (pathOutcome, pathOutcomeReason, []int32) {
+	return hasUseBeforeValidateCrossBlockModeWithSummaryStackWithWitness(
+		pass,
+		defBlock,
+		defIdx,
+		target,
+		syncLits,
+		syncCalls,
+		methodCalls,
+		ubvMode,
+		maxStates,
+		maxDepth,
+		nil,
+	)
+}
+
+func hasUseBeforeValidateCrossBlockModeWithSummaryStack(
+	pass *analysis.Pass,
+	defBlock *gocfg.Block,
+	defIdx int,
+	target castTarget,
+	syncLits map[*ast.FuncLit]bool,
+	syncCalls closureVarCallSet,
+	methodCalls methodValueValidateCallSet,
+	ubvMode string,
+	maxStates int,
+	maxDepth int,
+	summaryStack map[string]bool,
+) (pathOutcome, pathOutcomeReason) {
+	outcome, reason, _ := hasUseBeforeValidateCrossBlockModeWithSummaryStackWithWitness(
+		pass,
+		defBlock,
+		defIdx,
+		target,
+		syncLits,
+		syncCalls,
+		methodCalls,
+		ubvMode,
+		maxStates,
+		maxDepth,
+		summaryStack,
+	)
+	return outcome, reason
+}
+
+func hasUseBeforeValidateCrossBlockModeWithSummaryStackWithWitness(
+	pass *analysis.Pass,
+	defBlock *gocfg.Block,
+	defIdx int,
+	target castTarget,
+	syncLits map[*ast.FuncLit]bool,
+	syncCalls closureVarCallSet,
+	methodCalls methodValueValidateCallSet,
+	ubvMode string,
+	maxStates int,
+	maxDepth int,
+	summaryStack map[string]bool,
+) (pathOutcome, pathOutcomeReason, []int32) {
+	if defBlock == nil {
+		return pathOutcomeInconclusive, pathOutcomeReasonUnresolvedTarget, nil
+	}
 	// First check remainder of defBlock for use (same-block already
 	// handled) — skip directly to successor blocks.
 	// But we need to check if defBlock remainder has validate, which
 	// would prune all successor paths.
 	remainder := defBlock.Nodes[defIdx+1:]
 	if nodeSliceContainsValidateCall(pass, remainder, target, syncLits, syncCalls, methodCalls) {
-		return false // validated in same block — successors are safe
+		return pathOutcomeSafe, pathOutcomeReasonNone, nil // validated in same block — successors are safe
 	}
 
 	if len(defBlock.Succs) == 0 {
-		return false // return block — no successors to check
+		return pathOutcomeSafe, pathOutcomeReasonNone, nil // return block — no successors to check
 	}
 
-	visited := make(map[int32]bool)
-	visited[defBlock.Index] = true
+	mode := cfgTraversalModeUBVOrder
+	if ubvMode == ubvModeEscape {
+		mode = cfgTraversalModeUBVEscape
+	}
+	starts := make([]*gocfg.Block, 0, len(defBlock.Succs)+1)
+	starts = append(starts, defBlock)
+	starts = append(starts, defBlock.Succs...)
+	ctx := newCFGTraversalContextFromBlocks(
+		mode,
+		target.key(),
+		cfgValidationStateNeedsValidateBeforeUse,
+		starts,
+	)
+	ctx.markVisitState(defBlock.Index, cfgVisitAnyPredecessor)
+	seenStates := 1
+	budget := adaptiveBlockVisitBudgetForBlocks(
+		starts,
+		blockVisitBudget{maxStates: maxStates, maxDepth: maxDepth},
+	)
 
-	return dfsUseBeforeValidate(pass, defBlock.Succs, target, visited, syncLits, syncCalls, methodCalls)
+	return dfsUseBeforeValidateModeWithSummaryStackWithWitness(
+		pass,
+		defBlock.Succs,
+		target,
+		defBlock.Index,
+		ctx,
+		syncLits,
+		syncCalls,
+		methodCalls,
+		ubvMode,
+		0,
+		[]int32{defBlock.Index},
+		&seenStates,
+		budget.maxStates,
+		budget.maxDepth,
+		summaryStack,
+	)
 }
 
-// dfsUseBeforeValidate recursively checks whether any path through
-// successor blocks contains a "use" of varName before a "Validate" call.
-// Blocks containing Validate() prune their path (downstream is safe).
-// Blocks with no use and no Validate continue the DFS.
-func dfsUseBeforeValidate(
+func dfsUseBeforeValidateModeWithSummaryStackWithWitness(
 	pass *analysis.Pass,
 	succs []*gocfg.Block,
 	target castTarget,
-	visited map[int32]bool,
+	predecessor int32,
+	ctx *cfgTraversalContext,
 	syncLits map[*ast.FuncLit]bool,
 	syncCalls closureVarCallSet,
 	methodCalls methodValueValidateCallSet,
-) bool {
+	ubvMode string,
+	depth int,
+	path []int32,
+	seenStates *int,
+	maxStates int,
+	maxDepth int,
+	summaryStack map[string]bool,
+) (pathOutcome, pathOutcomeReason, []int32) {
+	if maxDepth > 0 && depth > maxDepth {
+		return pathOutcomeInconclusive, pathOutcomeReasonDepthBudget, cloneCFGPath(path)
+	}
+
 	for _, succ := range succs {
-		if visited[succ.Index] {
+		if succ == nil {
 			continue
 		}
-		visited[succ.Index] = true
+		if entry, ok := ctx.memoLookup(succ.Index, predecessor); ok {
+			if entry.outcome == pathOutcomeSafe {
+				continue
+			}
+			return entry.outcome, entry.reason, mergeCFGWitness(path, entry.witness)
+		}
+		if ctx.shouldSkip(succ.Index, predecessor) {
+			continue
+		}
+		ctx.markVisitState(succ.Index, predecessor)
+		activeKey := ctx.pushActive(succ.Index, predecessor)
+		nextPath := appendCFGPath(path, succ.Index)
+		if seenStates != nil {
+			*seenStates++
+			if maxStates > 0 && *seenStates > maxStates {
+				ctx.memoStore(succ.Index, predecessor, pathOutcomeInconclusive, pathOutcomeReasonStateBudget, nextPath)
+				ctx.popActive(activeKey)
+				return pathOutcomeInconclusive, pathOutcomeReasonStateBudget, nextPath
+			}
+		}
 
 		if !succ.Live {
+			ctx.memoStore(succ.Index, predecessor, pathOutcomeSafe, pathOutcomeReasonNone, nil)
+			ctx.popActive(activeKey)
 			continue
 		}
 
@@ -437,6 +597,23 @@ func dfsUseBeforeValidate(
 		foundUse := false
 		foundValidate := false
 		for _, node := range succ.Nodes {
+			if ubvMode == ubvModeEscape {
+				if containsValidateCallTarget(pass, node, target, syncLits, syncCalls, methodCalls) {
+					foundValidate = true
+					break
+				}
+				escapeOutcome, escapeReason := isVarEscapeTargetOutcomeWithSummaryStack(pass, node, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack)
+				if escapeOutcome == pathOutcomeInconclusive {
+					ctx.memoStore(succ.Index, predecessor, pathOutcomeInconclusive, escapeReason, nextPath)
+					ctx.popActive(activeKey)
+					return pathOutcomeInconclusive, escapeReason, nextPath
+				}
+				if escapeOutcome == pathOutcomeUnsafe {
+					foundUse = true
+					break
+				}
+				continue
+			}
 			order := firstUseValidateOrderInNode(pass, node, target, syncLits, syncCalls, methodCalls)
 			if order == ubvOrderUseBeforeValidate {
 				foundUse = true
@@ -453,16 +630,199 @@ func dfsUseBeforeValidate(
 		}
 
 		if foundUse {
-			return true // cross-block UBV detected
+			ctx.memoStore(succ.Index, predecessor, pathOutcomeUnsafe, pathOutcomeReasonNone, nextPath)
+			ctx.popActive(activeKey)
+			return pathOutcomeUnsafe, pathOutcomeReasonNone, nextPath // cross-block UBV detected
 		}
 		if foundValidate {
+			ctx.memoStore(succ.Index, predecessor, pathOutcomeSafe, pathOutcomeReasonNone, nil)
+			ctx.popActive(activeKey)
 			continue // this path is validated — skip successors
 		}
 
 		// Neither use nor validate in this block — continue DFS.
-		if dfsUseBeforeValidate(pass, succ.Succs, target, visited, syncLits, syncCalls, methodCalls) {
-			return true
+		outcome, reason, witness := dfsUseBeforeValidateModeWithSummaryStackWithWitness(
+			pass,
+			succ.Succs,
+			target,
+			succ.Index,
+			ctx,
+			syncLits,
+			syncCalls,
+			methodCalls,
+			ubvMode,
+			depth+1,
+			nextPath,
+			seenStates,
+			maxStates,
+			maxDepth,
+			summaryStack,
+		)
+		if outcome != pathOutcomeSafe {
+			ctx.memoStore(succ.Index, predecessor, outcome, reason, witness)
+			ctx.popActive(activeKey)
+			return outcome, reason, witness
+		}
+		ctx.memoStore(succ.Index, predecessor, pathOutcomeSafe, pathOutcomeReasonNone, nil)
+		ctx.popActive(activeKey)
+	}
+	return pathOutcomeSafe, pathOutcomeReasonNone, nil
+}
+
+func callIsNonEscapingBuiltin(call *ast.CallExpr) bool {
+	if call == nil {
+		return false
+	}
+	ident, ok := stripParens(call.Fun).(*ast.Ident)
+	if !ok {
+		return false
+	}
+	switch ident.Name {
+	case "len", "cap", "copy":
+		return true
+	default:
+		return false
+	}
+}
+
+func callUsesTargetOutcomeWithSummaryStack(
+	pass *analysis.Pass,
+	call *ast.CallExpr,
+	target castTarget,
+	syncLits map[*ast.FuncLit]bool,
+	syncCalls closureVarCallSet,
+	methodCalls methodValueValidateCallSet,
+	ubvMode string,
+	summaryStack map[string]bool,
+) (pathOutcome, pathOutcomeReason) {
+	if call == nil {
+		return pathOutcomeSafe, pathOutcomeReasonNone
+	}
+	if receiver := methodCalls[call]; receiver != nil && target.matchesExpr(pass, receiver) {
+		return pathOutcomeUnsafe, pathOutcomeReasonNone
+	}
+	if sel, ok := call.Fun.(*ast.SelectorExpr); ok && target.matchesExpr(pass, sel.X) {
+		switch sel.Sel.Name {
+		case validateMethodName, "String", "Error", "GoString":
+			return pathOutcomeSafe, pathOutcomeReasonNone
+		default:
+			return pathOutcomeUnsafe, pathOutcomeReasonNone
 		}
 	}
-	return false
+	if ubvMode == ubvModeEscape {
+		summary, ok, summaryReason := callCalleeSummaryForTargetWithStack(pass, call, target, stackScopeFromMap(summaryStack))
+		if ok && summary.AlwaysValidatesTarget && !summary.EscapesTargetBeforeValidate {
+			return pathOutcomeSafe, pathOutcomeReasonNone
+		}
+		if !ok && summaryReason == pathOutcomeReasonRecursionCycle && summaryStackHasRecursionFallback(summaryStack) {
+			goto directFallback
+		}
+		if !ok && (summaryReason == pathOutcomeReasonRecursionCycle ||
+			summaryReason == pathOutcomeReasonStateBudget ||
+			summaryReason == pathOutcomeReasonDepthBudget) {
+			return pathOutcomeInconclusive, summaryReason
+		}
+		if ok && summary.EscapesTargetBeforeValidate {
+			return pathOutcomeUnsafe, pathOutcomeReasonNone
+		}
+	}
+directFallback:
+	if callIsNonEscapingBuiltin(call) {
+		return pathOutcomeSafe, pathOutcomeReasonNone
+	}
+	for _, arg := range call.Args {
+		if target.matchesExpr(pass, arg) || isVarUseTarget(pass, arg, target, syncLits, syncCalls, methodCalls) {
+			return pathOutcomeUnsafe, pathOutcomeReasonNone
+		}
+	}
+	return pathOutcomeSafe, pathOutcomeReasonNone
+}
+
+func isVarEscapeTargetOutcomeWithSummaryStack(
+	pass *analysis.Pass,
+	node ast.Node,
+	target castTarget,
+	syncLits map[*ast.FuncLit]bool,
+	syncCalls closureVarCallSet,
+	methodCalls methodValueValidateCallSet,
+	ubvMode string,
+	summaryStack map[string]bool,
+) (pathOutcome, pathOutcomeReason) {
+	escaped := false
+	reason := pathOutcomeReasonNone
+	ast.Inspect(node, func(n ast.Node) bool {
+		if escaped {
+			return false
+		}
+		if lit, ok := n.(*ast.FuncLit); ok {
+			return syncLits[lit]
+		}
+		switch stmt := n.(type) {
+		case *ast.ReturnStmt:
+			for _, result := range stmt.Results {
+				if target.matchesExpr(pass, result) || isVarUseTarget(pass, result, target, syncLits, syncCalls, methodCalls) {
+					escaped = true
+					return false
+				}
+			}
+		case *ast.SendStmt:
+			if target.matchesExpr(pass, stmt.Value) || isVarUseTarget(pass, stmt.Value, target, syncLits, syncCalls, methodCalls) {
+				escaped = true
+				return false
+			}
+		case *ast.GoStmt:
+			callOutcome, callReason := callUsesTargetOutcomeWithSummaryStack(pass, stmt.Call, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack)
+			if callOutcome == pathOutcomeInconclusive {
+				reason = callReason
+				escaped = true
+				return false
+			}
+			if callOutcome == pathOutcomeUnsafe {
+				escaped = true
+				return false
+			}
+		case *ast.AssignStmt:
+			for i, rhs := range stmt.Rhs {
+				if !(target.matchesExpr(pass, rhs) || isVarUseTarget(pass, rhs, target, syncLits, syncCalls, methodCalls)) {
+					continue
+				}
+				if i < len(stmt.Lhs) && target.matchesExpr(pass, stmt.Lhs[i]) {
+					continue
+				}
+				escaped = true
+				return false
+			}
+		case *ast.ValueSpec:
+			for _, value := range stmt.Values {
+				if target.matchesExpr(pass, value) || isVarUseTarget(pass, value, target, syncLits, syncCalls, methodCalls) {
+					escaped = true
+					return false
+				}
+			}
+		case *ast.KeyValueExpr:
+			if target.matchesExpr(pass, stmt.Key) || target.matchesExpr(pass, stmt.Value) {
+				escaped = true
+				return false
+			}
+		case *ast.CallExpr:
+			callOutcome, callReason := callUsesTargetOutcomeWithSummaryStack(pass, stmt, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack)
+			if callOutcome == pathOutcomeInconclusive {
+				reason = callReason
+				escaped = true
+				return false
+			}
+			if callOutcome == pathOutcomeUnsafe {
+				escaped = true
+				return false
+			}
+		}
+		return true
+	})
+	if !escaped {
+		return pathOutcomeSafe, pathOutcomeReasonNone
+	}
+	if reason != pathOutcomeReasonNone {
+		return pathOutcomeInconclusive, reason
+	}
+	return pathOutcomeUnsafe, pathOutcomeReasonNone
 }

@@ -206,3 +206,55 @@ func TestIsKnownNoReturnFuncTable(t *testing.T) {
 		})
 	}
 }
+
+func TestCallMayReturnWithNoReturnAliases(t *testing.T) {
+	t.Parallel()
+
+	src := `package testpkg
+import "os"
+
+func mayReturn(int) {}
+
+func use(raw int) {
+	exit := os.Exit
+	exit(raw)
+	exit = mayReturn
+	exit(raw)
+}`
+
+	pass, file := buildTypedPassFromSource(t, src)
+	useFn := findFuncDecl(t, file, "use")
+	if useFn.Body == nil {
+		t.Fatal("expected use body")
+	}
+	aliases := collectNoReturnFuncAliasEvents(pass, useFn.Body)
+	calls := findDirectIdentCallsInFunc(t, useFn, "exit")
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 exit(...) calls, got %d", len(calls))
+	}
+	if got := callMayReturn(pass, calls[0], aliases); got {
+		t.Fatal("expected first aliased os.Exit call to be no-return")
+	}
+	if got := callMayReturn(pass, calls[1], aliases); !got {
+		t.Fatal("expected re-bound alias call to be may-return")
+	}
+}
+
+func findDirectIdentCallsInFunc(t *testing.T, fn *ast.FuncDecl, identName string) []*ast.CallExpr {
+	t.Helper()
+
+	var calls []*ast.CallExpr
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		ident, ok := stripParens(call.Fun).(*ast.Ident)
+		if !ok || ident.Name != identName {
+			return true
+		}
+		calls = append(calls, call)
+		return true
+	})
+	return calls
+}

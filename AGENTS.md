@@ -15,6 +15,10 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | Run (JSON for agents) | `make check-types-json` |
 | **Run all DDD checks** | **`make check-types-all`** |
 | **Run all DDD checks (JSON)** | **`make check-types-all-json`** |
+| **Check Phase A semantic contracts** | **`make check-semantic-spec`** |
+| **Check IFDS compatibility** | **`make check-ifds-compat`** |
+| **Check Phase C refinement** | **`make check-cfg-refinement`** |
+| **Check Phase D alias mode** | **`make check-cfg-alias`** |
 | **Check baseline (regression gate)** | **`make check-baseline`** |
 | **Update baseline** | **`make update-baseline`** |
 | Run tests | `cd tools/goplint && go test ./goplint/` |
@@ -34,10 +38,8 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | Check validate delegation | `make build-goplint && ./bin/goplint -check-validate-delegation -config=tools/goplint/exceptions.toml ./...` |
 | Check nonzero fields | `make build-goplint && ./bin/goplint -check-nonzero -config=tools/goplint/exceptions.toml ./...` |
 | Check redundant conversions | `make build-goplint && ./bin/goplint -check-redundant-conversion -config=tools/goplint/exceptions.toml ./...` |
-| Check validate delegation (all) | `make build-goplint && ./bin/goplint -check-validate-delegation-all -config=tools/goplint/exceptions.toml ./...` |
 | Check enum CUE sync | `make build-goplint && ./bin/goplint -check-enum-sync -config=tools/goplint/exceptions.toml ./...` |
 | CFA cast validation (default) | `make build-goplint && ./bin/goplint -check-cast-validation -config=tools/goplint/exceptions.toml ./...` |
-| Cast validation + no-cfa contract (expected failure) | `make build-goplint && ./bin/goplint -check-cast-validation -no-cfa -config=tools/goplint/exceptions.toml ./...` |
 | Audit overdue reviews | `make build-goplint && ./bin/goplint -audit-review-dates -config=tools/goplint/exceptions.toml ./...` |
 
 ## Testing Parallelism
@@ -62,24 +64,28 @@ Each diagnostic emitted by the analyzer carries a `category` field (visible in `
 | `missing-struct-validate` | `--check-struct-validate` or `--check-all` | Struct with constructor missing `Validate()` method |
 | `wrong-struct-validate-sig` | `--check-struct-validate` or `--check-all` | Struct has `Validate()` but wrong signature |
 | `unvalidated-cast` | `--check-cast-validation` or `--check-all` | Type conversion to DDD type from non-constant without `Validate()` check |
-| `use-before-validate` | `--check-use-before-validate` or `--check-all` | DDD Value Type variable used before Validate() in same basic block (CFA only) |
-| `use-before-validate` | `--check-use-before-validate-cross` | DDD Value Type variable used before Validate() across CFG blocks (CFA only, in CI/baseline) |
+| `unvalidated-cast-inconclusive` | `--check-cast-validation` or `--check-all` | CFA path exploration truncated before proving cast validation safety |
+| `use-before-validate-same-block` | `--check-use-before-validate` or `--check-all` | DDD Value Type variable used before Validate() in the defining CFG block |
+| `use-before-validate-cross-block` | `--check-use-before-validate` or `--check-all` | DDD Value Type variable used before Validate() across successor CFG blocks |
+| `use-before-validate-inconclusive` | `--check-use-before-validate` or `--check-all` | CFA path exploration truncated before proving UBV safety |
 | `missing-constructor-error-return` | `--check-constructor-return-error` or `--check-all` | Constructor for validatable type does not return error |
 | `unused-validate-result` | `--check-validate-usage` or `--check-all` | Validate() called with result completely discarded |
 | `nonzero-value-field` | `--check-nonzero` or `--check-all` | Struct field uses nonzero type as value (should be pointer) |
 | `unused-constructor-error` | `--check-constructor-error-usage` or `--check-all` | Constructor NewXxx() error return assigned to blank identifier |
 | `missing-constructor-validate` | `--check-constructor-validates` or `--check-all` | Constructor returns validatable type but never calls Validate() |
-| `incomplete-validate-delegation` | `--check-validate-delegation` or `--check-validate-delegation-all` or `--check-all` | Struct missing field Validate() delegation |
-| `missing-struct-validate-fields` | `--check-validate-delegation-all` or `--check-all` | Struct with validatable fields but no Validate() method |
+| `missing-constructor-validate-inconclusive` | `--check-constructor-validates` or `--check-all` | Constructor CFA path exploration truncated before proving Validate coverage |
+| `incomplete-validate-delegation` | `--check-validate-delegation` or `--check-all` | Struct missing field Validate() delegation |
+| `missing-struct-validate-fields` | `--check-validate-delegation` or `--check-all` | Struct with validatable fields but no Validate() method |
 | `wrong-func-option-type` | `--check-func-options` or `--check-all` | WithXxx() parameter type does not match the struct field type |
 | `redundant-conversion` | `--check-redundant-conversion` or `--check-all` | Type conversion with redundant intermediate basic-type hop |
 | `enum-cue-missing-go` | `--check-enum-sync` | CUE disjunction member not in Go Validate() switch |
 | `enum-cue-extra-go` | `--check-enum-sync` | Go Validate() switch case not in CUE disjunction |
+| `suggest-validate-all` | `--suggest-validate-all` | Advisory: struct may benefit from `//goplint:validate-all` |
 | `stale-exception` | `--audit-exceptions` | TOML exception pattern matched nothing |
 | `overdue-review` | `--audit-review-dates` | Exception with `review_after` date that has passed |
 | `unknown-directive` | (always active) | Unrecognized key in `//goplint:` directive (typo detection) |
 
-The `--check-all` flag enables `--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-validate-delegation-all`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, and `--check-redundant-conversion` in a single invocation. `--check-all` includes CFA-only checks, so `--no-cfa` is rejected in combination with `--check-all`. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), `--check-use-before-validate-cross` (not in the flag itself, but explicitly added by `make check-baseline` and `make check-types-all`), and `--suggest-validate-all` (advisory mode).
+The `--check-all` flag enables `--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, and `--check-redundant-conversion` in a single invocation. `--check-all` includes CFA-backed checks by default. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
 
 ## Architecture
 
@@ -105,7 +111,7 @@ tools/goplint/
 │   ├── config.go               # exception TOML loading + pattern matching + match counting
 │   ├── inspect.go              # struct/func AST visitors + helpers
 │   ├── typecheck.go            # isPrimitive() / isPrimitiveUnderlying() / isOptionFuncType()
-│   ├── cfa.go                      # CFA toggle, cfg.New wrapper, DFS utilities
+│   ├── cfa.go                      # CFA CFG wrapper, DFS utilities
 │   ├── cfa_cast_validation.go      # inspectUnvalidatedCastsCFA (CFA replacement for cast validation)
 │   ├── cfa_closure.go              # inspectClosureCastsCFA (closure analysis with independent CFGs)
 │   ├── cfa_collect.go              # collectCFACasts shared cast/method-value collection for CFA
@@ -216,7 +222,7 @@ Can be combined with other directives: `//plint:render,internal`.
 
 ### 5. Validate-All Directive — delegation completeness
 
-Struct types marked with `//goplint:validate-all` opt into delegation completeness checking via `--check-validate-delegation`. The check verifies that the struct's `Validate()` method calls `.Validate()` on every field whose type has a `Validate()` method.
+`--check-validate-delegation` always checks delegation completeness for structs with validatable fields. Structs marked with `//goplint:validate-all` receive the same delegation check and are also used to communicate intent.
 
 ```go
 //goplint:validate-all
@@ -227,7 +233,7 @@ type Config struct {
 }
 ```
 
-This directive only affects `--check-validate-delegation`. Without it, no delegation analysis is performed (opt-in to avoid false positives on structs with intentionally partial validation).
+This directive strengthens intent and review clarity, but delegation analysis is no longer opt-in.
 
 ### 6. Constant-Only Directive — constructor-validates exemption
 
@@ -298,11 +304,11 @@ Uses `analysis.Fact` propagation — the directive is exported as a `ValidatesTy
 
 ## Supplementary Modes
 
-Eighteen additional analysis modes complement the primary primitive detection:
+Seventeen additional analysis modes complement the primary primitive detection:
 
 ### `--check-all`
 
-Enables all DDD compliance checks (`--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-validate-delegation-all`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`) in a single invocation. `--check-all` includes CFA-only checks, so pairing it with `--no-cfa` is rejected. This is the recommended flag for comprehensive DDD compliance checks. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), `--check-use-before-validate-cross` (not in the flag itself, but explicitly added by `make check-baseline` and `make check-types-all`), and `--suggest-validate-all` (advisory mode).
+Enables all DDD compliance checks (`--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`) in a single invocation. This is the recommended flag for comprehensive DDD compliance checks. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
 
 ### `--audit-exceptions`
 
@@ -424,36 +430,23 @@ This check is CFA-only. It builds a CFG and verifies ALL return paths pass throu
 
 ### `--check-validate-delegation`
 
-Reports structs annotated with `//goplint:validate-all` whose `Validate()` method does not delegate to all fields that have `Validate()`. This is an opt-in check — only structs with the directive are analyzed.
+Checks delegation completeness for structs with validatable fields. The mode combines directive-aware and universal semantics:
 
-**What gets flagged:**
-- Field `FieldName` whose type has `Validate()` but is not called as `receiver.FieldName.Validate()` in the struct's `Validate()` method
-
-**What does NOT get flagged:**
-- Structs without `//goplint:validate-all` directive (opt-in only)
-- Fields whose types do not have `Validate()` (non-validatable, skipped)
-- Delegation via intermediate variable: `field := c.FieldName; field.Validate()` is recognized
-- Anonymous embedded fields: `Name` (embedded type) is tracked as `c.Name.Validate()`
-
-### `--check-validate-delegation-all`
-
-Universal version of `--check-validate-delegation`. Checks ALL structs in included packages for two conditions, without requiring the `//goplint:validate-all` directive:
-
-1. **Missing Validate()**: Struct has validatable fields (types with `Validate()`, slices/maps of such types) but no `Validate()` method at all.
+1. **Missing Validate()**: Struct has validatable fields but no `Validate()` method at all.
 2. **Incomplete delegation**: Struct has `Validate()` and validatable fields but does not delegate to all of them.
 
-Structs with `//goplint:validate-all` are skipped by this mode (they are handled by `--check-validate-delegation` to avoid duplicate findings). Error-type structs (name ending in "Error" or implementing the `error` interface) are excluded.
-
-**What gets flagged:**
-- Struct with 3 fields whose types have `Validate()` but the struct itself has no `Validate()` → `missing-struct-validate-fields`
-- Struct with `Validate()` that calls `FieldA.Validate()` but not `FieldB.Validate()` → `incomplete-validate-delegation`
+Validatable fields include direct types with `Validate()`, embedded fields, and collection fields (slice/map) whose element types are validatable.
 
 **What does NOT get flagged:**
-- Structs with `//goplint:validate-all` directive (handled by opt-in mode)
 - Structs without any validatable fields
 - Error-type structs
 - Fields with `//goplint:no-delegate` directive
 - Complete delegation (all validatable fields delegated)
+- Delegation via intermediate variable: `field := c.FieldName; field.Validate()`
+- Anonymous embedded fields delegated as `c.Name.Validate()`
+- Delegation via receiver helper methods, including range-loop delegation inside the helper body
+- Delegation via same-package helper functions such as `appendOptionalValidation(...)` / `appendEachValidation(...)` when the helper body actually calls `Validate()` on the forwarded field or collection elements
+- Direct or helper-method delegation guarded by `field != nil` or zero-value checks such as `field != ""`, `field != 0`, or `field != false` when those guards make the `Validate()` call unconditional for the non-zero case
 
 **Exception keys:**
 - Missing Validate(): `pkg.StructName.struct-validate-fields`
@@ -496,7 +489,7 @@ Reports type conversions with a redundant intermediate basic-type hop. Detects `
 
 ### CFA (Control-Flow Analysis) — default for `--check-cast-validation`
 
-CFA replaces the AST name-based heuristic in `--check-cast-validation` with CFG path-reachability analysis. Each function gets a control-flow graph (via `golang.org/x/tools/go/cfg`) and the analyzer checks whether *every* path from a type conversion to a function return passes through a `varName.Validate()` call. `--check-cast-validation` is now CFA-only; combining it with `--no-cfa` is rejected.
+CFA replaces the AST name-based heuristic in `--check-cast-validation` with CFG path-reachability analysis. Each function gets a control-flow graph (via `golang.org/x/tools/go/cfg`) and the analyzer checks whether *every* path from a type conversion to a function return passes through a `varName.Validate()` call. `--check-cast-validation` is CFA-backed by default.
 
 **What CFA catches that AST misses:**
 - Conditional validation: `if strict { x.Validate() }` followed by unconditional use
@@ -514,7 +507,7 @@ CFA replaces the AST name-based heuristic in `--check-cast-validation` with CFG 
 
 ### `--check-use-before-validate`
 
-Reports DDD Value Type variables that are used before `Validate()` is called in the same basic block. This is a CFA-only check — it requires `--check-cast-validation` to be active and CFA to be enabled (default).
+Reports DDD Value Type variables that are used before `Validate()` is called along executable CFG paths. This is a CFA-only check — it requires `--check-cast-validation` to be active and CFA to be enabled (default). Findings are split by category into same-block and cross-block variants.
 
 **What counts as a "use":**
 - Passing the variable as a function argument: `useFunc(x)`
@@ -526,10 +519,19 @@ Reports DDD Value Type variables that are used before `Validate()` is called in 
 - `x.Validate()` — the validation call itself
 - `x.String()`, `x.Error()`, `x.GoString()` — display-only methods
 
-**Scope (v1):** Same-block only. If the cast and the first use are in different CFG blocks, the check does not flag. This keeps false positives low while catching the most common pattern.
+**Scope:** Full-path CFG ordering with selectable UBV semantics via `--ubv-mode`:
+- `order`: strict temporal ordering checks.
+- `escape`: prioritizes values that escape before validation and uses recursion-safe interprocedural first-arg summaries to recognize helper calls that validate before escaping.
+
+CFG backend is selectable with `--cfg-backend`:
+- `ssa`: type-aware no-return pruning (default).
+- `ast`: conservative may-return CFG behavior.
+
+The check reports both same-block and cross-block findings when a value is used before a reachable `Validate()` call on the same execution path.
 
 **What gets flagged:**
 - `x := DddType(raw); useFunc(x); x.Validate()` — use precedes validate in same block
+- `x := DddType(raw); if cond { useFunc(x) }; x.Validate()` — use in a successor block precedes validate
 
 **What does NOT get flagged:**
 - `x := DddType(raw); x.Validate(); useFunc(x)` — validate precedes use
@@ -570,8 +572,7 @@ All supplementary modes respect the TOML exception config:
 - `--check-validate-usage`: excepted via `pkg.FuncName.validate-usage`
 - `--check-constructor-error-usage`: excepted via `pkg.FuncName.constructor-error-usage`
 - `--check-constructor-validates`: excepted via `pkg.ConstructorName.constructor-validate`
-- `--check-validate-delegation`: excepted via `pkg.StructName.FieldName.validate-delegation`
-- `--check-validate-delegation-all`: missing Validate() excepted via `pkg.StructName.struct-validate-fields`; incomplete delegation via `pkg.StructName.FieldName.validate-delegation`
+- `--check-validate-delegation`: missing Validate() excepted via `pkg.StructName.struct-validate-fields`; incomplete delegation via `pkg.StructName.FieldName.validate-delegation`
 - `--check-nonzero`: excepted via `pkg.StructName.FieldName.nonzero`
 - `--check-redundant-conversion`: excepted via `pkg.FuncName.redundant-conversion`
 - `--check-enum-sync`: excepted via `pkg.TypeName.memberValue.enum-cue-missing-go` or `pkg.TypeName.memberValue.enum-cue-extra-go`
@@ -587,9 +588,16 @@ make check-baseline    # Compare current state against baseline (CI gate)
 make update-baseline   # Regenerate baseline from current state
 ```
 
+`make check-baseline` and `make update-baseline` pin
+`-cfg-interproc-engine=legacy` to keep baseline suppression deterministic while
+IFDS remains the analyzer default path and compatibility is enforced by
+`make check-ifds-compat`, the Phase C refinement gate
+`make check-cfg-refinement`, and the Phase D alias gate
+`make check-cfg-alias`.
+
 ### How it works
 
-- **`--baseline=path`**: Analyzer flag. Loaded per-package in `run()`, suppresses findings whose stable `id` matches a baseline entry (with legacy message fallback). Only new findings are reported.
+- **`--baseline=path`**: Analyzer flag. Loaded per-package in `run()`, suppresses findings whose stable `id` matches a baseline entry. Only new findings are reported.
 - **`--update-baseline=path`**: main() flag. Runs self as subprocess and injects `-emit-findings-jsonl=<tmp>` so baseline generation consumes machine-stable finding IDs from a JSONL stream. Uses subprocess because `singlechecker.Main()` calls `os.Exit()` — no post-analysis aggregation is possible within the framework.
 
 ### Baseline TOML format
@@ -597,18 +605,20 @@ make update-baseline   # Regenerate baseline from current state
 ```toml
 [primitive]
 entries = [
-    { id = "gpl1_...", message = "struct field pkg.Foo.Bar uses primitive type string" },
+    { id = "gpl3_...", message = "struct field pkg.Foo.Bar uses primitive type string" },
 ]
 
 [missing-constructor]
 entries = [
-    { id = "gpl1_...", message = "exported struct pkg.Config has no NewConfig() constructor" },
+    { id = "gpl3_...", message = "exported struct pkg.Config has no NewConfig() constructor" },
 ]
 ```
 
-Sections: `[primitive]`, `[missing-validate]`, `[missing-stringer]`, `[missing-constructor]`, `[wrong-constructor-sig]`, `[wrong-validate-sig]`, `[wrong-stringer-sig]`, `[missing-func-options]`, `[missing-immutability]`, `[missing-struct-validate]`, `[wrong-struct-validate-sig]`, `[unvalidated-cast]`, `[unused-validate-result]`, `[unused-constructor-error]`, `[missing-constructor-validate]`, `[incomplete-validate-delegation]`, `[nonzero-value-field]`, `[redundant-conversion]`, `[missing-struct-validate-fields]`. Empty sections are omitted.
+Sections: `[primitive]`, `[missing-validate]`, `[missing-stringer]`, `[missing-constructor]`, `[wrong-constructor-sig]`, `[missing-func-options]`, `[missing-immutability]`, `[wrong-validate-sig]`, `[wrong-stringer-sig]`, `[missing-struct-validate]`, `[wrong-struct-validate-sig]`, `[unvalidated-cast]`, `[unvalidated-cast-inconclusive]`, `[unused-validate-result]`, `[unused-constructor-error]`, `[missing-constructor-validate]`, `[missing-constructor-validate-inconclusive]`, `[incomplete-validate-delegation]`, `[nonzero-value-field]`, `[wrong-func-option-type]`, `[enum-cue-missing-go]`, `[enum-cue-extra-go]`, `[use-before-validate-same-block]`, `[use-before-validate-cross-block]`, `[use-before-validate-inconclusive]`, `[suggest-validate-all]`, `[missing-constructor-error-return]`, `[redundant-conversion]`, `[missing-struct-validate-fields]`. Empty sections are omitted.
 
-`messages = [...]` (legacy v1 format) is still parsed for backward compatibility.
+`messages = [...]` (legacy v1 format) is no longer accepted; baseline files must use `entries = [{id, message}]`.
+Baseline generation is fail-closed for ID integrity: suppressible diagnostics must
+carry a `goplint://finding/<id>` URL; missing/invalid URLs abort parsing.
 
 ### When to update
 
@@ -619,11 +629,11 @@ Run `make update-baseline` after:
 
 ### CI integration
 
-The `goplint-baseline` and `goplint-tests` jobs in `lint.yml` are required checks. `goplint-baseline` runs `make check-baseline` (regression gate), while `goplint-tests` runs nested-module analyzer tests (`go test -race -count=1 ./...` and repeat runs) to catch tool-only regressions.
+The `goplint-baseline` and `goplint-tests` jobs in `lint.yml` are required checks. `goplint-baseline` runs `make check-baseline` (regression gate), while `goplint-tests` runs nested-module analyzer tests (`go test -race -count=1 ./...` and repeat runs) plus the semantic/IFDS/Phase C/Phase D script gates to catch tool-only regressions.
 
 ### Pre-commit hook
 
-The `goplint-baseline` local hook in `.pre-commit-config.yaml` runs `make check-baseline` advisory (always exits 0). Install with `make install-hooks`.
+The local hooks in `.pre-commit-config.yaml` now block on both `make check-baseline` and the semantic/IFDS/Phase C/Phase D behavior gates (`check-semantic-spec`, `check-ifds-compat`, `check-cfg-refinement`, `check-cfg-alias`) for goplint-relevant changes. Install with `make install-hooks`.
 
 ## Gotchas
 
@@ -633,23 +643,31 @@ The `goplint-baseline` local hook in `.pre-commit-config.yaml` runs `make check-
 - **`types.Alias` (Go 1.22+)**: Type aliases (`type X = string`) are transparent — `isPrimitive` must call `types.Unalias()` to resolve them. Without this, aliases silently pass the linter.
 - **Generic pointer receivers**: `*Container[T]` is `StarExpr{X: IndexExpr{...}}` in the AST. `receiverTypeName` must recurse through `StarExpr` to find the type name inside `IndexExpr`. A naive `StarExpr → Ident` check misses this.
 - **Flag state model**: `NewAnalyzer()` constructs analyzers with isolated `flagState`; there is no package-level shared analyzer instance. Bool modes are declared in `modeFlagSpecs` (`flags.go`) and used for registration, `newRunConfigForState()` snapshotting, and `--check-all` expansion to reduce wiring drift.
+- **Tracked string flag semantics**: `--config`, `--baseline`, and `--include-packages` are bound with explicitness tracking. Explicit empty values for `--config`/`--baseline` are rejected during run-config validation; explicit empty `--include-packages` intentionally clears package-prefix filtering. Comma lists with empty segments (for example `a,,b`) are invalid.
 - **`primitiveTypeName` needs `Unalias` too**: Even after `isPrimitive` correctly detects an alias as primitive, the diagnostic message must show the resolved type (`string`), not the alias name (`MyAlias`). Call `types.Unalias()` before `types.TypeString()`.
 - **Qualified name format**: The analyzer prefixes all names with the package name (`pkg.Type.Field`, `pkg.Func.param`). Exception patterns can be 2-segment (matched after stripping the package prefix) or 3-segment (exact match).
-- **CI baseline + analyzer tests are required**: `goplint-baseline` blocks merges on baseline regressions, and `goplint-tests` blocks merges on analyzer test/race regressions. The `goplint` full DDD scan remains advisory with `continue-on-error: true`. `make check-baseline` runs `-check-all -check-enum-sync -check-use-before-validate-cross` — enum sync and cross-block UBV are included in the baseline gate even though `--check-all` alone excludes them.
+- **CI baseline + analyzer tests are required**: `goplint-baseline` blocks merges on baseline regressions, and `goplint-tests` blocks merges on analyzer test/race regressions. The `goplint` full DDD scan remains advisory with `continue-on-error: true`. `make check-baseline` runs `-check-all -check-enum-sync -cfg-interproc-engine=legacy`.
 - **Per-package execution**: `go/analysis` analyzers run per-package. `--audit-exceptions` reports stale exceptions per-package — an exception that matches in package A but not package B will only be reported as stale during B's analysis. For a global stale audit, run against the full module (`./...`).
 - **`findConstructorForStruct` determinism**: Prefers exact match (`"New" + structName`) over prefix matches. Among prefix matches, picks lexicographically first name. Prevents non-deterministic results from Go map iteration order when multiple variant constructors exist.
 - **CFA import alias**: CFA files use `gocfg "golang.org/x/tools/go/cfg"` to avoid collision with the `*ExceptionConfig` parameter commonly named `cfg` in analyzer functions.
+- **`--cfg-alias-mode=ssa` (Phase D)**: Opt-in SSA-based must-alias tracking. Enriches `castTarget.matchesExpr` so `y := x; y.Validate()` discharges `x`'s validation requirement. SSA is built on-demand via `buildSSAForPass()` (NOT a `Requires` prerequisite — adding to `Requires` causes `failed prerequisites` for stdlib imports in the `go/analysis` framework). NOT included in `--check-all`. The `"ssa"` here refers to `go/ssa` SSA form, distinct from `--cfg-backend=ssa` which means "type-aware `go/cfg` CFG." `make check-cfg-alias` is the dedicated proof gate: it compares the curated alias fixture under `off` vs `ssa`, requires copy/multi-hop alias improvement only under `ssa`, and keeps the no-alias/reassignment/partial-branch controls failing in both modes.
+- **`go/cfg` builder callback**: `gocfg.New(body, mayReturn)` requires a non-nil `mayReturn` callback if the body can contain bare call-expression statements (`consume(x)`). Passing `nil` can panic during CFG construction when the builder evaluates call return behavior.
 - **CFA compartmentalization**: `cfa*.go` files may import shared helpers from `inspect.go` and `typecheck.go` but NEVER from `analyzer_cast_validation.go`. The reverse is also true. `analyzer.go` is the sole routing point. Within CFA, `cfa_collect.go` is the shared cast-collection layer.
 - **CFA synchronous closure tracking (`syncLits`)**: Outer-path validation checks descend into deferred closures (`defer func() { x.Validate() }()`) and immediate IIFEs (`func() { x.Validate() }()`), because both execute before function return. Goroutine closures remain excluded (`go func() { x.Validate() }()`), since they execute concurrently with no return-order guarantee.
-- **UBV closure ordering semantics**: `--check-use-before-validate` and `--check-use-before-validate-cross` use immediate-IIFE closure sets only. Deferred closures do NOT suppress UBV findings because deferred `Validate()` runs at function return, after earlier uses.
+- **UBV closure ordering semantics**: `--check-use-before-validate` uses immediate-IIFE closure sets only. Deferred closures do NOT suppress UBV findings because deferred `Validate()` runs at function return, after earlier uses.
 - **CFA no-return terminal paths**: Leaf CFG blocks ending in no-return calls (`panic`, `os.Exit`, `runtime.Goexit`, `log.Fatal*`, `testing.FailNow/Fatal*`) are treated as terminating paths, not implicit return paths. They must not trigger unvalidated-cast or constructor-validates path-to-return findings.
 - **Method-value Validate tracking**: CFA and constructor-validates recognize `Validate` method values (`vf := x.Validate; vf()`) including simple alias chains (`alias := vf; alias()`). Storing a method value without calling it does not count as validation.
 - **Method-expression Validate tracking**: CFA also recognizes method expressions (`vf := Type.Validate; vf(x)`) by mapping the first call argument as the receiver for Validate matching.
+- **Parallel assignment aliasing**: Alias collectors that build closure/method/delegation bindings must resolve all RHS expressions against the pre-assignment state and append events after resolution. Updating alias maps incrementally during `a, b = b, a`-style assignments yields incorrect bindings.
 - **Rebinding invalidation (closure vars + method values)**: Any reassignment to a tracked closure variable or method-value variable records a tombstone when the new RHS cannot be proven to preserve validation semantics. This intentionally prefers false positives over false negatives for rebinding-heavy code.
-- **CFA no-opt-out contract**: `--check-cast-validation`, `--check-constructor-validates`, and `--check-use-before-validate*` require CFA. `--no-cfa` with any of these modes is rejected during run-config validation.
+- **No-return alias tracking**: CFA terminal-path checks treat aliases to no-return functions (`exit := os.Exit; exit(1)`) as terminating only when the alias binding active at call-site still points to a known no-return target. Later rebinding cancels terminal inference.
+- **CFA default contract**: `--check-cast-validation`, `--check-constructor-validates`, and `--check-use-before-validate` always run with CFA semantics.
 - **CFA `if false` handling**: `go/cfg` does NOT perform constant folding. `if false { x.Validate() }` creates a structurally live block. However, the non-false path to return IS detected as unvalidated because the IfDone block has no Validate call.
 - **CFA path semantics**: CFA checks "path-to-return-without-validate," not "use-before-validate." If `x.Validate()` appears anywhere on a path from the cast to a return block, that path is considered validated regardless of whether `x` is used before the Validate call.
-- **Constructor-validates CFA**: `--check-constructor-validates` uses CFA to verify ALL return paths pass through `.Validate()` on the return type. Uses `constructorHasUnvalidatedReturnPath` which builds a CFG and DFS-checks from the entry block. Type-identity matching (via `typeIdentityKey`) is used instead of variable-name matching, including generic instantiation awareness. Synchronous closure-var calls are included in path checks, and `//goplint:validates-type=...` facts resolve to the validated type identity (not only helper package identity).
+- **Constructor-validates CFA**: `--check-constructor-validates` uses CFA to verify ALL return paths pass through `.Validate()` on the return type. Uses `constructorReturnPathOutcome`/`constructorHasUnvalidatedReturnPath` over backend-selected CFGs from the entry block. Type-identity matching (via `typeIdentityKey`) is used instead of variable-name matching, including generic instantiation awareness. Synchronous closure-var calls are included in path checks, and `//goplint:validates-type=...` facts resolve to the validated type identity (not only helper package identity).
+- **CFA inconclusive outcomes**: When `--cfg-max-states`/`--cfg-max-depth` budgets truncate exploration OR interprocedural UBV summaries hit recursion cycles, CFA reports dedicated `*-inconclusive` categories with `cfg_backend`, budget, reason, and bounded witness metadata (`cfg_witness_kind`, `cfg_witness_blocks`, `cfg_witness_edges`, `cfg_witness_call_chain`, with legacy `witness_cfg_*` compatibility keys). Emission is controlled by `--cfg-inconclusive-policy` (`error|warn|off`) and witness size by `--cfg-witness-max-steps`.
+- **Phase A oracle contract is behavioral**: Keep `tools/goplint/spec/semantic-rules.v1.json` synchronized with both `semantic_spec_oracle_test.go` (`oracle_matrix`) and `cfa_historical_ast_test.go` (`historical_miss_oracles`). `must_report` and `must_not_report` entries must be proven by analyzer output at symbol level, not only by fixture/symbol existence checks.
+- **Analysistest limiter token lifetime**: For helpers that acquire `analysistestParallelLimiter`, release the token inside the same helper invocation (for example, `defer func() { <-analysistestParallelLimiter }()`). Using `t.Cleanup` to release helper-acquired tokens can hold slots until test completion and cause avoidable stalls when one test performs multiple analysis runs.
 
 ## Test Architecture
 
@@ -676,7 +694,7 @@ The `goplint-baseline` local hook in `.pre-commit-config.yaml` runs `make check-
   - `TestConstructorValidatesCrossPackage` — cross-package `validates-type` fact propagation
   - `TestCheckNonZero` — `--check-nonzero` mode (nonzero types used as value fields)
   - `TestCheckRedundantConversion` — `--check-redundant-conversion` mode (redundant intermediate basic-type hops)
-  - `TestCheckValidateDelegationAll` — `--check-validate-delegation-all` mode (universal validate delegation check)
+  - `TestCheckValidateDelegationUniversal` — `--check-validate-delegation` universal delegation coverage
   - `TestBaselineSupplementaryCategories` — baseline suppression for supplementary modes (validate, stringer, constructors)
 - **CFA tests** (`cfa_test.go`, `cfa_integration_test.go`): Unit tests for CFG utilities and integration tests for CFA cast validation and closure analysis. Suites are parallelized and use per-test analyzer instances for isolation. Covers:
   - `TestBuildFuncCFG_*` — CFG construction from function bodies
@@ -689,4 +707,6 @@ The `goplint-baseline` local hook in `.pre-commit-config.yaml` runs `make check-
   - `TestCheckCastValidationCFANoReturnTerminator` — no-return sink handling in CFG leaves
   - `TestCheckUseBeforeValidateCFA` — use-before-validate detection against `use_before_validate` fixture
   - `TestCheckUseBeforeValidateMethodValue` — UBV ordering with method-value Validate calls
-  - `TestCFAEnabledByDefault` — verifies CFA stays enabled by default unless `--no-cfa` is explicitly set
+  - `TestCheckAllEnablesCFABackedCastValidation` — verifies `--check-all` enables CFA-backed cast validation
+- **Semantic contract tests** (`semantic_spec_*.go`, `cfa_historical_ast_test.go`): Validates Phase A catalog/schema consistency (including JSON Schema engine validation), run-control compatibility, inconclusive metadata contracts, oracle behavior (`must_report`/`must_not_report`), and historical miss replay driven by `historical_miss_fixtures` plus `historical_miss_oracles`.
+- **CFG benchmarks** (`cfa_bench_test.go`): Traversal benchmarks for CFG-heavy cast/UBV paths. Guardrail command: `./tools/goplint/scripts/check-cfg-bench-thresholds.sh` with thresholds in `tools/goplint/bench/thresholds.toml`.

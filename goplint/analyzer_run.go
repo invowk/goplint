@@ -3,6 +3,7 @@
 package goplint
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"strings"
@@ -93,9 +94,13 @@ func runWithState(pass *analysis.Pass, state *flagState) (any, error) {
 		return nil, err
 	}
 
-	// Apply CLI --include-packages override if set.
-	if rc.includePackages != "" {
-		cfg.Settings.IncludePackages = strings.Split(rc.includePackages, ",")
+	includePackages, hasIncludeOverride, err := parseIncludePackagesOverride(rc)
+	if err != nil {
+		return nil, err
+	}
+	// Apply CLI --include-packages override when explicitly set.
+	if hasIncludeOverride {
+		cfg.Settings.IncludePackages = includePackages
 	}
 
 	// Package filter: if include_packages is configured and this package
@@ -109,18 +114,209 @@ func runWithState(pass *analysis.Pass, state *flagState) (any, error) {
 	insp := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 	needs := deriveRunNeeds(rc)
 	collectors := newRunCollectors(rc, needs)
+	var ssaRes *ssaResult
+	if rc.checkCastValidation && rc.cfgAliasMode == cfgAliasModeSSA {
+		// Build SSA at most once per package analysis when Phase D alias
+		// tracking is active so every function and closure shares the same view.
+		ssaRes = buildSSAForPass(pass)
+	}
 
-	runTraversal(pass, insp, rc, cfg, bl, needs, &collectors)
-	runPostTraversalChecks(pass, state, rc, cfg, bl, &collectors)
+	if err := runTraversal(pass, insp, rc, cfg, bl, needs, &collectors, ssaRes); err != nil {
+		return nil, err
+	}
+	if err := runPostTraversalChecks(pass, state, rc, cfg, bl, &collectors); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
 
 func validateRunConfig(rc runConfig) error {
-	if rc.noCFA && (rc.checkCastValidation || rc.checkUseBeforeValidate || rc.checkUseBeforeValidateCross || rc.checkConstructorValidates) {
-		return fmt.Errorf("flags --check-cast-validation, --check-use-before-validate, --check-use-before-validate-cross, and --check-constructor-validates require CFA; remove --no-cfa")
+	if rc.configPathExplicit && strings.TrimSpace(rc.configPath) == "" {
+		return errors.New("flag --config was provided with an empty path")
+	}
+	if rc.baselinePathExplicit && strings.TrimSpace(rc.baselinePath) == "" {
+		return errors.New("flag --baseline was provided with an empty path")
+	}
+	ubvMode := rc.ubvMode
+	if ubvMode == "" {
+		ubvMode = defaultUBVMode
+	}
+	switch ubvMode {
+	case ubvModeOrder, ubvModeEscape:
+	default:
+		return fmt.Errorf("flag --ubv-mode must be %q or %q (got %q)", ubvModeOrder, ubvModeEscape, rc.ubvMode)
+	}
+	cfgBackend := rc.cfgBackend
+	if cfgBackend == "" {
+		cfgBackend = defaultCFGBackend
+	}
+	switch cfgBackend {
+	case cfgBackendSSA, cfgBackendAST:
+	default:
+		return fmt.Errorf("flag --cfg-backend must be %q or %q (got %q)", cfgBackendSSA, cfgBackendAST, rc.cfgBackend)
+	}
+	cfgInterprocEngine := strings.TrimSpace(strings.ToLower(rc.cfgInterprocEngine))
+	if cfgInterprocEngine == "" {
+		cfgInterprocEngine = defaultCFGInterprocEngine
+	}
+	switch cfgInterprocEngine {
+	case cfgInterprocEngineLegacy, cfgInterprocEngineIFDS, cfgInterprocEngineCompare:
+	default:
+		return fmt.Errorf(
+			"flag --cfg-interproc-engine must be %q, %q, or %q (got %q)",
+			cfgInterprocEngineLegacy,
+			cfgInterprocEngineIFDS,
+			cfgInterprocEngineCompare,
+			rc.cfgInterprocEngine,
+		)
+	}
+	cfgMaxStates := rc.cfgMaxStates
+	if cfgMaxStates == 0 {
+		cfgMaxStates = defaultCFGMaxStates
+	}
+	if cfgMaxStates <= 0 {
+		return fmt.Errorf("flag --cfg-max-states must be > 0 (got %d)", rc.cfgMaxStates)
+	}
+	cfgMaxDepth := rc.cfgMaxDepth
+	if cfgMaxDepth == 0 {
+		cfgMaxDepth = defaultCFGMaxDepth
+	}
+	if cfgMaxDepth <= 0 {
+		return fmt.Errorf("flag --cfg-max-depth must be > 0 (got %d)", rc.cfgMaxDepth)
+	}
+	cfgInconclusivePolicy := strings.TrimSpace(strings.ToLower(rc.cfgInconclusivePolicy))
+	if cfgInconclusivePolicy == "" {
+		cfgInconclusivePolicy = defaultCFGInconclusivePolicy
+	}
+	switch cfgInconclusivePolicy {
+	case cfgInconclusivePolicyError, cfgInconclusivePolicyWarn, cfgInconclusivePolicyOff:
+	default:
+		return fmt.Errorf(
+			"flag --cfg-inconclusive-policy must be %q, %q, or %q (got %q)",
+			cfgInconclusivePolicyError,
+			cfgInconclusivePolicyWarn,
+			cfgInconclusivePolicyOff,
+			rc.cfgInconclusivePolicy,
+		)
+	}
+	cfgWitnessMaxSteps := rc.cfgWitnessMaxSteps
+	if cfgWitnessMaxSteps == 0 {
+		cfgWitnessMaxSteps = defaultCFGWitnessMaxSteps
+	}
+	if cfgWitnessMaxSteps <= 0 {
+		return fmt.Errorf("flag --cfg-witness-max-steps must be > 0 (got %d)", rc.cfgWitnessMaxSteps)
+	}
+	cfgFeasibilityEngine := strings.TrimSpace(strings.ToLower(rc.cfgFeasibilityEngine))
+	if cfgFeasibilityEngine == "" {
+		cfgFeasibilityEngine = defaultCFGFeasibilityEngine
+	}
+	switch cfgFeasibilityEngine {
+	case cfgFeasibilityEngineOff, cfgFeasibilityEngineSMT:
+	default:
+		return fmt.Errorf(
+			"flag --cfg-feasibility-engine must be %q or %q (got %q)",
+			cfgFeasibilityEngineOff,
+			cfgFeasibilityEngineSMT,
+			rc.cfgFeasibilityEngine,
+		)
+	}
+	cfgRefinementMode := strings.TrimSpace(strings.ToLower(rc.cfgRefinementMode))
+	if cfgRefinementMode == "" {
+		cfgRefinementMode = defaultCFGRefinementMode
+	}
+	switch cfgRefinementMode {
+	case cfgRefinementModeOff, cfgRefinementModeOnce, cfgRefinementModeCEGAR:
+	default:
+		return fmt.Errorf(
+			"flag --cfg-refinement-mode must be %q, %q, or %q (got %q)",
+			cfgRefinementModeOff,
+			cfgRefinementModeOnce,
+			cfgRefinementModeCEGAR,
+			rc.cfgRefinementMode,
+		)
+	}
+	cfgRefinementMaxIterations := rc.cfgRefinementMaxIterations
+	if cfgRefinementMaxIterations == 0 {
+		cfgRefinementMaxIterations = defaultCFGRefinementMaxIterations
+	}
+	if cfgRefinementMaxIterations <= 0 {
+		return fmt.Errorf(
+			"flag --cfg-refinement-max-iterations must be > 0 (got %d)",
+			rc.cfgRefinementMaxIterations,
+		)
+	}
+	cfgFeasibilityMaxQueries := rc.cfgFeasibilityMaxQueries
+	if cfgFeasibilityMaxQueries == 0 {
+		cfgFeasibilityMaxQueries = defaultCFGFeasibilityMaxQueries
+	}
+	if cfgFeasibilityMaxQueries <= 0 {
+		return fmt.Errorf(
+			"flag --cfg-feasibility-max-queries must be > 0 (got %d)",
+			rc.cfgFeasibilityMaxQueries,
+		)
+	}
+	cfgFeasibilityTimeoutMS := rc.cfgFeasibilityTimeoutMS
+	if cfgFeasibilityTimeoutMS == 0 {
+		cfgFeasibilityTimeoutMS = defaultCFGFeasibilityTimeoutMS
+	}
+	if cfgFeasibilityTimeoutMS <= 0 {
+		return fmt.Errorf(
+			"flag --cfg-feasibility-timeout-ms must be > 0 (got %d)",
+			rc.cfgFeasibilityTimeoutMS,
+		)
+	}
+	cfgAliasMode := strings.TrimSpace(strings.ToLower(rc.cfgAliasMode))
+	if cfgAliasMode == "" {
+		cfgAliasMode = defaultCFGAliasMode
+	}
+	switch cfgAliasMode {
+	case cfgAliasModeOff, cfgAliasModeSSA:
+	default:
+		return fmt.Errorf(
+			"flag --cfg-alias-mode must be %q or %q (got %q)",
+			cfgAliasModeOff,
+			cfgAliasModeSSA,
+			rc.cfgAliasMode,
+		)
+	}
+	phaseCEnabled := cfgFeasibilityEngine != cfgFeasibilityEngineOff || cfgRefinementMode != cfgRefinementModeOff
+	if phaseCEnabled {
+		if cfgInterprocEngine != cfgInterprocEngineIFDS {
+			return fmt.Errorf(
+				"phase c flags require --cfg-interproc-engine=%q (got %q)",
+				cfgInterprocEngineIFDS,
+				cfgInterprocEngine,
+			)
+		}
+		if cfgFeasibilityEngine == cfgFeasibilityEngineOff || cfgRefinementMode == cfgRefinementModeOff {
+			return errors.New("phase c requires either off/off or smt with once/cegar refinement")
+		}
 	}
 	return nil
+}
+
+func parseIncludePackagesOverride(rc runConfig) ([]string, bool, error) {
+	if !rc.includePackagesExplicit {
+		return nil, false, nil
+	}
+
+	trimmed := strings.TrimSpace(rc.includePackages)
+	if trimmed == "" {
+		// Explicit empty value clears include_packages filtering.
+		return []string{}, true, nil
+	}
+
+	parts := strings.Split(rc.includePackages, ",")
+	out := make([]string, 0, len(parts))
+	for i, part := range parts {
+		prefix := strings.TrimSpace(part)
+		if prefix == "" {
+			return nil, false, fmt.Errorf("flag --include-packages contains an empty package prefix at position %d", i)
+		}
+		out = append(out, prefix)
+	}
+	return out, true, nil
 }
 
 func loadRunInputs(state *flagState, rc runConfig) (*ExceptionConfig, *BaselineConfig, error) {
@@ -170,13 +366,18 @@ func runTraversal(
 	bl *BaselineConfig,
 	needs runNeeds,
 	collectors *runCollectors,
-) {
+	ssaRes *ssaResult,
+) error {
+	var traverseErr error
 	nodeFilter := []ast.Node{
 		(*ast.GenDecl)(nil),
 		(*ast.FuncDecl)(nil),
 	}
 
 	insp.Preorder(nodeFilter, func(n ast.Node) {
+		if traverseErr != nil {
+			return
+		}
 		// Skip test files entirely — test data legitimately uses primitives.
 		if isTestFile(pass, n.Pos()) {
 			return
@@ -242,13 +443,27 @@ func runTraversal(
 			}
 
 			// Cast validation: detect unvalidated type conversions to DDD types.
-			// CFA (default) uses path-reachability analysis; --no-cfa falls
-			// back to AST name-based heuristic.
+			// Always uses CFA path-reachability analysis.
 			if rc.checkCastValidation {
-				if rc.noCFA {
-					inspectUnvalidatedCasts(pass, n, cfg, bl)
-				} else {
-					inspectUnvalidatedCastsCFA(pass, n, cfg, bl, rc.checkUseBeforeValidate, rc.checkUseBeforeValidateCross)
+				if err := inspectUnvalidatedCastsCFA(
+					pass,
+					n,
+					cfg,
+					bl,
+					rc.checkUseBeforeValidate,
+					rc.ubvMode,
+					rc.cfgBackend,
+					rc.cfgInterprocEngine,
+					rc.cfgMaxStates,
+					rc.cfgMaxDepth,
+					rc.cfgInconclusivePolicy,
+					rc.cfgWitnessMaxSteps,
+					newCFGPhaseCOptions(rc),
+					rc.cfgAliasMode,
+					ssaRes,
+				); err != nil {
+					traverseErr = err
+					return
 				}
 			}
 
@@ -268,6 +483,7 @@ func runTraversal(
 			}
 		}
 	})
+	return traverseErr
 }
 
 func runPostTraversalChecks(
@@ -277,7 +493,7 @@ func runPostTraversalChecks(
 	cfg *ExceptionConfig,
 	bl *BaselineConfig,
 	collectors *runCollectors,
-) {
+) error {
 	// Post-traversal checks for supplementary modes.
 	if rc.checkValidate {
 		reportMissingValidate(pass, collectors.namedTypes, collectors.methodSeen, cfg, bl)
@@ -303,7 +519,22 @@ func runPostTraversalChecks(
 		reportMissingStructValidate(pass, collectors.exportedStructs, collectors.constructorDetails, collectors.methodSeen, cfg, bl)
 	}
 	if rc.checkConstructorValidates {
-		inspectConstructorValidates(pass, collectors.constructorDetails, collectors.constantOnlyTypes, cfg, bl)
+		if err := inspectConstructorValidates(
+			pass,
+			collectors.constructorDetails,
+			collectors.constantOnlyTypes,
+			cfg,
+			bl,
+			rc.cfgBackend,
+			rc.cfgInterprocEngine,
+			rc.cfgMaxStates,
+			rc.cfgMaxDepth,
+			rc.cfgInconclusivePolicy,
+			rc.cfgWitnessMaxSteps,
+			newCFGPhaseCOptions(rc),
+		); err != nil {
+			return err
+		}
 	}
 
 	// Constructor return error — constructors for validatable types should return error.
@@ -311,13 +542,10 @@ func runPostTraversalChecks(
 		inspectConstructorReturnError(pass, collectors.constructorDetails, collectors.constantOnlyTypes, cfg, bl)
 	}
 
-	// Validate delegation — opt-in via //goplint:validate-all.
+	// Validate delegation — always evaluates both directive-based and
+	// universal delegation semantics.
 	if rc.checkValidateDelegation {
 		inspectValidateDelegation(pass, cfg, bl)
-	}
-
-	// Universal validate delegation — checks ALL structs with validatable fields.
-	if rc.checkValidateDelegationAll {
 		inspectValidateDelegationAll(pass, cfg, bl)
 	}
 
@@ -344,4 +572,5 @@ func runPostTraversalChecks(
 	if rc.checkEnumSync {
 		inspectEnumSync(pass, cfg, bl)
 	}
+	return nil
 }

@@ -78,7 +78,7 @@ func inspectStructFields(pass *analysis.Pass, node *ast.GenDecl, cfg *ExceptionC
 
 			// Anonymous/embedded fields (no names)
 			if len(field.Names) == 0 {
-				qualName := fmt.Sprintf("%s.(embedded)", structName)
+				qualName := structName + ".(embedded)"
 				if cfg.isExcepted(qualName) {
 					continue
 				}
@@ -177,7 +177,7 @@ func inspectFieldList(pass *analysis.Pass, fields *ast.FieldList, funcName, kind
 
 		// Unnamed parameters (e.g., func(string))
 		if len(field.Names) == 0 {
-			qualName := fmt.Sprintf("%s.(unnamed)", funcName)
+			qualName := funcName + ".(unnamed)"
 			if cfg.isExcepted(qualName) {
 				continue
 			}
@@ -383,8 +383,8 @@ func isKnownDirectiveKey(key string) bool {
 }
 
 // hasIgnoreDirective checks whether a field/func has an ignore directive.
-// Recognized forms: //goplint:ignore, //plint:ignore,
-// //nolint:goplint, and combined forms like //goplint:ignore,internal.
+// Recognized forms: `//goplint:ignore`, `//plint:ignore`,
+// `//nolint:goplint`, and combined forms like `//goplint:ignore,internal`.
 func hasIgnoreDirective(doc *ast.CommentGroup, lineComment *ast.CommentGroup) bool {
 	return hasDirectiveKey(doc, lineComment, "ignore")
 }
@@ -531,7 +531,7 @@ func parseDirectiveKeys(text string) (keys []string, unknown []string) {
 
 	// Handle nolint:goplint as a special "ignore" directive.
 	// Match the token exactly in the nolint linter list, so near-misses like
-	// nolint:goplintfoo are not treated as valid suppressions.
+	// "nolint:goplintfoo" are not treated as valid suppressions.
 	if rest, ok := strings.CutPrefix(content, "nolint:"); ok {
 		if sepIdx := strings.Index(rest, " --"); sepIdx >= 0 {
 			rest = rest[:sepIdx]

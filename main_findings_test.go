@@ -78,4 +78,44 @@ func TestParseFindingsJSONL(t *testing.T) {
 			t.Fatalf("expected 1 primitive finding, got %d", got)
 		}
 	})
+
+	t.Run("whitespace-only input returns empty findings", func(t *testing.T) {
+		t.Parallel()
+		findings, err := parseFindingsJSONL([]byte(" \n\t "))
+		if err != nil {
+			t.Fatalf("parseFindingsJSONL() error = %v", err)
+		}
+		if len(findings) != 0 {
+			t.Fatalf("expected 0 categories, got %d", len(findings))
+		}
+	})
+
+	t.Run("trailing garbage after valid record fails", func(t *testing.T) {
+		t.Parallel()
+		input := []byte(`{"category":"primitive","id":"id-ok","message":"ok"}{"bad":`)
+		if _, err := parseFindingsJSONL(input); err == nil {
+			t.Fatal("expected decoding error for trailing garbage")
+		}
+	})
+}
+
+func TestParseFindingsJSONLIgnoresNonFindingKinds(t *testing.T) {
+	t.Parallel()
+
+	input := []byte(strings.Join([]string{
+		`{"kind":"refinement-trace","category":"unvalidated-cast","id":"trace-1","message":"unsafe"}`,
+		`{"category":"primitive","id":"id-1","message":"struct field pkg.A.B uses primitive type string"}`,
+		"",
+	}, "\n"))
+
+	findings, err := parseFindingsJSONL(input)
+	if err != nil {
+		t.Fatalf("parseFindingsJSONL() error = %v", err)
+	}
+	if got := len(findings[goplint.CategoryPrimitive]); got != 1 {
+		t.Fatalf("expected 1 primitive finding, got %d", got)
+	}
+	if got := len(findings[goplint.CategoryUnvalidatedCast]); got != 0 {
+		t.Fatalf("expected refinement traces to be ignored, got %d unvalidated-cast entries", got)
+	}
 }

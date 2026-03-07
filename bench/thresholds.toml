@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MPL-2.0
+
+# Simple ns/op guardrails for CFG-heavy traversal benchmarks.
+# Keys are benchmark names with `_ns_per_op` suffix.
+
+BenchmarkCFGTraversalCastPath_ns_per_op = 600000
+BenchmarkCFGTraversalUBVCrossBlock_ns_per_op = 600000

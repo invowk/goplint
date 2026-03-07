@@ -1,0 +1,692 @@
+{
+  "version": "v1",
+  "rules": [
+    {
+      "category": "unvalidated-cast",
+      "family": "cfa-cast",
+      "entrypoints": [
+        "inspectUnvalidatedCastsCFA",
+        "inspectClosureCastsCFA"
+      ],
+      "enabled_by_flags": [
+        "check-cast-validation"
+      ],
+      "run_controls": [
+        "cfg-alias-mode",
+        "cfg-backend",
+        "cfg-interproc-engine",
+        "cfg-feasibility-engine",
+        "cfg-refinement-mode",
+        "cfg-refinement-max-iterations",
+        "cfg-feasibility-max-queries",
+        "cfg-feasibility-timeout-ms",
+        "cfg-max-depth",
+        "cfg-max-states"
+      ],
+      "traversal_mode": "cast-path",
+      "state_domain": [
+        "needs-validate",
+        "validated"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "refinement_statuses": [
+        "unsafe"
+      ],
+      "required_meta_on_refinement": [
+        "cfg_feasibility_engine",
+        "cfg_feasibility_result",
+        "cfg_refinement_status",
+        "cfg_refinement_iterations",
+        "cfg_refinement_trigger",
+        "cfg_refinement_witness_hash"
+      ],
+      "baseline_policy": "suppressible",
+      "interproc_engine_modes": [
+        "legacy",
+        "ifds",
+        "compare"
+      ],
+      "fact_families": [
+        "cast-needs-validate"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated"
+      ]
+    },
+    {
+      "category": "unvalidated-cast-inconclusive",
+      "family": "cfa-cast",
+      "entrypoints": [
+        "inspectUnvalidatedCastsCFA",
+        "inspectClosureCastsCFA"
+      ],
+      "enabled_by_flags": [
+        "check-cast-validation"
+      ],
+      "run_controls": [
+        "cfg-alias-mode",
+        "cfg-backend",
+        "cfg-inconclusive-policy",
+        "cfg-interproc-engine",
+        "cfg-feasibility-engine",
+        "cfg-refinement-mode",
+        "cfg-refinement-max-iterations",
+        "cfg-feasibility-max-queries",
+        "cfg-feasibility-timeout-ms",
+        "cfg-max-depth",
+        "cfg-max-states",
+        "cfg-witness-max-steps"
+      ],
+      "traversal_mode": "cast-path",
+      "state_domain": [
+        "needs-validate",
+        "validated"
+      ],
+      "outcome_domain": [
+        "inconclusive"
+      ],
+      "inconclusive_reasons": [
+        "state-budget",
+        "depth-budget",
+        "recursion-cycle",
+        "unresolved-target"
+      ],
+      "required_meta_on_inconclusive": [
+        "cfg_backend",
+        "cfg_budget_states",
+        "cfg_budget_depth",
+        "cfg_inconclusive_reason",
+        "cfg_inconclusive_policy",
+        "cfg_witness_kind",
+        "cfg_witness_blocks",
+        "witness_cfg_path",
+        "witness_cfg_steps"
+      ],
+      "refinement_statuses": [
+        "inconclusive-refined",
+        "inconclusive-unrefined"
+      ],
+      "required_meta_on_refinement": [
+        "cfg_feasibility_engine",
+        "cfg_feasibility_result",
+        "cfg_refinement_status",
+        "cfg_refinement_iterations",
+        "cfg_refinement_trigger",
+        "cfg_refinement_witness_hash"
+      ],
+      "baseline_policy": "suppressible",
+      "interproc_engine_modes": [
+        "legacy",
+        "ifds",
+        "compare"
+      ],
+      "fact_families": [
+        "cast-needs-validate"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated"
+      ]
+    },
+    {
+      "category": "use-before-validate-same-block",
+      "family": "cfa-ubv",
+      "entrypoints": [
+        "inspectUseBeforeValidateCFA"
+      ],
+      "enabled_by_flags": [
+        "check-use-before-validate"
+      ],
+      "run_controls": [
+        "cfg-alias-mode",
+        "cfg-backend",
+        "cfg-interproc-engine",
+        "cfg-feasibility-engine",
+        "cfg-refinement-mode",
+        "cfg-refinement-max-iterations",
+        "cfg-feasibility-max-queries",
+        "cfg-feasibility-timeout-ms",
+        "cfg-max-depth",
+        "cfg-max-states",
+        "ubv-mode"
+      ],
+      "traversal_mode": "ubv-same-block",
+      "state_domain": [
+        "needs-validate",
+        "validated",
+        "consumed-before-validate"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "refinement_statuses": [
+        "unsafe"
+      ],
+      "required_meta_on_refinement": [
+        "cfg_feasibility_engine",
+        "cfg_feasibility_result",
+        "cfg_refinement_status",
+        "cfg_refinement_iterations",
+        "cfg_refinement_trigger",
+        "cfg_refinement_witness_hash"
+      ],
+      "baseline_policy": "suppressible",
+      "interproc_engine_modes": [
+        "legacy",
+        "ifds",
+        "compare"
+      ],
+      "fact_families": [
+        "ubv-needs-validate-before-use"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated",
+        "needs-to-escaped-before-validate",
+        "needs-to-consumed-before-validate"
+      ]
+    },
+    {
+      "category": "use-before-validate-cross-block",
+      "family": "cfa-ubv",
+      "entrypoints": [
+        "inspectUseBeforeValidateCFA"
+      ],
+      "enabled_by_flags": [
+        "check-use-before-validate"
+      ],
+      "run_controls": [
+        "cfg-alias-mode",
+        "cfg-backend",
+        "cfg-interproc-engine",
+        "cfg-feasibility-engine",
+        "cfg-refinement-mode",
+        "cfg-refinement-max-iterations",
+        "cfg-feasibility-max-queries",
+        "cfg-feasibility-timeout-ms",
+        "cfg-max-depth",
+        "cfg-max-states",
+        "ubv-mode"
+      ],
+      "traversal_mode": "ubv-cross-block",
+      "state_domain": [
+        "needs-validate",
+        "validated",
+        "consumed-before-validate"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "refinement_statuses": [
+        "unsafe"
+      ],
+      "required_meta_on_refinement": [
+        "cfg_feasibility_engine",
+        "cfg_feasibility_result",
+        "cfg_refinement_status",
+        "cfg_refinement_iterations",
+        "cfg_refinement_trigger",
+        "cfg_refinement_witness_hash"
+      ],
+      "baseline_policy": "suppressible",
+      "interproc_engine_modes": [
+        "legacy",
+        "ifds",
+        "compare"
+      ],
+      "fact_families": [
+        "ubv-needs-validate-before-use"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated",
+        "needs-to-escaped-before-validate",
+        "needs-to-consumed-before-validate"
+      ]
+    },
+    {
+      "category": "use-before-validate-inconclusive",
+      "family": "cfa-ubv",
+      "entrypoints": [
+        "inspectUseBeforeValidateCFA"
+      ],
+      "enabled_by_flags": [
+        "check-use-before-validate"
+      ],
+      "run_controls": [
+        "cfg-alias-mode",
+        "cfg-backend",
+        "cfg-inconclusive-policy",
+        "cfg-interproc-engine",
+        "cfg-feasibility-engine",
+        "cfg-refinement-mode",
+        "cfg-refinement-max-iterations",
+        "cfg-feasibility-max-queries",
+        "cfg-feasibility-timeout-ms",
+        "cfg-max-depth",
+        "cfg-max-states",
+        "cfg-witness-max-steps",
+        "ubv-mode"
+      ],
+      "traversal_mode": "ubv-cross-block",
+      "state_domain": [
+        "needs-validate",
+        "validated",
+        "consumed-before-validate"
+      ],
+      "outcome_domain": [
+        "inconclusive"
+      ],
+      "inconclusive_reasons": [
+        "state-budget",
+        "depth-budget",
+        "recursion-cycle",
+        "unresolved-target"
+      ],
+      "required_meta_on_inconclusive": [
+        "cfg_backend",
+        "cfg_budget_states",
+        "cfg_budget_depth",
+        "cfg_inconclusive_reason",
+        "cfg_inconclusive_policy",
+        "cfg_witness_kind",
+        "cfg_witness_blocks",
+        "witness_cfg_path",
+        "witness_cfg_steps"
+      ],
+      "refinement_statuses": [
+        "inconclusive-refined",
+        "inconclusive-unrefined"
+      ],
+      "required_meta_on_refinement": [
+        "cfg_feasibility_engine",
+        "cfg_feasibility_result",
+        "cfg_refinement_status",
+        "cfg_refinement_iterations",
+        "cfg_refinement_trigger",
+        "cfg_refinement_witness_hash"
+      ],
+      "baseline_policy": "suppressible",
+      "interproc_engine_modes": [
+        "legacy",
+        "ifds",
+        "compare"
+      ],
+      "fact_families": [
+        "ubv-needs-validate-before-use"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated",
+        "needs-to-escaped-before-validate",
+        "needs-to-consumed-before-validate"
+      ]
+    },
+    {
+      "category": "missing-constructor-validate",
+      "family": "cfa-constructor-validates",
+      "entrypoints": [
+        "inspectConstructorValidateCalls"
+      ],
+      "enabled_by_flags": [
+        "check-constructor-validates"
+      ],
+      "run_controls": [
+        "cfg-backend",
+        "cfg-interproc-engine",
+        "cfg-feasibility-engine",
+        "cfg-refinement-mode",
+        "cfg-refinement-max-iterations",
+        "cfg-feasibility-max-queries",
+        "cfg-feasibility-timeout-ms",
+        "cfg-max-depth",
+        "cfg-max-states"
+      ],
+      "traversal_mode": "constructor-return-path",
+      "state_domain": [
+        "returns-validatable",
+        "validated-before-return"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "refinement_statuses": [
+        "unsafe"
+      ],
+      "required_meta_on_refinement": [
+        "cfg_feasibility_engine",
+        "cfg_feasibility_result",
+        "cfg_refinement_status",
+        "cfg_refinement_iterations",
+        "cfg_refinement_trigger",
+        "cfg_refinement_witness_hash"
+      ],
+      "baseline_policy": "suppressible",
+      "interproc_engine_modes": [
+        "legacy",
+        "ifds",
+        "compare"
+      ],
+      "fact_families": [
+        "ctor-return-needs-validate"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated"
+      ]
+    },
+    {
+      "category": "missing-constructor-validate-inconclusive",
+      "family": "cfa-constructor-validates",
+      "entrypoints": [
+        "inspectConstructorValidateCalls"
+      ],
+      "enabled_by_flags": [
+        "check-constructor-validates"
+      ],
+      "run_controls": [
+        "cfg-backend",
+        "cfg-inconclusive-policy",
+        "cfg-interproc-engine",
+        "cfg-feasibility-engine",
+        "cfg-refinement-mode",
+        "cfg-refinement-max-iterations",
+        "cfg-feasibility-max-queries",
+        "cfg-feasibility-timeout-ms",
+        "cfg-max-depth",
+        "cfg-max-states",
+        "cfg-witness-max-steps"
+      ],
+      "traversal_mode": "constructor-return-path",
+      "state_domain": [
+        "returns-validatable",
+        "validated-before-return"
+      ],
+      "outcome_domain": [
+        "inconclusive"
+      ],
+      "inconclusive_reasons": [
+        "state-budget",
+        "depth-budget",
+        "recursion-cycle",
+        "unresolved-target"
+      ],
+      "required_meta_on_inconclusive": [
+        "cfg_backend",
+        "cfg_budget_states",
+        "cfg_budget_depth",
+        "cfg_inconclusive_reason",
+        "cfg_inconclusive_policy",
+        "cfg_witness_kind",
+        "cfg_witness_blocks",
+        "witness_cfg_path",
+        "witness_cfg_steps"
+      ],
+      "refinement_statuses": [
+        "inconclusive-refined",
+        "inconclusive-unrefined"
+      ],
+      "required_meta_on_refinement": [
+        "cfg_feasibility_engine",
+        "cfg_feasibility_result",
+        "cfg_refinement_status",
+        "cfg_refinement_iterations",
+        "cfg_refinement_trigger",
+        "cfg_refinement_witness_hash"
+      ],
+      "baseline_policy": "suppressible",
+      "interproc_engine_modes": [
+        "legacy",
+        "ifds",
+        "compare"
+      ],
+      "fact_families": [
+        "ctor-return-needs-validate"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated"
+      ]
+    }
+  ],
+  "oracle_matrix": [
+    {
+      "category": "unvalidated-cast",
+      "must_report": [
+        {
+          "fixture": "cfa_castvalidation",
+          "symbol": "ValidateInDeadBranch"
+        },
+        {
+          "fixture": "cfa_castvalidation",
+          "symbol": "ValidateOnOneBranch"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "cfa_castvalidation",
+          "symbol": "ValidateOnAllBranches"
+        },
+        {
+          "fixture": "cfa_castvalidation",
+          "symbol": "ValidateBeforeUse"
+        }
+      ]
+    },
+    {
+      "category": "unvalidated-cast-inconclusive",
+      "must_report": [
+        {
+          "fixture": "cfa_cast_inconclusive",
+          "symbol": "Inconclusive"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "cfa_castvalidation",
+          "symbol": "ValidateBeforeUse"
+        }
+      ]
+    },
+    {
+      "category": "use-before-validate-same-block",
+      "must_report": [
+        {
+          "fixture": "use_before_validate",
+          "symbol": "UseBeforeValidate"
+        },
+        {
+          "fixture": "use_before_validate",
+          "symbol": "UseInFuncArgBeforeValidate"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "use_before_validate",
+          "symbol": "ValidateBeforeUse"
+        },
+        {
+          "fixture": "use_before_validate",
+          "symbol": "NoUseAtAll"
+        }
+      ]
+    },
+    {
+      "category": "use-before-validate-cross-block",
+      "must_report": [
+        {
+          "fixture": "use_before_validate_cross",
+          "symbol": "CrossBlockUseBeforeValidate"
+        },
+        {
+          "fixture": "use_before_validate_cross",
+          "symbol": "CrossBlockUseOnOnePath"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "use_before_validate_cross",
+          "symbol": "CrossBlockValidateFirst"
+        },
+        {
+          "fixture": "use_before_validate_cross",
+          "symbol": "CrossBlockNoUse"
+        }
+      ]
+    },
+    {
+      "category": "use-before-validate-inconclusive",
+      "must_report": [
+        {
+          "fixture": "use_before_validate_escape",
+          "symbol": "RecursiveCycleConservative"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "use_before_validate_escape",
+          "symbol": "DelegatedValidationCoversPath"
+        }
+      ]
+    },
+    {
+      "category": "missing-constructor-validate",
+      "must_report": [
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewServer"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewWidget"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewConfig"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewSession"
+        }
+      ]
+    },
+    {
+      "category": "missing-constructor-validate-inconclusive",
+      "must_report": [
+        {
+          "fixture": "constructorvalidates_inconclusive",
+          "symbol": "NewServer"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewConfig"
+        }
+      ]
+    }
+  ],
+  "historical_miss_fixtures": [
+    "castvalidation_nocfa_dead_branch",
+    "castvalidation_nocfa_dotimport_compare",
+    "castvalidation_nocfa_errors_noncomparison",
+    "castvalidation_nocfa_suppression",
+    "castvalidation_nocfa_validate_before_cast",
+    "constructorvalidates_nocfa_ast"
+  ],
+  "historical_miss_oracles": [
+    {
+      "fixture": "castvalidation_nocfa_dead_branch",
+      "category": "unvalidated-cast",
+      "must_report": [
+        {
+          "fixture": "castvalidation_nocfa_dead_branch",
+          "symbol": "DeadBranchValidate"
+        }
+      ]
+    },
+    {
+      "fixture": "castvalidation_nocfa_dotimport_compare",
+      "category": "unvalidated-cast",
+      "must_report": [
+        {
+          "fixture": "castvalidation_nocfa_dotimport_compare",
+          "symbol": "DotImportNonComparatorFinding"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "castvalidation_nocfa_dotimport_compare",
+          "symbol": "DotImportComparatorNoFinding"
+        }
+      ]
+    },
+    {
+      "fixture": "castvalidation_nocfa_errors_noncomparison",
+      "category": "unvalidated-cast",
+      "must_report": [
+        {
+          "fixture": "castvalidation_nocfa_errors_noncomparison",
+          "symbol": "ErrorsJoinReports"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "castvalidation_nocfa_errors_noncomparison",
+          "symbol": "ErrorsComparisonNoFinding"
+        }
+      ]
+    },
+    {
+      "fixture": "castvalidation_nocfa_suppression",
+      "category": "unvalidated-cast",
+      "must_report": [
+        {
+          "fixture": "castvalidation_nocfa_suppression",
+          "symbol": "Reported"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "castvalidation_nocfa_suppression",
+          "symbol": "ConfigSuppressed"
+        }
+      ]
+    },
+    {
+      "fixture": "castvalidation_nocfa_validate_before_cast",
+      "category": "unvalidated-cast",
+      "must_report": [
+        {
+          "fixture": "castvalidation_nocfa_validate_before_cast",
+          "symbol": "ValidateBeforeCast"
+        }
+      ]
+    },
+    {
+      "fixture": "constructorvalidates_nocfa_ast",
+      "category": "missing-constructor-validate",
+      "must_report": [
+        {
+          "fixture": "constructorvalidates_nocfa_ast",
+          "symbol": "NewMissing"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "constructorvalidates_nocfa_ast",
+          "symbol": "NewDirect"
+        },
+        {
+          "fixture": "constructorvalidates_nocfa_ast",
+          "symbol": "NewTransitive"
+        }
+      ]
+    }
+  ]
+}

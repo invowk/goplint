@@ -158,7 +158,7 @@ func checkStructFieldsNonZero(
 
 		// Anonymous/embedded fields.
 		if len(field.Names) == 0 {
-			qualName := fmt.Sprintf("%s.(embedded)", structQualName)
+			qualName := structQualName + ".(embedded)"
 			excKey := qualName + ".nonzero"
 			if cfg.isExcepted(excKey) {
 				continue

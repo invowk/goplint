@@ -59,40 +59,6 @@ func TestDiagnosticURLWithMeta(t *testing.T) {
 	}
 }
 
-func TestFallbackFindingID(t *testing.T) {
-	t.Parallel()
-
-	id := FallbackFindingID(CategoryPrimitive, "struct field pkg.Foo.Bar uses primitive type string")
-	if id == "" {
-		t.Fatal("FallbackFindingID returned empty ID")
-	}
-}
-
-func TestFallbackFindingIDForDiagnostic(t *testing.T) {
-	t.Parallel()
-
-	id1 := FallbackFindingIDForDiagnostic(CategoryUnusedValidateResult, "a.go:10:2", "Validate() result discarded")
-	id2 := FallbackFindingIDForDiagnostic(CategoryUnusedValidateResult, "a.go:20:2", "Validate() result discarded")
-	if id1 == "" || id2 == "" {
-		t.Fatal("FallbackFindingIDForDiagnostic returned empty ID")
-	}
-	if id1 == id2 {
-		t.Fatalf("expected different positions to produce different IDs: %q", id1)
-	}
-}
-
-func TestFallbackFindingIDForDiagnostic_EmptyPosUsesFallback(t *testing.T) {
-	t.Parallel()
-
-	category := CategoryUnusedValidateResult
-	message := "Validate() result discarded"
-	got := FallbackFindingIDForDiagnostic(category, "", message)
-	want := FallbackFindingID(category, message)
-	if got != want {
-		t.Fatalf("FallbackFindingIDForDiagnostic(empty pos) = %q, want %q", got, want)
-	}
-}
-
 func TestStablePosKey(t *testing.T) {
 	t.Parallel()
 

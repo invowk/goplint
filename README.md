@@ -43,6 +43,10 @@ make update-baseline
 | `make check-types-json` | Same, JSON output for tooling |
 | `make check-types-all` | All DDD checks: primitives + method + constructor + structural checks |
 | `make check-types-all-json` | Same, JSON output |
+| `make check-semantic-spec` | Semantic contract and oracle checks for CFA-backed categories |
+| `make check-ifds-compat` | Legacy-vs-IFDS no-silent-downgrade compatibility gate |
+| `make check-cfg-refinement` | Phase C refinement gate: soundness, provenance, determinism |
+| `make check-cfg-alias` | Phase D alias gate: prove SSA alias mode improves curated fixtures while remaining opt-in |
 | `make check-baseline` | Regression gate: report only **new** findings vs baseline |
 | `make update-baseline` | Regenerate `baseline.toml` from current codebase state |
 
@@ -161,6 +165,11 @@ The baseline prevents DDD compliance regressions. A committed `baseline.toml` re
 3. Findings **in** the baseline are silently suppressed
 4. Findings **not** in the baseline are reported as errors (regressions)
 
+`make check-baseline` and `make update-baseline` pin `-cfg-interproc-engine=legacy`
+to keep baseline suppression deterministic while IFDS default rollout is guarded by
+`make check-ifds-compat`, Phase C precision by `make check-cfg-refinement`, and
+Phase D alias precision by `make check-cfg-alias`.
+
 ### Workflow
 
 ```bash
@@ -179,34 +188,36 @@ make check-baseline
 # Bare primitive type usage
 [primitive]
 entries = [
-    { id = "gpl1_...", message = "struct field pkg.Foo.Bar uses primitive type string" },
-    { id = "gpl1_...", message = "parameter \"name\" of pkg.Func uses primitive type string" },
+    { id = "gpl3_...", message = "struct field pkg.Foo.Bar uses primitive type string" },
+    { id = "gpl3_...", message = "parameter \"name\" of pkg.Func uses primitive type string" },
 ]
 
 # Exported structs missing NewXxx() constructor
 [missing-constructor]
 entries = [
-    { id = "gpl1_...", message = "exported struct pkg.Config has no NewConfig() constructor" },
+    { id = "gpl3_...", message = "exported struct pkg.Config has no NewConfig() constructor" },
 ]
 ```
 
 `id` is the stable semantic identity used for suppression; `message` is for human readability.  
-`messages = [...]` (v1 format) is still accepted for backward compatibility, but ID matching is authoritative when diagnostics provide IDs.
+Suppression is strict ID-only. Baselines must use `entries = [...]`; legacy `messages = [...]` sections are rejected during parsing.
+Baseline generation is fail-closed for ID integrity: suppressible diagnostics must
+carry a `goplint://finding/<id>` URL; missing/invalid URLs abort parsing.
 
 ### CI Integration
 
-The `goplint-baseline` job in `.github/workflows/lint.yml` runs `make check-baseline` on every PR as a required regression gate.
+The `goplint-baseline` and `goplint-tests` jobs in `.github/workflows/lint.yml` are required checks. `goplint-baseline` runs `make check-baseline` on every PR as the regression gate, while `goplint-tests` runs nested-module analyzer tests plus the semantic/IFDS/Phase C/Phase D script gates, including `make check-cfg-alias`.
 
-### Pre-commit Hook
+### Pre-commit Hooks
 
-An advisory pre-commit hook is configured in `.pre-commit-config.yaml`:
+Blocking local pre-commit hooks are configured in `.pre-commit-config.yaml`:
 
 ```bash
 # Install hooks
 make install-hooks
 
-# The hook runs automatically on commit when Go files change
-# It warns but does not block commits
+# The hooks run automatically on commit for goplint-relevant changes
+# They enforce both the legacy baseline gate and the semantic/IFDS/Phase C/Phase D behavior gates
 ```
 
 ## JSON Output
@@ -228,16 +239,16 @@ Each diagnostic includes a `category` field for filtering:
         "posn": "pkg/invowkfile/types.go:42:5",
         "message": "struct field invowkfile.Foo.Bar uses primitive type string",
         "category": "primitive",
-        "url": "goplint://finding/gpl1_..."
+        "url": "goplint://finding/gpl3_..."
       }
     ]
   }
 }
 ```
 
-`url` encodes the stable finding ID used by baseline v2.
+`url` encodes the stable finding ID used by baseline suppression and may include machine-readable query metadata (for example `ubv_scope=same-block|cross-block` and witness fields).
 
-Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constructor`, `wrong-constructor-sig`, `wrong-validate-sig`, `wrong-stringer-sig`, `missing-func-options`, `missing-immutability`, `missing-struct-validate`, `wrong-struct-validate-sig`, `unvalidated-cast`, `unused-validate-result`, `unused-constructor-error`, `missing-constructor-validate`, `incomplete-validate-delegation`, `nonzero-value-field`, `stale-exception`, `unknown-directive`.
+Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constructor`, `wrong-constructor-sig`, `missing-func-options`, `missing-immutability`, `wrong-validate-sig`, `wrong-stringer-sig`, `missing-struct-validate`, `wrong-struct-validate-sig`, `unvalidated-cast`, `unvalidated-cast-inconclusive`, `unused-validate-result`, `unused-constructor-error`, `missing-constructor-validate`, `missing-constructor-validate-inconclusive`, `incomplete-validate-delegation`, `nonzero-value-field`, `wrong-func-option-type`, `enum-cue-missing-go`, `enum-cue-extra-go`, `use-before-validate-same-block`, `use-before-validate-cross-block`, `use-before-validate-inconclusive`, `suggest-validate-all`, `missing-constructor-error-return`, `redundant-conversion`, `missing-struct-validate-fields`, `unknown-directive`, `stale-exception`, `overdue-review`.
 
 ## CLI Flags
 
@@ -253,6 +264,19 @@ Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constr
 | `-check-func-options` | bool | `false` | Report missing/incomplete functional options pattern |
 | `-check-immutability` | bool | `false` | Report constructor-backed structs with exported mutable fields |
 | `-check-struct-validate` | bool | `false` | Report constructor-backed structs missing `Validate()` |
+| `-ubv-mode` | string | `"escape"` | UBV semantics mode: `order` or `escape` |
+| `-cfg-backend` | string | `"ssa"` | Path-analysis backend selector: `ssa` or `ast` |
+| `-cfg-interproc-engine` | string | `"ifds"` | Interprocedural engine selector: `legacy`, `ifds`, or `compare` |
+| `-cfg-feasibility-engine` | string | `"off"` | Phase C feasibility engine: `off` or `smt` |
+| `-cfg-refinement-mode` | string | `"off"` | Phase C refinement mode: `off`, `once`, or `cegar` |
+| `-cfg-refinement-max-iterations` | int | `3` | Maximum Phase C refinement iterations for one witness |
+| `-cfg-feasibility-max-queries` | int | `16` | Maximum Phase C feasibility queries per witness |
+| `-cfg-feasibility-timeout-ms` | int | `200` | Maximum Phase C feasibility query time in milliseconds |
+| `-cfg-alias-mode` | string | `"off"` | Phase D alias tracking: `off` or `ssa` (SSA-based must-alias enrichment) |
+| `-cfg-max-states` | int | `20000` | Maximum CFG states explored before conservative fallback |
+| `-cfg-max-depth` | int | `512` | Maximum CFG DFS depth before conservative fallback |
+| `-cfg-inconclusive-policy` | string | `"error"` | Inconclusive CFA policy: `error`, `warn`, or `off` |
+| `-cfg-witness-max-steps` | int | `12` | Maximum CFG witness steps encoded in inconclusive metadata |
 | `-audit-exceptions` | bool | `false` | Report stale exception patterns |
 | `-global` | bool | `false` | Aggregate `-audit-exceptions` globally and fail on globally stale patterns |
 | `-update-baseline` | string | `""` | Generate baseline TOML at the given path |
@@ -284,8 +308,24 @@ The tool is a **separate Go module** to avoid adding `golang.org/x/tools` and `g
 
 ### CFA Notes
 
-- `--check-cast-validation`, `--check-constructor-validates`, and `--check-use-before-validate*` are CFA-only checks.
-- `--no-cfa` with any of those checks is rejected in run-config validation.
+- `--check-cast-validation`, `--check-constructor-validates`, and `--check-use-before-validate` are CFA-only checks.
+- CFA is always enabled for those checks; there is no CFA opt-out flag.
+- `--check-use-before-validate` emits split categories: `use-before-validate-same-block` and `use-before-validate-cross-block`.
+- `--cfg-interproc-engine=legacy|ifds|compare` selects the interprocedural solver path for cast/UBV/constructor-validates checks.
+- `--cfg-interproc-engine=compare` runs legacy and IFDS solvers and fails on forbidden `legacy -> safe` silent downgrades.
+- Default rollout is now `ifds`; keep `compare` compatibility checks and benchmark gates active for regression monitoring.
+- Phase C is opt-in and IFDS-only: `--cfg-feasibility-engine=smt` must be paired with `--cfg-refinement-mode=once|cegar`.
+- Phase C uses a narrow predicate vocabulary. `sat` keeps the witness live, `unsat` can discharge the current witness, and unsupported or timed-out queries degrade to `unknown`, never `safe`.
+- CFA budget truncation and recursion-summary cycles emit inconclusive categories (`unvalidated-cast-inconclusive`, `use-before-validate-inconclusive`, `missing-constructor-validate-inconclusive`) with `cfg_*` metadata.
+- `--cfg-inconclusive-policy` controls inconclusive emission: `error` (default), `warn` (emits with warning metadata), `off` (suppresses inconclusive findings).
+- Inconclusive metadata includes bounded witness fields (`cfg_witness_kind`, `cfg_witness_blocks`, `cfg_witness_edges`, `cfg_witness_call_chain`, plus compatibility keys `witness_cfg_path`, `witness_cfg_steps`, `witness_cfg_truncated`) capped by `--cfg-witness-max-steps`.
+- Refined findings add feasibility/refinement metadata (`cfg_feasibility_engine`, `cfg_feasibility_result`, `cfg_refinement_status`, `cfg_refinement_iterations`, `cfg_refinement_trigger`, `cfg_refinement_witness_hash`).
+- `-emit-findings-jsonl` now also writes `kind=refinement-trace` records for Phase C-evaluated non-safe witnesses so gates can audit refined and retained outcomes that did not become user-facing findings.
+- `--cfg-alias-mode=ssa` is Phase D's opt-in SSA must-alias upgrade. It stays out of `--check-all`; `make check-cfg-alias` proves the curated alias-fixture delta by keeping alias mode `off` as the control run and requiring only the `ssa` run to discharge the copy/multi-hop alias cases.
+- IFDS unresolved-call handling is target-relevant: unknown helper calls only keep a finding inconclusive when the unresolved call could operate on the tracked cast/return target, so unrelated helpers like `filepath.Join`, `len`, or `copy` do not poison otherwise validated paths.
+- `--ubv-mode=order` uses strict ordering semantics; `--ubv-mode=escape` focuses on values escaping before validation.
+- `--ubv-mode=escape` uses recursion-safe interprocedural first-argument summaries to treat helper calls as validation only when the callee validates before escaping that argument.
+- `--cfg-backend=ssa` uses type-aware no-return pruning; `--cfg-backend=ast` is conservative and treats calls as may-return.
 - Auto-skip for index expressions is map-only (map lookups), not slice/array indexing.
 - UBV checks treat immediate IIFEs as synchronous ordering context; deferred `Validate()` does not suppress use-before-validate findings.
 
@@ -300,7 +340,28 @@ cd tools/goplint && go test -race ./goplint/
 
 # Run a specific test
 cd tools/goplint && go test -v -run TestBaselineSuppression ./goplint/
+
+# Run CFG-heavy benchmarks
+cd tools/goplint && go test -run '^$' -bench '^BenchmarkCFGTraversal' ./goplint
+
+# Check benchmark thresholds
+./tools/goplint/scripts/check-cfg-bench-thresholds.sh
+
+# Check Phase A semantic contracts
+./tools/goplint/scripts/check-semantic-spec.sh
+
+# Check Phase D alias opt-in behavior
+./tools/goplint/scripts/check-cfg-alias.sh
 ```
+
+## Soundness Docs
+
+- `docs/goplint/current-techniques-and-semantics.md`
+- `docs/goplint/state-of-the-art-soundness-roadmap.md`
+- `docs/goplint/phase-a-implementation-plan.md`
+- `docs/goplint/phase-b-implementation-plan.md`
+- `docs/goplint/semantic-rule-spec-phase-a.md`
+- `docs/goplint/semantic-rule-spec-phase-b.md`
 
 ## License
 

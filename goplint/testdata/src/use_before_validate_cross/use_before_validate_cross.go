@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
-// Package use_before_validate_cross provides test fixtures for the
-// --check-use-before-validate-cross mode. This mode extends UBV detection
+// Package use_before_validate_cross provides test fixtures for
+// --check-use-before-validate. The mode performs full-path UBV detection
 // across CFG block boundaries: it flags cases where a DDD Value Type
 // variable is used in a successor block before any block on that path
 // contains a Validate() call.

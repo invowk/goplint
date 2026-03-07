@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/invowk/invowk/tools/goplint/spec/schema/semantic-rules.schema.json",
+  "title": "goplint semantic rules catalog",
+  "type": "object",
+  "required": [
+    "version",
+    "rules",
+    "oracle_matrix",
+    "historical_miss_fixtures",
+    "historical_miss_oracles"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "v1"
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "category",
+          "family",
+          "entrypoints",
+          "enabled_by_flags",
+          "run_controls",
+          "traversal_mode",
+          "state_domain",
+          "outcome_domain",
+          "baseline_policy"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1
+          },
+          "family": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entrypoints": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "enabled_by_flags": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "run_controls": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "traversal_mode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state_domain": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "outcome_domain": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "safe",
+                "unsafe",
+                "inconclusive"
+              ]
+            }
+          },
+          "interproc_engine_modes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "legacy",
+                "ifds",
+                "compare"
+              ]
+            }
+          },
+          "fact_families": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "edge_function_tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "identity",
+                "needs-to-validated",
+                "needs-to-escaped-before-validate",
+                "needs-to-consumed-before-validate"
+              ]
+            }
+          },
+          "inconclusive_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "state-budget",
+                "depth-budget",
+                "recursion-cycle",
+                "unresolved-target"
+              ]
+            }
+          },
+          "required_meta_on_inconclusive": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "refinement_statuses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "unsafe",
+                "inconclusive-refined",
+                "inconclusive-unrefined",
+                "proven-safe"
+              ]
+            }
+          },
+          "required_meta_on_refinement": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "baseline_policy": {
+            "type": "string",
+            "enum": [
+              "suppressible",
+              "always-visible",
+              "audit-only"
+            ]
+          }
+        }
+      }
+    },
+    "oracle_matrix": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "category",
+          "must_report",
+          "must_not_report"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1
+          },
+          "must_report": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/oracle_case"
+            }
+          },
+          "must_not_report": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/oracle_case"
+            }
+          }
+        }
+      }
+    },
+    "historical_miss_fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "historical_miss_oracles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "fixture",
+          "category",
+          "must_report"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "fixture": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1
+          },
+          "must_report": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/oracle_case"
+            }
+          },
+          "must_not_report": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/oracle_case"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "oracle_case": {
+      "type": "object",
+      "required": [
+        "fixture",
+        "symbol"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fixture": {
+          "type": "string",
+          "minLength": 1
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

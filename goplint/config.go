@@ -3,6 +3,7 @@
 package goplint
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -99,6 +100,11 @@ func loadConfig(path string, strictMissing bool) (*ExceptionConfig, error) {
 	if err := validateExceptionPatterns(cfg.Exceptions); err != nil {
 		return nil, err
 	}
+	normalizedPrefixes, err := normalizeIncludePackagePrefixes(cfg.Settings.IncludePackages)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Settings.IncludePackages = normalizedPrefixes
 
 	cfg.matchCounts = make(map[int]int, len(cfg.Exceptions))
 
@@ -112,24 +118,17 @@ func loadConfigCached(state *flagState, path string, strictMissing bool) (*Excep
 		return loadConfig(path, strictMissing)
 	}
 	key := configCacheKey{path: path, strictMissing: strictMissing}
-	if cached, ok := state.configCache.Load(key); ok {
-		entry := cached.(*configCacheEntry)
-		if entry.err != nil {
-			return nil, entry.err
+	entry := loadCacheEntry(&state.configCache, key, func() *configCacheEntry {
+		cfg, err := loadConfig(path, strictMissing)
+		cacheEntry := &configCacheEntry{err: err}
+		if err == nil {
+			cacheEntry.template = configTemplate(cfg)
 		}
-		return cloneExceptionConfig(entry.template), nil
+		return cacheEntry
+	})
+	if entry.err != nil {
+		return nil, entry.err
 	}
-
-	cfg, err := loadConfig(path, strictMissing)
-	entry := &configCacheEntry{err: err}
-	if err == nil {
-		entry.template = configTemplate(cfg)
-	}
-	state.configCache.Store(key, entry)
-	if err != nil {
-		return nil, err
-	}
-
 	return cloneExceptionConfig(entry.template), nil
 }
 
@@ -171,6 +170,40 @@ func joinTOMLKeys(keys []toml.Key) string {
 	return strings.Join(parts, ", ")
 }
 
+// ShouldAnalyzePackage reports whether diagnostics should be emitted for the
+// given package path. Returns true when include_packages is empty (no filter)
+// or when the path matches any prefix in include_packages. Non-matching
+// packages are still analyzed for fact export but their findings are suppressed.
+func (c *ExceptionConfig) ShouldAnalyzePackage(pkgPath string) bool {
+	if len(c.Settings.IncludePackages) == 0 {
+		return true
+	}
+	for _, prefix := range c.Settings.IncludePackages {
+		if prefix == "" {
+			continue
+		}
+		if strings.HasPrefix(pkgPath, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeIncludePackagePrefixes(prefixes []string) ([]string, error) {
+	if len(prefixes) == 0 {
+		return nil, nil
+	}
+	normalized := make([]string, 0, len(prefixes))
+	for i, prefix := range prefixes {
+		trimmed := strings.TrimSpace(prefix)
+		if trimmed == "" {
+			return nil, fmt.Errorf("parsing config TOML: settings.include_packages[%d]: empty package prefix", i)
+		}
+		normalized = append(normalized, trimmed)
+	}
+	return normalized, nil
+}
+
 // isExcepted checks whether a qualified name (e.g., "pkg.Type.Field")
 // matches any exception pattern in the config.
 //
@@ -207,22 +240,6 @@ func (c *ExceptionConfig) isExcludedPath(filePath string) bool {
 	for _, ep := range c.Settings.ExcludePaths {
 		normalizedExclude := strings.ReplaceAll(filepath.ToSlash(ep), "\\", "/")
 		if strings.Contains(normalizedPath, normalizedExclude) {
-			return true
-		}
-	}
-	return false
-}
-
-// ShouldAnalyzePackage reports whether diagnostics should be emitted for the
-// given package path. Returns true when include_packages is empty (no filter)
-// or when the path matches any prefix in include_packages. Non-matching
-// packages are still analyzed for fact export but their findings are suppressed.
-func (c *ExceptionConfig) ShouldAnalyzePackage(pkgPath string) bool {
-	if len(c.Settings.IncludePackages) == 0 {
-		return true
-	}
-	for _, prefix := range c.Settings.IncludePackages {
-		if strings.HasPrefix(pkgPath, prefix) {
 			return true
 		}
 	}
@@ -282,7 +299,7 @@ func validateExceptionPatterns(exceptions []Exception) error {
 func validateExceptionPattern(pattern string) error {
 	parts := strings.Split(pattern, ".")
 	if len(parts) == 0 {
-		return fmt.Errorf("must contain at least one segment")
+		return errors.New("must contain at least one segment")
 	}
 	for _, part := range parts {
 		if part == "" {
