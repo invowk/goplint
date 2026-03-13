@@ -274,10 +274,6 @@ reason = "runtime.GOOS boundary, no typed alternative"
 pattern = "moduleError.op"
 reason = "unexported display label"
 
-[[exceptions]]
-pattern = "checkCommandDependenciesExist.currentModule"
-reason = "empty string = no module; ModuleID rejects empty"
-
 # =============================================================================
 # Test-Only Fields
 # =============================================================================
@@ -990,14 +986,6 @@ pattern = "invowkfile.FieldPath.*.*"
 reason = "FieldPath method index/name params"
 
 [[exceptions]]
-pattern = "invowkfile.itoa.*"
-reason = "FieldPath utility — int-to-string for path building"
-
-[[exceptions]]
-pattern = "invowkfile.itoa.return.*"
-reason = "FieldPath utility return"
-
-[[exceptions]]
 pattern = "invowkfile.ValidationErrors.*.return.*"
 reason = "error/warning count returns (display-only)"
 
@@ -1087,18 +1075,6 @@ reason = "raw CUE source text input"
 # or pass values to Cobra/shell/config subsystems.
 
 [[exceptions]]
-pattern = "invowk.shellEscapeSingleQuote.*"
-reason = "shell escaping — raw text manipulation"
-
-[[exceptions]]
-pattern = "invowk.shellEscapeSingleQuote.return.*"
-reason = "shell escaping return"
-
-[[exceptions]]
-pattern = "invowk.validateCustomCheckOutput.outputStr"
-reason = "raw command output text"
-
-[[exceptions]]
 pattern = "invowk.captureUserEnv.return.*"
 reason = "raw env map capture — exec/OS boundary"
 
@@ -1121,18 +1097,6 @@ reason = "Cobra flag binding (resolved later to FilesystemPath)"
 [[exceptions]]
 pattern = "invowk.discoveryRequestCache.lookups"
 reason = "cache map key — internal optimization"
-
-[[exceptions]]
-pattern = "invowk.resolvedDefinitions.flagValues"
-reason = "Cobra flag value map — framework boundary"
-
-[[exceptions]]
-pattern = "invowk.newContainerValidationContext.script"
-reason = "raw script content for validation"
-
-[[exceptions]]
-pattern = "invowk.checkTransientExitCode.label"
-reason = "display label for error messages"
 
 [[exceptions]]
 pattern = "invowk.isArgEnvVar.*"
@@ -1636,24 +1600,6 @@ review_after = "2027-09-01"
 blocked_by = "CLI typed request pattern or Cobra typed flags"
 
 [[exceptions]]
-pattern = "invowk.commandService.loadConfig.*"
-reason = "Cobra flag binding path"
-review_after = "2027-09-01"
-blocked_by = "CLI typed request pattern or Cobra typed flags"
-
-[[exceptions]]
-pattern = "invowk.isExecutable.*"
-reason = "filepath boundary — os.Stat callers"
-
-[[exceptions]]
-pattern = "invowk.isReadable.*"
-reason = "filepath boundary"
-
-[[exceptions]]
-pattern = "invowk.isWritable.*"
-reason = "filepath boundary"
-
-[[exceptions]]
 pattern = "invowk.runPathValidation.*"
 reason = "Cobra args boundary"
 
@@ -1668,18 +1614,6 @@ reason = "Cobra args boundary"
 [[exceptions]]
 pattern = "invowk.detectPathType.*"
 reason = "filepath boundary — os.Stat callers"
-
-[[exceptions]]
-pattern = "invowk.executeInteractive.cmdName"
-reason = "Cobra boundary — from args/ExecuteRequest"
-
-[[exceptions]]
-pattern = "invowk.validateArguments.cmdName"
-reason = "Cobra boundary — display label"
-
-[[exceptions]]
-pattern = "invowk.validateFlagValues.cmdName"
-reason = "Cobra boundary — display label"
 
 # cmd module commands
 [[exceptions]]
@@ -1934,45 +1868,13 @@ reason = "atomic int32 state loads — method-level state reads via CAS"
 # --- invowkmod: 4H tightened (2026-02-28) — 7 specific patterns replace 2 blankets ---
 
 [[exceptions]]
-pattern = "invowkmod.findModuleInDir.cast-validation"
-reason = "filesystem boundary — entry.Name() with .invowkmod suffix stripped"
-
-[[exceptions]]
 pattern = "invowkmod.parseLockFileCUE.cast-validation"
 reason = "parse boundary — CUE-decoded lock file version string"
-
-[[exceptions]]
-pattern = "invowkmod.parseModuleKey.cast-validation"
-reason = "parse boundary — lock file line to ModuleRefKey conversion"
-
-[[exceptions]]
-pattern = "invowkmod.resolveIdentifier.cast-validation"
-reason = "parse boundary — user identifier to ModuleRefKey lookup"
-
-[[exceptions]]
-pattern = "invowkmod.Resolver.loadTransitiveDeps.cast-validation"
-reason = "filesystem boundary — cachePath to FilesystemPath conversion"
-
-[[exceptions]]
-pattern = "invowkmod.Resolver.resolveOne.cast-validation"
-reason = "filesystem boundary — resolved module path to FilesystemPath"
-
-[[exceptions]]
-pattern = "invowkmod.Resolver.List.cast-validation"
-reason = "filesystem boundary — cached module path to FilesystemPath"
 
 # --- invowkfile: 4H tightened (2026-02-28) — 0 findings, blankets removed ---
 # invowkfile has no cast-validation findings (auto-skip contexts handle all casts).
 
 # --- discovery package: specific filesystem path and identifier cast sites ---
-[[exceptions]]
-pattern = "discovery.Discovery.New.cast-validation"
-reason = "os.Getwd returns valid path or error"
-
-[[exceptions]]
-pattern = "discovery.discoverInDir.cast-validation"
-reason = "os.Stat confirmed path exists"
-
 [[exceptions]]
 pattern = "discovery.Discovery.discoverModulesInDirWithDiagnostics.cast-validation"
 reason = "filepath.Abs + os.ReadDir confirmed paths"
@@ -1993,38 +1895,6 @@ reason = "derived from valid command name parts"
 # Provision package has no cast-validation findings (auto-skip contexts handle all casts).
 
 # --- cmd/invowk: 4H tightened (2026-02-28) — 8 specific patterns replace 2 blankets ---
-
-[[exceptions]]
-pattern = "invowk.loadConfigWithFallback.cast-validation"
-reason = "config boundary — config path to FilesystemPath conversion"
-
-[[exceptions]]
-pattern = "invowk.normalizeSourceName.cast-validation"
-reason = "parse boundary — raw source string to SourceID conversion"
-
-[[exceptions]]
-pattern = "invowk.runInvowkfilePathValidation.cast-validation"
-reason = "CLI boundary — Cobra flag to FilesystemPath conversion"
-
-[[exceptions]]
-pattern = "invowk.runModulePathValidation.cast-validation"
-reason = "CLI boundary — Cobra flag to FilesystemPath conversion"
-
-[[exceptions]]
-pattern = "invowk.runModuleAdd.cast-validation"
-reason = "CLI boundary — Cobra args to DDD type conversions"
-
-[[exceptions]]
-pattern = "invowk.runModuleArchive.cast-validation"
-reason = "CLI boundary — Cobra args to DDD type conversions"
-
-[[exceptions]]
-pattern = "invowk.runModuleCreate.cast-validation"
-reason = "CLI boundary — Cobra args to DDD type conversions"
-
-[[exceptions]]
-pattern = "invowk.runModuleImport.cast-validation"
-reason = "CLI boundary — Cobra args to DDD type conversions"
 
 # =============================================================================
 # 4F: TUI/Container/Env Map — Baseline-to-Exception Migration
@@ -2421,36 +2291,12 @@ pattern = "invowk.buildCommandUsageString.cmdPart"
 reason = "CLI boundary — command path segment for usage string"
 
 [[exceptions]]
-pattern = "invowk.validateHostDependencies.userEnv"
-reason = "exec/OS boundary — captured user environment for validation"
-
-[[exceptions]]
-pattern = "invowk.validateDependencies.userEnv"
-reason = "exec/OS boundary — user environment passthrough"
-
-[[exceptions]]
-pattern = "invowk.commandService.validateAndRenderDeps.userEnv"
-reason = "exec/OS boundary — user environment passthrough"
-
-[[exceptions]]
-pattern = "invowk.checkEnvVarDependencies.userEnv"
-reason = "exec/OS boundary — user environment check"
-
-[[exceptions]]
 pattern = "invowk.parseEnvVarFlags.return.*"
 reason = "CLI boundary — Cobra --env flag parse result"
 
 [[exceptions]]
 pattern = "invowk.parseEnvVarFlags.envVarFlags"
 reason = "CLI boundary — raw Cobra --env flag values"
-
-[[exceptions]]
-pattern = "invowk.validateFlagValues.flagValues"
-reason = "CLI boundary — user-provided flag value strings"
-
-[[exceptions]]
-pattern = "invowk.validateArguments.providedArgs"
-reason = "CLI boundary — positional args from Cobra"
 
 [[exceptions]]
 pattern = "invowk.RenderHostNotSupportedError.currentOS"
@@ -2507,10 +2353,6 @@ reason = "CLI boundary — raw env var name strings from user input"
 [[exceptions]]
 pattern = "invowk.toDotenvFilePaths.paths"
 reason = "CLI boundary — raw dotenv file path strings from user input"
-
-[[exceptions]]
-pattern = "invowk.capabilityCheckScript.return.*"
-reason = "exec boundary — generated script content"
 
 [[exceptions]]
 pattern = "invowk.detectPathType.return.*"
@@ -2896,10 +2738,6 @@ reason = "parse boundary — module ID list from discovery"
 # Filesystem boundary — OS-listed directory names already validated by discovery.
 
 [[exceptions]]
-pattern = "invowkmod.findModuleInDir.cast-validation"
-reason = "filesystem boundary — entry.Name() with .invowkmod suffix stripped; validated by discovery"
-
-[[exceptions]]
 pattern = "discovery.getModuleShortName.cast-validation"
 reason = "filesystem boundary — module short name derived from validated module path"
 
@@ -2977,10 +2815,6 @@ reason = "hint string for CLI rendering (typed via HintTimedOut/HintCancelled co
 [[exceptions]]
 pattern = "commandsvc.executeInteractive.cmdName"
 reason = "display-only command name passed to TUI"
-
-[[exceptions]]
-pattern = "classifyExecutionError.hint"
-reason = "return hint for CLI adapter rendering"
 
 [[exceptions]]
 pattern = "commandsvc.classifyExecutionError.return.*"
@@ -3305,10 +3139,6 @@ pattern = "invowkmod.Constraint.struct-validate-fields"
 reason = "internal parse-tree; Op validated during parse, Original is display-only"
 
 # --- Invowkfile with existing Validate() collision ---
-
-[[exceptions]]
-pattern = "invowkfile.Invowkfile.struct-validate-fields"
-reason = "has existing Validate(opts ...ValidateOption) ValidationErrors; DDD uses ValidateFields() instead"
 
 # =============================================================================
 # Incomplete Validate Delegation — Intentional Non-Delegation
