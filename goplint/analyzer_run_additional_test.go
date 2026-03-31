@@ -3,6 +3,8 @@
 package goplint
 
 import (
+	"errors"
+	"io/fs"
 	"strings"
 	"testing"
 )
@@ -21,7 +23,7 @@ func TestLoadRunInputsExplicitMissingConfigPath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected missing explicit config path to fail")
 	}
-	if !strings.Contains(err.Error(), "reading config") || !strings.Contains(err.Error(), "no such file or directory") {
+	if !strings.Contains(err.Error(), "reading config") || !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("expected config-file-not-found error, got %v", err)
 	}
 }
@@ -40,7 +42,7 @@ func TestLoadRunInputsExplicitMissingBaselinePath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected missing explicit baseline path to fail")
 	}
-	if !strings.Contains(err.Error(), "reading baseline") || !strings.Contains(err.Error(), "no such file or directory") {
+	if !strings.Contains(err.Error(), "reading baseline") || !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("expected baseline-file-not-found error, got %v", err)
 	}
 }

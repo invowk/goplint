@@ -29,6 +29,18 @@ import (
 	"github.com/invowk/invowk/tools/goplint/goplint"
 )
 
+var (
+	// ErrAnalyzerSubprocess indicates a failure running the analyzer subprocess.
+	ErrAnalyzerSubprocess = errors.New("running analyzer subprocess")
+
+	// ErrParsingAnalysisOutput indicates a failure parsing analyzer output.
+	ErrParsingAnalysisOutput = errors.New("parsing analysis output")
+
+	// ErrFindingsStreamEmpty indicates the findings stream is empty despite
+	// analyzer output containing suppressible findings.
+	ErrFindingsStreamEmpty = errors.New("findings stream is empty")
+)
+
 type commandRunner func(cmd *exec.Cmd) error
 
 type baselineGenerator func(outputPath string, originalArgs []string) error
@@ -184,7 +196,7 @@ func generateBaselineWithRunner(
 
 	stdout, err := runAnalyzerSubprocess(runCommand, stderr, subArgs)
 	if err != nil {
-		return fmt.Errorf("running analyzer subprocess: %w", err)
+		return fmt.Errorf("%w: %w", ErrAnalyzerSubprocess, err)
 	}
 
 	// Parse the machine findings stream emitted by the analyzer.
@@ -194,7 +206,7 @@ func generateBaselineWithRunner(
 	}
 	findings, err := parseFindingsJSONL(findingsData)
 	if err != nil {
-		return fmt.Errorf("parsing analysis output: %w", err)
+		return fmt.Errorf("%w: %w", ErrParsingAnalysisOutput, err)
 	}
 	analysisFindings, err := parseAnalysisJSON(stdout)
 	if err != nil {
@@ -203,7 +215,7 @@ func generateBaselineWithRunner(
 	streamCount := countBaselineFindings(findings)
 	analysisCount := countBaselineFindings(analysisFindings)
 	if analysisCount > 0 && streamCount == 0 {
-		return fmt.Errorf("findings stream is empty but analyzer output contains %d suppressible findings", analysisCount)
+		return fmt.Errorf("%w but analyzer output contains %d suppressible findings", ErrFindingsStreamEmpty, analysisCount)
 	}
 	if streamCount < analysisCount {
 		return fmt.Errorf("findings stream is incomplete (%d findings) versus analyzer output (%d findings)", streamCount, analysisCount)

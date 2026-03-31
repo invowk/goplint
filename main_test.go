@@ -711,7 +711,7 @@ func TestGenerateBaseline(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected parse error from malformed JSON stream")
 		}
-		if !strings.Contains(err.Error(), "parsing analysis output") {
+		if !errors.Is(err, ErrParsingAnalysisOutput) {
 			t.Fatalf("expected parsing analysis output error, got %v", err)
 		}
 	})
@@ -746,7 +746,7 @@ func TestGenerateBaseline(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected empty findings stream error")
 		}
-		if !strings.Contains(err.Error(), "findings stream is empty") {
+		if !errors.Is(err, ErrFindingsStreamEmpty) {
 			t.Fatalf("expected fail-closed findings stream error, got %v", err)
 		}
 	})
@@ -762,7 +762,7 @@ func TestGenerateBaseline(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected command error")
 		}
-		if !strings.Contains(err.Error(), "running analyzer subprocess") {
+		if !errors.Is(err, ErrAnalyzerSubprocess) {
 			t.Fatalf("expected wrapped subprocess error, got %v", err)
 		}
 	})
