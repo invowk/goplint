@@ -1,12 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 #
 # goplint baseline — accepted DDD compliance findings
-# Generated: 2026-03-27
+# Generated: 2026-04-02
 # Regenerate: make update-baseline
-# Total: 1 findings
+# Total: 3 findings
 
 # Bare primitive type usage
 [primitive]
 entries = [
+    { id = "gpl3_33578fc7f2771e2cd951fa15fc7f5e7f27cb906416193ca42c103de9bb85a580", message = "return value of invowkmod.MissingTransitiveDepDiagnostic.CUESnippet uses primitive type string" },
     { id = "gpl3_5d23fc2f41c96e8c6bc7ec3034ed4a7f5688a227b7b988df2275eab0186a728a", message = "struct field invowk.WatchCommandNotFoundError.Name uses primitive type string" },
+]
+
+# Structs with validatable fields but no Validate() method
+[missing-struct-validate-fields]
+entries = [
+    { id = "gpl3_37101911e269df047674552c9342df92323f17ff3d30b7fda0b1a403dfbb0683", message = "struct invowkmod.lockHashEntry has 2 validatable field(s) but no Validate() method" },
 ]

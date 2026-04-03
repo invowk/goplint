@@ -1442,10 +1442,6 @@ pattern = "invowkmod.Resolver.*.return.*"
 reason = "resolver internal returns"
 
 [[exceptions]]
-pattern = "invowkmod.atomicWriteFile.*"
-reason = "filepath boundary"
-
-[[exceptions]]
 pattern = "invowkmod.copyDir.*"
 reason = "filepath boundary"
 
@@ -1472,6 +1468,26 @@ reason = "filepath boundary"
 [[exceptions]]
 pattern = "invowkmod.LockFile.Save.*"
 reason = "filepath boundary"
+
+[[exceptions]]
+pattern = "invowkmod.parseLockFile.*"
+reason = "CUE content parsing boundary"
+
+[[exceptions]]
+pattern = "invowkmod.extractLockFileVersion.*"
+reason = "CUE content parsing boundary"
+
+[[exceptions]]
+pattern = "invowkmod.lockFileParserV1V2.Parse.*"
+reason = "CUE content parsing boundary"
+
+[[exceptions]]
+pattern = "invowkmod.lockFileParserV1V2.struct-validate-fields"
+reason = "internal parser config struct — not a domain entity"
+
+[[exceptions]]
+pattern = "fspath.AtomicWriteFile.*"
+reason = "filepath/byte boundary — generic utility accepting raw filesystem types"
 
 # invowkfile — parse/shebang boundary
 [[exceptions]]
@@ -3354,4 +3370,28 @@ reason = "lifecycle result; Registry is service object, Diagnostics validated at
 [[exceptions]]
 pattern = "tui.SpinBuilder.struct-validate-fields"
 reason = "builder pattern; fields validated when Build() is called"
+
+# =============================================================================
+# Explicit-only deps feature — internal helpers at OS/display boundaries
+# =============================================================================
+
+[[exceptions]]
+pattern = "invowkmod.computeModuleHash.dir"
+reason = "exec/OS boundary: dir comes from OS-resolved filesystem path"
+
+[[exceptions]]
+pattern = "invowkmod.hashFileContent.path"
+reason = "exec/OS boundary: internal helper receiving OS-resolved path"
+
+[[exceptions]]
+pattern = "deps.findMatchingCommand.currentModule"
+reason = "parse boundary: already extracted from typed ModuleID via string()"
+
+[[exceptions]]
+pattern = "deps.findMatchingCommand.alternatives"
+reason = "parse boundary: normalized from typed CommandName values"
+
+[[exceptions]]
+pattern = "invowkmod.MissingTransitiveDepDiagnostic.CUESnippet"
+reason = "display-only: returns formatted CUE text for error messages"
 # =============================================================================
