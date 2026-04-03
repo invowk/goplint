@@ -3,7 +3,7 @@
 # goplint baseline — accepted DDD compliance findings
 # Generated: 2026-04-03
 # Regenerate: make update-baseline
-# Total: 124 findings
+# Total: 127 findings
 
 # Bare primitive type usage
 [primitive]
@@ -24,6 +24,7 @@ entries = [
     { id = "gpl3_31eb51bcd8573946c34d3204f6b62604f2b8224eae15002f0f7d908783dc65b7", message = "struct field invowk.auditJSONFinding.Severity uses primitive type string" },
     { id = "gpl3_33578fc7f2771e2cd951fa15fc7f5e7f27cb906416193ca42c103de9bb85a580", message = "return value of invowkmod.MissingTransitiveDepDiagnostic.CUESnippet uses primitive type string" },
     { id = "gpl3_340af4174bc69e6156a18c96064e188fd0f352a3777fdb732831c80b5b4aa8ef", message = "parameter \"content\" of audit.NetworkChecker.checkDNSExfiltration uses primitive type string" },
+    { id = "gpl3_42d022c20fcc169e5fd36ac87702252458f887a7d72b57d2147f215cf9777f23", message = "struct field invowkmod.Invowkmod.Author uses primitive type string" },
     { id = "gpl3_48752dccee38320523f0e085b5c75349fbd04a48c5765b6157ce94a53b66b875", message = "parameter \"content\" of audit.ScriptChecker.checkObfuscation uses primitive type string" },
     { id = "gpl3_49ce29fb8f11ac3ac05c3d2ee1095decd3fba7f0d2d502d30639bcf802798264", message = "struct field invowk.auditJSONFinding.Line uses primitive type int" },
     { id = "gpl3_4c54501293506b2b7e25099f6f650988e6525f2333ac83f59a988828899dee2a", message = "struct field invowk.auditJSONSummary.Info uses primitive type int" },
@@ -46,7 +47,9 @@ entries = [
     { id = "gpl3_7cff6436e68b808d02210c957e53217e7d6421bceff7844e0f9e9f937157f04d", message = "parameter \"absPath\" of audit.ScanContext.loadDirectoryTree uses primitive type string" },
     { id = "gpl3_803c83d828831d194908c56b83661c9c3daaccb9eb1275e162d2a04b0f7d00ff", message = "struct field invowk.auditJSONSummary.InvowkfilesScanned uses primitive type int" },
     { id = "gpl3_80bf04d7e524e8ca153eaa4eb625d84e7afa3ae9dc1444857ad2d1063f16a048", message = "struct field audit.CorrelationRule.ResultTitle uses primitive type string" },
+    { id = "gpl3_836b5cbcd6c0e5119c39c3c9c5013c9c628fdac9e66c2ef1ba3ac993fe422bd3", message = "struct field invowkmod.Invowkmod.Repository uses primitive type string" },
     { id = "gpl3_849e6a4e3e3b40293b38c5563cf7ee1d39238110d5a92325233209f4ce316ba4", message = "parameter \"modPath\" of audit.SymlinkChecker.scanDir uses primitive type string" },
+    { id = "gpl3_8810baacd5910a160cb45af825eb5aeb583525d512867308b99d7433942dde36", message = "struct field invowkmod.Invowkmod.License uses primitive type string" },
     { id = "gpl3_8a06ab70f9c440448219d528385acab1317318ae12a4810e8eab1872496844c0", message = "parameter \"surfaceID\" of audit.Correlator.applyRules uses primitive type string" },
     { id = "gpl3_8bedad8ffb8a2cb599024e060066c5c7aa4fce368d4038354262b75a712de21b", message = "struct field audit.Finding.SurfaceID uses primitive type string" },
     { id = "gpl3_8ce1b2fb95ecc3b1b6c71a250a02476c6ed3fac19d6c26d3087fc0d4e42ac709", message = "struct field audit.Finding.Line uses primitive type int" },
