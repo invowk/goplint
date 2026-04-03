@@ -126,33 +126,33 @@ entries = [
 # Type conversions to DDD types without Validate() check
 [unvalidated-cast]
 entries = [
-    { id = "gpl3_0166c45a21613e69a9d2dfe3a7f33c954ac49194079c2a7128e0102ab9e72e10", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_045a749641a9f89f9ef44a0cd612b08d544d8a7c3b1d9d11a402f1c959d06b30", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_08cc1cacc0b2954f38c6179c7f09dc49d6dc470f37c4c0ff01ec8bcb04713031", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
     { id = "gpl3_0c49a308cb96f254db7100fc5e6c9451f8ded2e82458f055f0218dc788915b2b", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_1e5a9d618f43305b897766290f360b5cec0ab6ba1919fa8d2706d3e749422515", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_2af22dede11d7a8254f666c8172d60d2836984ee952006f291af83349b97b15f", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_3b799fa6bf31629a7325156f8dc5e28a4e0795aa7f5e277ef6de0897717c095d", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_2dab80c38e6a09015f59fcb6ac54199bb64930695dac0a094cfbcd3b484ffab6", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_320bed3f92606da282b160bfb7a97c59aa7d2e585665a3d7ed6b23f5a904a86e", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
     { id = "gpl3_3cc104be640a7abd73bf02733506b2c30075f91483cbaf5176166d4f14e101ee", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_431788b552190979a45ff82b300ecbb705bab2c01154d5d993397b96c0dc0f7a", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
     { id = "gpl3_4510faa646d5f8447ff7bd2750312d7a4cb187dfd2e030caef4353544e88806c", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_48f635452e09b0df6d9bdd67819e55d0ae6754a3b714bd5ad5f0bc7a5ee25395", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_4fc77f314ad73c7a466104f5ed6f975648e267c5ea3605698183ebcce25c10bd", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
     { id = "gpl3_53736f747392c0818c4f9740abd7e75c75ac5ec2001d5a8c20e002fe4351c0d3", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_637bf57ec7fd86fdf4839e9ef7aad1e3001aa728790d40092b242ac92eae33f7", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_7d0f5e80f6fa5f13105887dc8a4ad064e85eaef475aab261f2d8187e4aaf3f68", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_997b26797b036b060bf2d5a406247f9d3db3fc9ba763196a5f0c6521094ad3e8", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_a8161f54442526850609d04d36d4a8d0ae0552ad6fc7028d35b7a1886af84119", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_bc718b0769454f2e5235df35a0f41b26046d6cf381d8c1d43c2562ee43a289f8", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_c863c1144a0ffb680ccd757804578dd70161cc730b80d6c1f1893522a757ddff", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_db27275e81ef38113a7c68dba94dac497103800f9b5cbb67daa9a6ea6642da99", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_df05d1dc50911c0bb9916d3868089a834c119ab826012cb4f560dd42eb503f0b", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_e23e497caa06e0b923592602325ecfa8c4045100451d1873bdb1d250130873e2", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_e86a5e124b5f17fb66b4ef5a18d94f2ada5cbd0b9c20fdda55dfdc3071104e59", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_e965621ea4c7de3f2d035badc7bda7826b7e0ffd680d82840d9db5562e29c99b", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_f8650f91fbe574c85db16dc76794e6baa0a5f858f92bab799f1fedf3b7dbd3f3", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
-    { id = "gpl3_f9c261af2b75499f5439a5d1ea33344c61ef839b26d67d9cc99e2856407cbd3a", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_780248d9b17daa447d594cc5fb46d0d262d7bb41cb40d01d8674e909b620e9f7", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_83afdde49ee996865976f080803081c991659b35feb1344741aeed4ab25f1cd0", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_930bb8627ddf3179bed137393f552528840440c35422d627b90a20eb88a1055d", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_b051b96c5ef3d4d5a804a3b0ad9568d702d39f6abe7e8805ce132ce03d0d1720", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_b77d84dedc6168c5112a23949467d2b1fe74fef34d234625e603dd50fcac4555", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_ba007d0dfea05e4187d5d5cced6bc76d015b58d8df501261a93c7dc2bfb194cb", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_cc16d2b28dd9572c7eab8c3b9be6296b77915ed73ffe35fc449d8f9bf09b0c42", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_d643b8405e20a498980cc5ce69b74162cffb35757a70e2f4dcea7e610b054d58", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_dca1b776d626011cd9ef3c2be87336e1626aacf7cac49fb5fdc952240d1b1f57", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
+    { id = "gpl3_e5e4ffb6593ff784124608179ba0b38db4938977c70aa214662e273580956164", message = "type conversion to types.FilesystemPath from non-constant without Validate() check" },
 ]
 
 # Redundant intermediate type conversions
 [redundant-conversion]
 entries = [
-    { id = "gpl3_04e50a2231e32f4e95780b7a7e5b7d628b0776b8844e730bcd14718ce3bdb896", message = "redundant intermediate conversion to string in types.FilesystemPath(string(...)); use types.FilesystemPath(...) directly" },
+    { id = "gpl3_32352d823378d9fc14bb48a376acfa2b52576b720529b60bf4e11ff3817f53ae", message = "redundant intermediate conversion to string in types.FilesystemPath(string(...)); use types.FilesystemPath(...) directly" },
 ]
 
 # Structs with validatable fields but no Validate() method
