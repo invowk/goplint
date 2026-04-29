@@ -601,12 +601,20 @@ reason = "service object; invariants enforced by constructor"
 
 # Service objects — module resolution
 [[exceptions]]
-pattern = "invowkmod.Resolver.struct-validate"
+pattern = "modulesync.Resolver.struct-validate"
 reason = "stateful service with mutex; constructor returns error"
 
 [[exceptions]]
-pattern = "invowkmod.GitFetcher.struct-validate"
+pattern = "modulesync.GitFetcher.struct-validate"
 reason = "service object; empty cacheDir valid for default"
+
+[[exceptions]]
+pattern = "modulesync.TagInfo.struct-validate"
+reason = "go-git pass-through; Name string already excepted"
+
+[[exceptions]]
+pattern = "modulesync.tagInfo.*"
+reason = "go-git pass-through tag metadata"
 
 # Zero-field stateless services
 [[exceptions]]
@@ -1432,14 +1440,42 @@ reason = "filepath.Join recursive boundary"
 review_after = "2027-06-01"
 blocked_by = "provision package typed path migration"
 
-# invowkmod — CUE text manipulation and resolver internals
+# module sync — CUE text manipulation and resolver internals
 [[exceptions]]
-pattern = "invowkmod.Resolver.*.*"
+pattern = "modulesync.Resolver.*.*"
 reason = "resolver internals — filepath.Join and cache path operations"
 
 [[exceptions]]
-pattern = "invowkmod.Resolver.*.return.*"
+pattern = "modulesync.Resolver.*.return.*"
 reason = "resolver internal returns"
+
+[[exceptions]]
+pattern = "modulesync.isGitURL.*"
+reason = "resolver helper classifies raw CLI identifier strings"
+
+[[exceptions]]
+pattern = "modulesync.resolveIdentifier.*"
+reason = "resolver helper matches raw CLI identifier strings"
+
+[[exceptions]]
+pattern = "modulesync.buildAmbiguousError.*"
+reason = "resolver helper reports raw CLI identifier strings"
+
+[[exceptions]]
+pattern = "modulesync.isSupportedGitURLPrefix.*"
+reason = "resolver helper validates raw Git URL strings"
+
+[[exceptions]]
+pattern = "modulesync.computeNamespace.*"
+reason = "resolver helper formats namespace from resolved version string"
+
+[[exceptions]]
+pattern = "modulesync.extractModuleFromInvowkmod.*"
+reason = "resolver helper scans raw invowkmod CUE text"
+
+[[exceptions]]
+pattern = "modulesync.isValidVersionString.*"
+reason = "Git adapter filters raw tag strings before SemVer construction"
 
 [[exceptions]]
 pattern = "invowkmod.copyDir.*"
@@ -3127,12 +3163,16 @@ reason = "TUI display DTO; validatable fields are display config"
 # --- Other Intentionally Deferred ---
 
 [[exceptions]]
-pattern = "invowkmod.TagInfo.struct-validate-fields"
+pattern = "modulesync.TagInfo.struct-validate-fields"
 reason = "go-git pass-through; Name string already excepted"
 
 [[exceptions]]
-pattern = "invowkmod.GitFetcher.struct-validate-fields"
+pattern = "modulesync.GitFetcher.struct-validate-fields"
 reason = "service object; CacheDir from constructor"
+
+[[exceptions]]
+pattern = "modulesync.Resolver.struct-validate-fields"
+reason = "stateful service with mutex; constructor validates filesystem paths"
 
 [[exceptions]]
 pattern = "invowkmod.LockFile.struct-validate-fields"
