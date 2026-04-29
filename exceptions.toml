@@ -180,6 +180,18 @@ reason = "import cycle: tui->tuiserver; method params"
 pattern = "tuiserver.*.*.*.*"
 reason = "import cycle: tui->tuiserver; method returns"
 
+[[exceptions]]
+pattern = "tuiwire.*.*"
+reason = "JSON wire format for delegated TUI protocol types"
+
+[[exceptions]]
+pattern = "tuiwire.*.*.*"
+reason = "JSON wire format for delegated TUI protocol params"
+
+[[exceptions]]
+pattern = "tuiwire.*.*.*.*"
+reason = "JSON wire format for delegated TUI protocol returns"
+
 # =============================================================================
 # Free-Form User Input
 # =============================================================================
