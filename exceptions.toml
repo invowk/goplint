@@ -693,6 +693,10 @@ pattern = "invowkmod.*.constructor"
 reason = "DTOs and data types; constructed via struct literals"
 
 [[exceptions]]
+pattern = "moduleops.*.constructor"
+reason = "application adapter DTOs/options; constructed via struct literals at command boundaries"
+
+[[exceptions]]
 pattern = "config.*.constructor"
 reason = "config DTOs; populated by Viper mapstructure"
 
@@ -2529,12 +2533,36 @@ pattern = "invowkmod.Create.return.*"
 reason = "filesystem boundary — created module directory path"
 
 [[exceptions]]
-pattern = "invowkmod.Unpack.return.*"
+pattern = "moduleops.Unpack.return.*"
 reason = "filesystem boundary — extracted module path"
 
 [[exceptions]]
-pattern = "invowkmod.pruneVendorDir.return.*"
+pattern = "moduleops.downloadFile.*"
+reason = "HTTP/filesystem adapter boundary — raw URL and temp file paths"
+
+[[exceptions]]
+pattern = "moduleops.extractFile.*"
+reason = "ZIP/filesystem adapter boundary — destination path from validated archive extraction"
+
+[[exceptions]]
+pattern = "moduleops.pruneVendorDir.*"
 reason = "filesystem boundary — pruned directory paths"
+
+[[exceptions]]
+pattern = "moduleops.*.*.*"
+reason = "application adapter boundary — filesystem operation returns and diagnostics use raw OS path strings"
+
+[[exceptions]]
+pattern = "auditllm.*.*"
+reason = "LLM adapter boundary — provider names, prompts, models, and wire fields are external strings"
+
+[[exceptions]]
+pattern = "auditllm.*.*.*"
+reason = "LLM adapter boundary — provider names, prompts, models, and wire fields are external strings"
+
+[[exceptions]]
+pattern = "auditllm.*.*.*.*"
+reason = "LLM adapter boundary — provider names, prompts, models, and wire fields are external strings"
 
 [[exceptions]]
 pattern = "invowkmod.ValidationResult.AddIssue.message"
@@ -3179,11 +3207,11 @@ pattern = "invowkmod.LockFile.struct-validate-fields"
 reason = "mutable entity (//goplint:mutable); Modules map mutated by resolver"
 
 [[exceptions]]
-pattern = "invowkmod.UnpackOptions.struct-validate-fields"
+pattern = "moduleops.UnpackOptions.struct-validate-fields"
 reason = "wire boundary; Source is external path from caller"
 
 [[exceptions]]
-pattern = "invowkmod.VendorOptions.struct-validate-fields"
+pattern = "moduleops.VendorOptions.struct-validate-fields"
 reason = "wire boundary; ModuleDir from caller"
 
 [[exceptions]]
