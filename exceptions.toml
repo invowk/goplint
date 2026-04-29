@@ -3032,6 +3032,22 @@ reason = "internal result struct from CreateRuntimeRegistry()"
 pattern = "deps.*.cast-validation"
 reason = "DependencyMessage display-text casts from fmt.Sprintf — pre-formatted, not raw input"
 
+[[exceptions]]
+pattern = "runtime.VirtualScriptOptions.*"
+reason = "internal CLI subprocess adapter DTO carries script text, argv, and env strings across a process boundary"
+
+[[exceptions]]
+pattern = "commandadapters.NewDiscoveryService.constructor-validate"
+reason = "adapter constructor has no fallible invariants; nil provider remains valid for tests"
+
+[[exceptions]]
+pattern = "commandadapters.NewDiscoveryService.constructor-return-error"
+reason = "adapter constructor has no fallible invariants; nil provider remains valid for tests"
+
+[[exceptions]]
+pattern = "commandadapters.discoveryRequestCache.lookups.validate-delegation"
+reason = "request-local cache entries are validated when produced by discovery; map contents are not user domain state"
+
 # =============================================================================
 # Orphaned Validator Audit — Constant-Only Types
 # =============================================================================
