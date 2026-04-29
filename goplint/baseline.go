@@ -5,6 +5,7 @@ package goplint
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -213,68 +214,33 @@ func WriteBaseline(path string, findings map[string][]BaselineFinding) error {
 }
 
 func (b *BaselineConfig) categoryForName(name string) BaselineCategory {
-	switch name {
-	case CategoryPrimitive:
-		return b.Primitive
-	case CategoryMissingValidate:
-		return b.MissingValidate
-	case CategoryMissingStringer:
-		return b.MissingStringer
-	case CategoryMissingConstructor:
-		return b.MissingConstructor
-	case CategoryWrongConstructorSig:
-		return b.WrongConstructorSig
-	case CategoryWrongValidateSig:
-		return b.WrongValidateSig
-	case CategoryWrongStringerSig:
-		return b.WrongStringerSig
-	case CategoryMissingFuncOptions:
-		return b.MissingFuncOptions
-	case CategoryMissingImmutability:
-		return b.MissingImmutability
-	case CategoryMissingStructValidate:
-		return b.MissingStructValidate
-	case CategoryWrongStructValidateSig:
-		return b.WrongStructValidateSig
-	case CategoryUnvalidatedCast:
-		return b.UnvalidatedCast
-	case CategoryUnvalidatedCastInconclusive:
-		return b.UnvalidatedCastInconclusive
-	case CategoryUnusedValidateResult:
-		return b.UnusedValidateResult
-	case CategoryUnusedConstructorError:
-		return b.UnusedConstructorError
-	case CategoryMissingConstructorValidate:
-		return b.MissingConstructorValidate
-	case CategoryMissingConstructorValidateInc:
-		return b.MissingConstructorValidateInc
-	case CategoryIncompleteValidateDelegation:
-		return b.IncompleteValidateDelegation
-	case CategoryNonZeroValueField:
-		return b.NonZeroValueField
-	case CategoryWrongFuncOptionType:
-		return b.WrongFuncOptionType
-	case CategoryEnumCueMissingGo:
-		return b.EnumCueMissingGo
-	case CategoryEnumCueExtraGo:
-		return b.EnumCueExtraGo
-	case CategoryUseBeforeValidateSameBlock:
-		return b.UseBeforeValidateSameBlock
-	case CategoryUseBeforeValidateCrossBlock:
-		return b.UseBeforeValidateCrossBlock
-	case CategoryUseBeforeValidateInconclusive:
-		return b.UseBeforeValidateInconclusive
-	case CategorySuggestValidateAll:
-		return b.SuggestValidateAll
-	case CategoryMissingConstructorErrorReturn:
-		return b.MissingConstructorErrorReturn
-	case CategoryRedundantConversion:
-		return b.RedundantConversion
-	case CategoryMissingStructValidateFields:
-		return b.MissingStructValidateFields
-	default:
+	cat, ok := b.categoriesByName()[name]
+	if !ok {
 		return BaselineCategory{}
 	}
+	return cat
+}
+
+func (b *BaselineConfig) categoriesByName() map[string]BaselineCategory {
+	if b == nil {
+		return nil
+	}
+	value := reflect.ValueOf(*b)
+	typ := value.Type()
+	categoryType := reflect.TypeFor[BaselineCategory]()
+	categories := make(map[string]BaselineCategory, len(BaselinedCategoryNames()))
+	for i := range typ.NumField() {
+		field := typ.Field(i)
+		if field.Type != categoryType {
+			continue
+		}
+		tag := strings.Split(field.Tag.Get("toml"), ",")[0]
+		if tag == "" || tag == "-" {
+			continue
+		}
+		categories[tag] = value.Field(i).Interface().(BaselineCategory)
+	}
+	return categories
 }
 
 // emptyBaseline returns a baseline that matches nothing.

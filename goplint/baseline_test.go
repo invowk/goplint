@@ -5,6 +5,7 @@ package goplint
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -678,9 +679,18 @@ func TestBaselineCategoryCompleteness(t *testing.T) {
 
 	// Verify buildLookup() initializes an entry for each category.
 	bl := emptyBaseline()
+	baselineFields := bl.categoriesByName()
 	for _, cat := range baselinedCategories {
+		if _, ok := baselineFields[cat]; !ok {
+			t.Errorf("BaselineConfig missing TOML field for category %q", cat)
+		}
 		if _, ok := bl.lookupByID[cat]; !ok {
 			t.Errorf("buildLookup() missing ID entry for category %q", cat)
+		}
+	}
+	for cat := range baselineFields {
+		if !slices.Contains(baselinedCategories, cat) {
+			t.Errorf("BaselineConfig has unexpected TOML category %q", cat)
 		}
 	}
 
