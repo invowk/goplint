@@ -96,6 +96,7 @@ type flagState struct {
 	auditReviewDates            bool
 	checkEnumSync               bool
 	suggestValidateAll          bool
+	checkBoundaryRequest        bool
 
 	// runtime caches/state are intentionally analyzer-instance scoped.
 	overdueReviewMu   sync.Mutex
@@ -360,6 +361,18 @@ func modeFlagSpecs() []modeFlagSpec {
 			},
 		},
 		{
+			flagName:          "check-boundary-request-validation",
+			usage:             "report exported Request/Options boundaries that use validatable parameters before Validate()",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkBoundaryRequest
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkBoundaryRequest
+			},
+		},
+		{
 			flagName:          "suggest-validate-all",
 			usage:             "report structs with Validate() + validatable fields but no //goplint:validate-all directive (advisory)",
 			defaultValue:      false,
@@ -525,6 +538,7 @@ type runConfig struct {
 	auditReviewDates            bool
 	checkEnumSync               bool
 	suggestValidateAll          bool
+	checkBoundaryRequest        bool
 }
 
 func newRunConfigForState(state *flagState) runConfig {

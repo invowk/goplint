@@ -670,6 +670,42 @@ reason = "has AddDirectDep() mutation; DDD Entity"
 pattern = "invowkmod.LockFile.struct-validate"
 reason = "Modules map mutated by resolver; DDD Entity"
 
+[[exceptions]]
+pattern = "audit.EnvChecker.struct-validate"
+reason = "zero-field stateless checker; no invariants"
+
+[[exceptions]]
+pattern = "audit.LockFileChecker.struct-validate"
+reason = "zero-field stateless checker; no invariants"
+
+[[exceptions]]
+pattern = "audit.ModuleMetadataChecker.struct-validate"
+reason = "zero-field stateless checker; no invariants"
+
+[[exceptions]]
+pattern = "audit.NetworkChecker.struct-validate"
+reason = "zero-field stateless checker; no invariants"
+
+[[exceptions]]
+pattern = "audit.ScriptChecker.struct-validate"
+reason = "zero-field stateless checker; no invariants"
+
+[[exceptions]]
+pattern = "audit.SymlinkChecker.struct-validate"
+reason = "zero-field stateless checker; no invariants"
+
+[[exceptions]]
+pattern = "audit.LLMChecker.struct-validate"
+reason = "service adapter; completer and concurrency are runtime dependencies"
+
+[[exceptions]]
+pattern = "audit.Correlator.struct-validate"
+reason = "service object; correlation rules are declarative package constants validated by NewCorrelator"
+
+[[exceptions]]
+pattern = "audit.Scanner.struct-validate"
+reason = "service object; checkers, correlator, and config provider are runtime dependencies"
+
 # Registries (post-construction population)
 [[exceptions]]
 pattern = "runtime.Registry.struct-validate"
@@ -737,6 +773,22 @@ pattern = "audit.SymlinkRef.constructor"
 reason = "scanner snapshot DTO; constructed only by scan context filesystem walk"
 
 [[exceptions]]
+pattern = "audit.ScanContext.constructor"
+reason = "immutable scanner snapshot DTO; constructed only by BuildScanContext"
+
+[[exceptions]]
+pattern = "audit.ScannedInvowkfile.constructor"
+reason = "scanner snapshot DTO; constructed during scan context discovery"
+
+[[exceptions]]
+pattern = "audit.ScannedModule.constructor"
+reason = "scanner snapshot DTO; constructed during scan context discovery"
+
+[[exceptions]]
+pattern = "audit.ScriptRef.constructor"
+reason = "scanner snapshot DTO; constructed while deriving script views"
+
+[[exceptions]]
 pattern = "sshserver.*.constructor"
 reason = "SSH server DTOs/config; constructed via struct literals"
 
@@ -793,6 +845,14 @@ reason = "cfg, engine, sshServer, provisioner are required deps, not optional"
 [[exceptions]]
 pattern = "discovery.Discovery.func-options"
 reason = "cfg is a required param, not optional"
+
+[[exceptions]]
+pattern = "audit.Diagnostic.func-options"
+reason = "severity, code, and message are required constructor inputs; only path is optional"
+
+[[exceptions]]
+pattern = "audit.Scanner.func-options"
+reason = "config provider is a required scanner dependency, not optional configuration"
 
 # =============================================================================
 # Primitive Bulk Exceptions — TUI Internal Model State
@@ -3484,6 +3544,206 @@ pattern = "tui.SpinBuilder.struct-validate-fields"
 reason = "builder pattern; fields validated when Build() is called"
 
 # =============================================================================
+# Audit scanner/reporting backlog — intentional DTOs and text-analysis surfaces
+# =============================================================================
+
+[[exceptions]]
+pattern = "audit.CorrelationRule.*"
+reason = "declarative rule metadata; strings are checker IDs and rendered finding text"
+
+[[exceptions]]
+pattern = "audit.Finding.*"
+reason = "audit result DTO; fields are report identity, line numbers, and rendered remediation text"
+
+[[exceptions]]
+pattern = "audit.Report.*"
+reason = "audit summary DTO; counts and duration are derived scanner statistics"
+
+[[exceptions]]
+pattern = "audit.Report.CountBySeverity.return.*"
+reason = "derived summary counts keyed by typed severity"
+
+[[exceptions]]
+pattern = "audit.Report.DurationMillis.return.*"
+reason = "JSON summary duration value derived from time.Duration"
+
+[[exceptions]]
+pattern = "audit.ScanContext.ScriptCount.return.*"
+reason = "derived count from immutable scanner snapshot"
+
+[[exceptions]]
+pattern = "audit.ScanContext.addDiagnostic.message"
+reason = "diagnostic text assembled at scanner boundary"
+
+[[exceptions]]
+pattern = "audit.ScanContext.struct-validate-fields"
+reason = "immutable scanner snapshot DTO; constructed by BuildScanContext"
+
+[[exceptions]]
+pattern = "audit.ScannedInvowkfile.SurfaceID"
+reason = "scanner surface identifier; string is either module ID text or filesystem path text"
+
+[[exceptions]]
+pattern = "audit.ScannedInvowkfile.struct-validate-fields"
+reason = "scanner snapshot DTO; fields populated from parse/discovery results"
+
+[[exceptions]]
+pattern = "audit.ScannedModule.SurfaceID"
+reason = "scanner surface identifier; string is either module ID text or filesystem path text"
+
+[[exceptions]]
+pattern = "audit.ScannedModule.struct-validate-fields"
+reason = "scanner snapshot DTO; fields populated from parse/discovery/filesystem results"
+
+[[exceptions]]
+pattern = "audit.ScriptRef.SurfaceID"
+reason = "scanner surface identifier; string is either module ID text or filesystem path text"
+
+[[exceptions]]
+pattern = "audit.ScriptRef.ImplIndex"
+reason = "script implementation index captured from invowkfile slice position"
+
+[[exceptions]]
+pattern = "audit.ScriptRef.resolvedContent"
+reason = "script body snapshot for content-analysis checkers"
+
+[[exceptions]]
+pattern = "audit.ScriptRef.Content.return.*"
+reason = "script body accessor for content-analysis checkers"
+
+[[exceptions]]
+pattern = "audit.ScriptRef.struct-validate-fields"
+reason = "scanner snapshot DTO; fields populated from validated invowkfile/module data"
+
+[[exceptions]]
+pattern = "audit.*Checker.Name.return.*"
+reason = "checker interface identifier used in report provenance"
+
+[[exceptions]]
+pattern = "audit.*Checker.check*.content"
+reason = "content-analysis helper scans raw script text"
+
+[[exceptions]]
+pattern = "audit.ModuleMetadataChecker.checkTyposquatting.allIDs"
+reason = "typosquatting distance helper compares normalized module ID strings"
+
+[[exceptions]]
+pattern = "audit.NewLLMChecker.concurrency"
+reason = "runtime concurrency limit, not a domain value"
+
+[[exceptions]]
+pattern = "audit.LLMChecker.concurrency"
+reason = "runtime concurrency limit, not a domain value"
+
+[[exceptions]]
+pattern = "audit.llmFinding.*"
+reason = "LLM JSON response DTO; validated and converted before producing audit findings"
+
+[[exceptions]]
+pattern = "audit.LLMMalformedResponseError.RawResponse"
+reason = "diagnostic payload preserving raw provider response for troubleshooting"
+
+[[exceptions]]
+pattern = "audit.CheckerFailedError.CheckerName"
+reason = "checker interface identifier used in error reporting"
+
+[[exceptions]]
+pattern = "audit.parseFindings.raw"
+reason = "LLM boundary parser accepts raw provider text"
+
+[[exceptions]]
+pattern = "audit.buildUserPrompt.return.*"
+reason = "LLM prompt rendering output"
+
+[[exceptions]]
+pattern = "audit.prepareScripts.maxScriptChars"
+reason = "LLM prompt truncation limit"
+
+[[exceptions]]
+pattern = "audit.truncateScript.*"
+reason = "text truncation helper for LLM prompt content"
+
+[[exceptions]]
+pattern = "audit.truncateScript.return.*"
+reason = "text truncation helper for LLM prompt content"
+
+[[exceptions]]
+pattern = "audit.levenshtein.*"
+reason = "string-distance algorithm for typosquatting heuristics"
+
+[[exceptions]]
+pattern = "audit.levenshtein.return.*"
+reason = "string-distance algorithm for typosquatting heuristics"
+
+[[exceptions]]
+pattern = "audit.ParseSeverity.s"
+reason = "parse boundary from CLI/LLM text into Severity"
+
+[[exceptions]]
+pattern = "audit.Correlator.applyRules.surfaceID"
+reason = "correlation groups findings by scanner surface identifier"
+
+[[exceptions]]
+pattern = "audit.Correlator.applyEscalation.surfaceID"
+reason = "correlation groups findings by scanner surface identifier"
+
+[[exceptions]]
+pattern = "audit.appendScriptsFromInvowkfile.surfaceID"
+reason = "scanner surface identifier propagated into script refs"
+
+[[exceptions]]
+pattern = "audit.SymlinkChecker.*.surfaceID"
+reason = "scanner surface identifier propagated into symlink findings"
+
+[[exceptions]]
+pattern = "audit.isWithinBoundary.*"
+reason = "filesystem boundary helper compares filepath-cleaned strings"
+
+[[exceptions]]
+pattern = "invowk.auditJSONFinding.*"
+reason = "CLI JSON DTO fields use stable wire-format primitives"
+
+[[exceptions]]
+pattern = "invowk.auditJSONSummary.*"
+reason = "CLI JSON summary DTO fields are derived counts and duration"
+
+[[exceptions]]
+pattern = "invowk.renderAuditText.scanPath"
+reason = "CLI display label for scan target"
+
+[[exceptions]]
+pattern = "invowk.severityIcon.return.*"
+reason = "CLI display glyph selected from typed severity"
+
+[[exceptions]]
+pattern = "invowk.formatDuration.return.*"
+reason = "CLI display formatting helper"
+
+[[exceptions]]
+pattern = "invowk.buildProviderChecker.provider"
+reason = "CLI flag text parsed by LLM provider detection"
+
+[[exceptions]]
+pattern = "invowk.WatchCommandNotFoundError.Name"
+reason = "display-only command name in watch error detail"
+
+[[exceptions]]
+pattern = "invowkmod.Invowkmod.Author"
+reason = "CUE-parsed optional metadata text constrained by schema"
+
+[[exceptions]]
+pattern = "invowkmod.Invowkmod.License"
+reason = "CUE-parsed optional metadata text constrained by schema"
+
+[[exceptions]]
+pattern = "invowkmod.Invowkmod.Repository"
+reason = "CUE-parsed optional metadata text constrained by schema"
+
+[[exceptions]]
+pattern = "invowkmod.MissingTransitiveDepDiagnostic.CUESnippet.return.*"
+reason = "display-only: returns formatted CUE text for error messages"
+
+# =============================================================================
 # Explicit-only deps feature — internal helpers at OS/display boundaries
 # =============================================================================
 
@@ -3503,7 +3763,4 @@ reason = "parse boundary: already extracted from typed ModuleID via string()"
 pattern = "deps.findMatchingCommand.alternatives"
 reason = "parse boundary: normalized from typed CommandName values"
 
-[[exceptions]]
-pattern = "invowkmod.MissingTransitiveDepDiagnostic.CUESnippet"
-reason = "display-only: returns formatted CUE text for error messages"
 # =============================================================================

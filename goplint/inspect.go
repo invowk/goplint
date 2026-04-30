@@ -375,7 +375,8 @@ func isKnownDirectiveKey(key string) bool {
 		"mutable",
 		"no-delegate",
 		"enum-cue",
-		"validates-type":
+		"validates-type",
+		"trusted-boundary":
 		return true
 	default:
 		return false
@@ -419,6 +420,12 @@ func hasMutableDirective(genDoc *ast.CommentGroup, specDoc *ast.CommentGroup) bo
 // delegation checking even though its type has a Validate() method.
 func hasNoDelegateDirective(doc *ast.CommentGroup, lineComment *ast.CommentGroup) bool {
 	return hasDirectiveKey(doc, lineComment, "no-delegate")
+}
+
+// hasTrustedBoundaryDirective checks whether a function is an intentional
+// boundary exception because its caller has already validated the request.
+func hasTrustedBoundaryDirective(doc *ast.CommentGroup, lineComment *ast.CommentGroup) bool {
+	return hasDirectiveKey(doc, lineComment, "trusted-boundary")
 }
 
 // hasDirectiveKey checks whether the given directive key appears in any

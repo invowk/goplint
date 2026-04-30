@@ -63,6 +63,7 @@ func diagnosticCategoryRegistry() []CategorySpec {
 		{Name: CategoryMissingConstructorErrorReturn, BaselinePolicy: BaselineSuppressible, BaselineLabel: "Constructors returning validatable types without an error return"},
 		{Name: CategoryRedundantConversion, BaselinePolicy: BaselineSuppressible, BaselineLabel: "Redundant intermediate type conversions"},
 		{Name: CategoryMissingStructValidateFields, BaselinePolicy: BaselineSuppressible, BaselineLabel: "Structs with validatable fields but no Validate() method"},
+		{Name: CategoryUnvalidatedBoundaryRequest, BaselinePolicy: BaselineSuppressible, BaselineLabel: "Exported request/options boundaries using parameters before Validate()"},
 		{Name: CategoryUnknownDirective, BaselinePolicy: BaselineAlwaysVisible},
 		{Name: CategoryStaleException, BaselinePolicy: BaselineAuditOnly},
 		{Name: CategoryOverdueReview, BaselinePolicy: BaselineAuditOnly},

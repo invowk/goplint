@@ -481,6 +481,10 @@ func runTraversal(
 			if rc.checkConstructorErrUsage {
 				inspectConstructorErrorUsage(pass, n, cfg, bl)
 			}
+
+			if rc.checkBoundaryRequest {
+				inspectBoundaryRequestValidation(pass, n, cfg, bl)
+			}
 		}
 	})
 	return traverseErr

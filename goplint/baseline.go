@@ -47,6 +47,7 @@ type BaselineConfig struct {
 	MissingConstructorErrorReturn BaselineCategory `toml:"missing-constructor-error-return"`
 	RedundantConversion           BaselineCategory `toml:"redundant-conversion"`
 	MissingStructValidateFields   BaselineCategory `toml:"missing-struct-validate-fields"`
+	UnvalidatedBoundaryRequest    BaselineCategory `toml:"unvalidated-boundary-request"`
 
 	// lookupByID is an O(1) index keyed by category → finding ID.
 	lookupByID map[string]map[string]bool

@@ -248,6 +248,23 @@ func TestCheckValidateUsage(t *testing.T) {
 	runAnalysisTest(t, testdata, h.Analyzer, "validateusage")
 }
 
+// TestCheckBoundaryRequestValidation exercises
+// --check-boundary-request-validation against exported Request/Options
+// boundaries, including default-then-validate prologues and trusted-boundary
+// exceptions.
+//
+// NOT parallel: shares h.Analyzer.Flags state.
+func TestCheckBoundaryRequestValidation(t *testing.T) {
+	t.Parallel()
+
+	testdata := analysistest.TestData()
+	h := newAnalyzerHarness()
+	resetFlags(t, h)
+	setFlag(t, h.Analyzer, "check-boundary-request-validation", "true")
+
+	runAnalysisTest(t, testdata, h.Analyzer, "boundaryrequest")
+}
+
 // TestCheckConstructorErrorUsage exercises the --check-constructor-error-usage
 // mode against the constructorusage fixture, verifying that constructor calls
 // with error returns assigned to blank identifiers are flagged.
