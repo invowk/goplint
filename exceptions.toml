@@ -647,6 +647,14 @@ pattern = "discovery.DiscoveredCommandSet.struct-validate"
 reason = "maps populated post-construction"
 
 [[exceptions]]
+pattern = "audit.SymlinkRef.struct-validate"
+reason = "scanner snapshot DTO; fields populated from one filesystem walk and inspected read-only by checkers"
+
+[[exceptions]]
+pattern = "audit.scriptFileFacts.struct-validate"
+reason = "internal scanner snapshot DTO; fields populated together from filesystem stat/read facts"
+
+[[exceptions]]
 pattern = "runtime.ExecutionContext.struct-validate"
 reason = "13 fields set post-construction; DDD Entity"
 
@@ -723,6 +731,10 @@ reason = "container DTOs/options; constructed via struct literals"
 [[exceptions]]
 pattern = "discovery.*.constructor"
 reason = "discovery DTOs/results; constructed via struct literals"
+
+[[exceptions]]
+pattern = "audit.SymlinkRef.constructor"
+reason = "scanner snapshot DTO; constructed only by scan context filesystem walk"
 
 [[exceptions]]
 pattern = "sshserver.*.constructor"
