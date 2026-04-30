@@ -2747,6 +2747,10 @@ pattern = "invowkfile.NewValidationError.field"
 reason = "display text — field name for validation error"
 
 [[exceptions]]
+pattern = "invowkfile.NewValidationErrorWithCause.field"
+reason = "display text — field name for validation error"
+
+[[exceptions]]
 pattern = "invowkfile.ValidationError.Message"
 reason = "display text — validation error message"
 
