@@ -162,24 +162,6 @@ reason = "composite display string"
 pattern = "ModuleCollisionError.SecondSource"
 reason = "composite display string"
 
-# =============================================================================
-# Import Cycle Prevention
-# =============================================================================
-# Using typed fields would require importing a package that creates a
-# circular dependency.
-
-[[exceptions]]
-pattern = "tuiserver.*.*"
-reason = "import cycle: tui->tuiserver; JSON wire format for all protocol types"
-
-[[exceptions]]
-pattern = "tuiserver.*.*.*"
-reason = "import cycle: tui->tuiserver; method params"
-
-[[exceptions]]
-pattern = "tuiserver.*.*.*.*"
-reason = "import cycle: tui->tuiserver; method returns"
-
 [[exceptions]]
 pattern = "tuiwire.*.*"
 reason = "JSON wire format for delegated TUI protocol types"
@@ -191,6 +173,54 @@ reason = "JSON wire format for delegated TUI protocol params"
 [[exceptions]]
 pattern = "tuiwire.*.*.*.*"
 reason = "JSON wire format for delegated TUI protocol returns"
+
+[[exceptions]]
+pattern = "tuiserver.Client.*"
+reason = "HTTP client adapter boundary for delegated TUI protocol"
+
+[[exceptions]]
+pattern = "tuiserver.Client.*.*"
+reason = "HTTP client adapter params/returns for delegated TUI protocol"
+
+[[exceptions]]
+pattern = "tuiserver.Client.*.*.*"
+reason = "HTTP client adapter params/returns for delegated TUI protocol"
+
+[[exceptions]]
+pattern = "tuiserver.NewClient.*"
+reason = "HTTP client adapter constructor boundary"
+
+[[exceptions]]
+pattern = "tuiserver.Server.*"
+reason = "HTTP server adapter boundary for delegated TUI protocol"
+
+[[exceptions]]
+pattern = "tuiserver.Server.*.*"
+reason = "HTTP server adapter params/returns for delegated TUI protocol"
+
+[[exceptions]]
+pattern = "tuiserver.Server.*.*.*"
+reason = "HTTP server adapter params/returns for delegated TUI protocol"
+
+[[exceptions]]
+pattern = "tuiserver.TUIRequest.*"
+reason = "HTTP JSON request adapter boundary for delegated TUI protocol"
+
+[[exceptions]]
+pattern = "tuiserver.generateToken.*"
+reason = "crypto token generation boundary"
+
+[[exceptions]]
+pattern = "tuiserver.generateToken.return.*"
+reason = "crypto token generation boundary"
+
+[[exceptions]]
+pattern = "tuiserver.*.*.cast-validation"
+reason = "HTTP server/client adapter validates generated token and listen port at construction"
+
+[[exceptions]]
+pattern = "tuiserver.*.*.*.cast-validation"
+reason = "HTTP server/client adapter validates generated token and listen port at construction"
 
 # =============================================================================
 # Free-Form User Input
@@ -1620,11 +1650,11 @@ reason = "filepath.Join boundary — 9+ test sites pass string literals"
 
 [[exceptions]]
 pattern = "invowkfile.ParseShebang.content"
-reason = "script content — callers receive string from ResolveScript()"
+reason = "script content boundary"
 
 [[exceptions]]
 pattern = "invowkfile.ResolveInterpreter.scriptContent"
-reason = "script content boundary — 5 callers receive string from ResolveScript()"
+reason = "script content boundary"
 
 [[exceptions]]
 pattern = "RuntimeConfig.ResolveInterpreterFromScript.scriptContent"
@@ -1977,6 +2007,10 @@ reason = "constructor validates parameters inline via typed Validate() calls"
 [[exceptions]]
 pattern = "execute.NewRuntimeSelection.constructor-validate"
 reason = "constructor validates parameters inline — mode.Validate() + nil check match Validate() body"
+
+[[exceptions]]
+pattern = "commandsvc.NewWatchPlan.constructor-validate"
+reason = "constructor validates assembled plan before returning"
 
 # =============================================================================
 # Cast Validation Exceptions (CFA unvalidated-cast)
@@ -2872,7 +2906,7 @@ reason = "exec boundary — resolved script content"
 
 [[exceptions]]
 pattern = "invowkfile.Implementation.ResolveScriptWithModule.return.*"
-reason = "exec boundary — resolved script content"
+reason = "inline script content boundary"
 
 [[exceptions]]
 pattern = "invowkfile.Implementation.ResolveScriptWithFSAndModule.return.*"
