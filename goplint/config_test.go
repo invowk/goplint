@@ -328,7 +328,7 @@ func TestShouldAnalyzePackage(t *testing.T) {
 			name:            "partial prefix does not match",
 			includePackages: []string{"github.com/invowk/invowk"},
 			pkgPath:         "github.com/invowk/invowk-other",
-			want:            true, // HasPrefix matches — "invowk-other" starts with "invowk"
+			want:            false,
 		},
 		{
 			name:            "empty prefixes are ignored",

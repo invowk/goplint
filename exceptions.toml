@@ -3798,3 +3798,610 @@ pattern = "deps.findMatchingCommand.alternatives"
 reason = "parse boundary: normalized from typed CommandName values"
 
 # =============================================================================
+
+# =============================================================================
+# Nonzero Value-Type Fields
+# =============================================================================
+# Enabling method-level goplint:nonzero facts made these current value-field
+# uses explicit. They are required command/schema/result values or diagnostic
+# payload fields, not optional fields that should become pointers.
+
+[[exceptions]]
+pattern = "AmbiguousCommandError.CommandName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ArgsSubcommandConflictError.CommandName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ArgsSubcommandConflictError.FilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Argument.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ArgumentValidationError.CommandName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ArgumentValidationError.InvalidArg.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "BaseCLIEngine.binaryPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "BaseCLIEngine.sysctlOverridePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "BuildExecutionContextOptions.EnvInheritMode.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "BuildExecutionContextOptions.Platform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "BuildOptions.ContextDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "BuildOptions.Dockerfile.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "BuildOptions.Tag.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "BuildRegistryOptions.SelectedRuntime.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Command.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "CommandInfo.FilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "CommandInfo.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "CommandInfo.SimpleName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "CommandScopeLockError.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "CommandTreeEntry.FilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "CommandTreeEntry.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Config.BaseDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Config.BinaryMountPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Config.CacheDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Config.Host.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Config.InvowkBinaryPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Config.InvowkfilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Config.ModulesMountPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "FileNotFoundError.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "LoadError.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ConnectionInfo.Host.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ConnectionInfo.Token.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "CreateOptions.ParentDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "CustomCheck.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "CustomCheckDependency.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "DependencyError.CommandName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Diagnostic.path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "DiscoveredFile.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Discovery.baseDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Discovery.commandsDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "DryRunPlan.CommandName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "DryRunPlan.Platform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "DryRunPlan.Runtime.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "DryRunPlan.Timeout.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "EnvContext.InheritModeOverride.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "EnvVarCheck.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ExecutionContext.SelectedRuntime.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Finding.FilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Flag.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "FlagValidationError.CommandName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "GitFetcher.cacheDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Implementation.Timeout.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ImplementationMatch.Platform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ImplementationMatch.Runtime.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidArgumentNameError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidAuthTokenError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidBinaryNameError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidCheckNameError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidCommandIDError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidCommandNameError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidContainerIDError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidDotenvFilePathError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidDurationStringError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidEnvInheritModeError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidEnvVarNameError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidFilesystemPathError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidFlagNameError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidGlobPatternError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidHostAddressError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidHostFilesystemPathError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidHostMappingError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidImageTagError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidMountTargetPathError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidPlatformError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidPortMappingSpecError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidRuntimeModeError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidTokenValueError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "InvalidVolumeMountSpecError.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Invowkfile.FilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Invowkfile.ModulePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Invowkmod.FilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "LoadOptions.BaseDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "LoadOptions.ConfigDirPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "LoadOptions.ConfigFilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "LoadResult.SourcePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Module.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "PlatformConfig.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "PlatformRuntimeKey.Platform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "PlatformRuntimeKey.Runtime.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Request.BaseImage.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Request.ConfigPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Request.EnvInheritMode.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Request.InvowkfilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Request.Platform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Request.Runtime.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ResolvedModule.CachePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Result.ImageTag.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "RunOptions.Image.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "RunOptions.WorkDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "RunResult.ContainerID.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "RuntimeConfig.EnvInheritMode.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "RuntimeConfig.Name.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "RuntimeNotAllowedError.CommandName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "RuntimeNotAllowedError.Platform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "RuntimeNotAllowedError.Runtime.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "RuntimeSelection.mode.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ScanContext.rootPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ScanContextBuildError.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ScannedInvowkfile.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ScannedModule.LockPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ScannedModule.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ScriptRef.CommandName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ScriptRef.FilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ScriptRef.ModulePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ScriptRef.ScriptPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ServiceError.IssueID.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "SymlinkRef.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Token.CommandID.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Token.Value.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "UnsupportedPlatformError.CommandName.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "UnsupportedPlatformError.Current.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ValidationContext.FilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ValidationContext.Platform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ValidationError.FilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ValidationResult.InvowkfilePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ValidationResult.InvowkmodPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "ValidationResult.ModulePath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "VolumeMount.ContainerPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "VolumeMount.HostPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "WatchConfig.Debounce.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "WatchPlan.BaseDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "auditJSONDiagnostic.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "containerExecPrep.image.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "containerExecPrep.tempScriptPath.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "containerExecPrep.workDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "envInheritConfig.mode.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "invowkfileContainerConfig.Containerfile.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "invowkfileContainerConfig.Image.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "scriptFileFacts.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "validateOptions.platform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "validateOptions.workDir.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "vendoredModuleArtifact.Path.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "dryRunEnv.return.*"
+reason = "exec/OS boundary (projected environment map)"
+
+[[exceptions]]
+pattern = "matchLLMFindingToScript.byID"
+reason = "LLM wire attribution lookup uses JSON string IDs"
+
+[[exceptions]]
+pattern = "matchLLMFindingToScript.byName"
+reason = "LLM wire attribution lookup uses JSON command names"
+
+[[exceptions]]
+pattern = "matchLLMFindingToScript.nameCounts"
+reason = "LLM attribution uniqueness lookup"
+
+[[exceptions]]
+pattern = "scriptPromptID.return.0"
+reason = "LLM wire prompt ID string"
+
+[[exceptions]]
+pattern = "OperationError.Engine"
+reason = "external engine display name from adapter boundary"
+
+[[exceptions]]
+pattern = "OperationError.Operation"
+reason = "operation label for typed adapter error"
+
+[[exceptions]]
+pattern = "OperationError.Resource"
+reason = "resource path/tag for typed adapter error"

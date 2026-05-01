@@ -172,7 +172,7 @@ func joinTOMLKeys(keys []toml.Key) string {
 
 // ShouldAnalyzePackage reports whether diagnostics should be emitted for the
 // given package path. Returns true when include_packages is empty (no filter)
-// or when the path matches any prefix in include_packages. Non-matching
+// or when the path matches any import-path segment in include_packages. Non-matching
 // packages are still analyzed for fact export but their findings are suppressed.
 func (c *ExceptionConfig) ShouldAnalyzePackage(pkgPath string) bool {
 	if len(c.Settings.IncludePackages) == 0 {
@@ -182,7 +182,7 @@ func (c *ExceptionConfig) ShouldAnalyzePackage(pkgPath string) bool {
 		if prefix == "" {
 			continue
 		}
-		if strings.HasPrefix(pkgPath, prefix) {
+		if pkgPath == prefix || strings.HasPrefix(pkgPath, prefix+"/") {
 			return true
 		}
 	}

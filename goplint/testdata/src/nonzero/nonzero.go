@@ -30,6 +30,16 @@ func (m ModuleID) Validate() error {
 
 func (m ModuleID) String() string { return string(m) }
 
+type MethodAnnotatedName string // want MethodAnnotatedName:"nonzero"
+
+//goplint:nonzero
+func (m MethodAnnotatedName) Validate() error {
+	if m == "" {
+		return fmt.Errorf("empty method annotated name")
+	}
+	return nil
+}
+
 // ZeroValidType does NOT have //goplint:nonzero — zero value is valid.
 type ZeroValidType string
 
@@ -40,10 +50,11 @@ func (z ZeroValidType) String() string  { return string(z) }
 
 // ConfigWithNonZero uses nonzero types as value fields — should be flagged.
 type ConfigWithNonZero struct {
-	Name     CommandName   // want `struct field nonzero\.ConfigWithNonZero\.Name uses nonzero type CommandName as value`
-	Module   ModuleID      // want `struct field nonzero\.ConfigWithNonZero\.Module uses nonzero type ModuleID as value`
-	ZeroOK   ZeroValidType // NOT flagged — no nonzero annotation
-	internal string        // want `struct field nonzero\.ConfigWithNonZero\.internal uses primitive type string`
+	Name     CommandName         // want `struct field nonzero\.ConfigWithNonZero\.Name uses nonzero type CommandName as value`
+	Module   ModuleID            // want `struct field nonzero\.ConfigWithNonZero\.Module uses nonzero type ModuleID as value`
+	Method   MethodAnnotatedName // want `struct field nonzero\.ConfigWithNonZero\.Method uses nonzero type MethodAnnotatedName as value`
+	ZeroOK   ZeroValidType       // NOT flagged — no nonzero annotation
+	internal string              // want `struct field nonzero\.ConfigWithNonZero\.internal uses primitive type string`
 }
 
 // ConfigWithPointers uses *Type for optional nonzero fields — correct.
@@ -61,7 +72,7 @@ type MixedStruct struct {
 
 // EmbeddedNonZero embeds a nonzero type directly — should be flagged.
 type EmbeddedNonZero struct {
-	CommandName // want `struct field nonzero\.EmbeddedNonZero\.\(embedded\) uses nonzero type CommandName as value`
+	CommandName        // want `struct field nonzero\.EmbeddedNonZero\.\(embedded\) uses nonzero type CommandName as value`
 	Other       string // want `struct field nonzero\.EmbeddedNonZero\.Other uses primitive type string`
 }
 

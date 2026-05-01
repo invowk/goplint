@@ -461,12 +461,12 @@ func validateMethodReceiverFromExpr(pass *analysis.Pass, expr ast.Expr) (receive
 		return nil, false, false
 	}
 	sel, ok := stripParens(expr).(*ast.SelectorExpr)
-	if !ok || sel.Sel.Name != "Validate" {
+	if !ok || sel.Sel.Name != validateMethodName {
 		return nil, false, false
 	}
 
 	if selection, hasSelection := pass.TypesInfo.Selections[sel]; hasSelection {
-		if selection.Obj() == nil || selection.Obj().Name() != "Validate" {
+		if selection.Obj() == nil || selection.Obj().Name() != validateMethodName {
 			return nil, false, false
 		}
 		switch selection.Kind() {

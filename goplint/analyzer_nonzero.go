@@ -66,11 +66,12 @@ func inspectNonZero(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConfi
 	// Phase 1: Export facts for types with //goplint:nonzero directive.
 	for _, file := range pass.Files {
 		for _, decl := range file.Decls {
-			gd, ok := decl.(*ast.GenDecl)
-			if !ok {
-				continue
+			switch d := decl.(type) {
+			case *ast.GenDecl:
+				exportNonZeroFacts(pass, d)
+			case *ast.FuncDecl:
+				exportNonZeroFactForValidateMethod(pass, d)
 			}
-			exportNonZeroFacts(pass, gd)
 		}
 	}
 
@@ -193,4 +194,22 @@ func resolveTypeObject(t types.Type) types.Object {
 // GenDecl-level doc (for single-spec type blocks) and the TypeSpec-level doc.
 func hasNonZeroDirective(genDoc *ast.CommentGroup, specDoc *ast.CommentGroup) bool {
 	return hasDirectiveKey(genDoc, nil, "nonzero") || hasDirectiveKey(specDoc, nil, "nonzero")
+}
+
+func exportNonZeroFactForValidateMethod(pass *analysis.Pass, fd *ast.FuncDecl) {
+	if fd.Recv == nil || fd.Name == nil || fd.Name.Name != "Validate" || !hasDirectiveKey(fd.Doc, nil, "nonzero") {
+		return
+	}
+	if len(fd.Recv.List) == 0 {
+		return
+	}
+	recvType := fd.Recv.List[0].Type
+	if star, ok := recvType.(*ast.StarExpr); ok {
+		recvType = star.X
+	}
+	typeObj := resolveTypeObject(pass.TypesInfo.TypeOf(recvType))
+	if typeObj == nil {
+		return
+	}
+	pass.ExportObjectFact(typeObj, &NonZeroFact{})
 }
