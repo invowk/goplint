@@ -77,6 +77,18 @@ pattern = "BuildExecutionContextOptions.EnvVars"
 reason = "exec/OS boundary"
 
 [[exceptions]]
+pattern = "deps.IOContext.constructor"
+reason = "boundary DTO that mirrors runtime stream slots; constructed with literals at adapter edges"
+
+[[exceptions]]
+pattern = "deps.ExecutionContext.constructor"
+reason = "boundary DTO that decouples deps from runtime; constructed with literals at adapter edges"
+
+[[exceptions]]
+pattern = "commandsvc.WatchExecutionOutcome.constructor"
+reason = "watch callback result DTO; literal construction keeps command exit and infrastructure error clear"
+
+[[exceptions]]
 pattern = "BaseCLIEngine.cmdEnvOverrides"
 reason = "exec/OS boundary"
 
