@@ -2928,14 +2928,6 @@ reason = "parse boundary — extracted module ID from command string"
 pattern = "invowkfile.EnvConfig.GetVars.return.*"
 reason = "exec/OS boundary — env map for runtime consumption"
 
-[[exceptions]]
-pattern = "invowkfile.NewCommandScope.moduleID"
-reason = "parse boundary — module ID string from discovery"
-
-[[exceptions]]
-pattern = "invowkfile.NewCommandScope.globalModuleIDs"
-reason = "parse boundary — module ID list from discovery"
-
 # --- 1G: ModuleShortName Unvalidated-Cast ---
 # Filesystem boundary — OS-listed directory names already validated by discovery.
 
@@ -3520,10 +3512,6 @@ reason = "factory function; context built from already-validated invowkfile data
 [[exceptions]]
 pattern = "deps.NewContainerValidationContext.constructor-validate"
 reason = "factory function; returns stub context for dep validation"
-
-[[exceptions]]
-pattern = "invowkfile.NewCommandScope.constructor-validate"
-reason = "factory function; CommandScope populated from validated module data"
 
 [[exceptions]]
 pattern = "invowkmod.NewCommandScope.constructor-validate"
