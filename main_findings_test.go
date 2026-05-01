@@ -15,7 +15,7 @@ func TestParseFindingsJSONL(t *testing.T) {
 	t.Run("unknown category fails", func(t *testing.T) {
 		t.Parallel()
 		input := []byte(`{"category":"unknown-category","id":"id-1","message":"x"}`)
-		if _, err := parseFindingsJSONL(input); err == nil {
+		if _, err := goplint.CollectBaselineFindingsFromStream(input); err == nil {
 			t.Fatal("expected unknown category error")
 		}
 	})
@@ -27,9 +27,9 @@ func TestParseFindingsJSONL(t *testing.T) {
 			`{"category":"primitive","id":"id-prim","message":"struct field pkg.A.B uses primitive type string","posn":"pkg/a.go:2:1"}`,
 			"",
 		}, "\n"))
-		findings, err := parseFindingsJSONL(input)
+		findings, err := goplint.CollectBaselineFindingsFromStream(input)
 		if err != nil {
-			t.Fatalf("parseFindingsJSONL() error = %v", err)
+			t.Fatalf("goplint.CollectBaselineFindingsFromStream() error = %v", err)
 		}
 		if len(findings[goplint.CategoryUnknownDirective]) != 0 {
 			t.Fatal("expected unknown-directive findings to be excluded from baseline stream")
@@ -46,9 +46,9 @@ func TestParseFindingsJSONL(t *testing.T) {
 			`{"category":"primitive","id":"id-1","message":"msg-b","posn":"pkg/a.go:2:1"}`,
 			"",
 		}, "\n"))
-		findings, err := parseFindingsJSONL(input)
+		findings, err := goplint.CollectBaselineFindingsFromStream(input)
 		if err != nil {
-			t.Fatalf("parseFindingsJSONL() error = %v", err)
+			t.Fatalf("goplint.CollectBaselineFindingsFromStream() error = %v", err)
 		}
 		entries := findings[goplint.CategoryPrimitive]
 		if len(entries) != 1 {
@@ -62,7 +62,7 @@ func TestParseFindingsJSONL(t *testing.T) {
 	t.Run("malformed record fails", func(t *testing.T) {
 		t.Parallel()
 		input := []byte(`{"category":"primitive","message":"missing-id"}`)
-		if _, err := parseFindingsJSONL(input); err == nil {
+		if _, err := goplint.CollectBaselineFindingsFromStream(input); err == nil {
 			t.Fatal("expected malformed record error")
 		}
 	})
@@ -70,9 +70,9 @@ func TestParseFindingsJSONL(t *testing.T) {
 	t.Run("last line without trailing newline is parsed", func(t *testing.T) {
 		t.Parallel()
 		input := []byte(`{"category":"primitive","id":"id-final","message":"struct field pkg.A.B uses primitive type string","posn":"pkg/a.go:4:2"}`)
-		findings, err := parseFindingsJSONL(input)
+		findings, err := goplint.CollectBaselineFindingsFromStream(input)
 		if err != nil {
-			t.Fatalf("parseFindingsJSONL() error = %v", err)
+			t.Fatalf("goplint.CollectBaselineFindingsFromStream() error = %v", err)
 		}
 		if got := len(findings[goplint.CategoryPrimitive]); got != 1 {
 			t.Fatalf("expected 1 primitive finding, got %d", got)
@@ -81,9 +81,9 @@ func TestParseFindingsJSONL(t *testing.T) {
 
 	t.Run("whitespace-only input returns empty findings", func(t *testing.T) {
 		t.Parallel()
-		findings, err := parseFindingsJSONL([]byte(" \n\t "))
+		findings, err := goplint.CollectBaselineFindingsFromStream([]byte(" \n\t "))
 		if err != nil {
-			t.Fatalf("parseFindingsJSONL() error = %v", err)
+			t.Fatalf("goplint.CollectBaselineFindingsFromStream() error = %v", err)
 		}
 		if len(findings) != 0 {
 			t.Fatalf("expected 0 categories, got %d", len(findings))
@@ -93,7 +93,7 @@ func TestParseFindingsJSONL(t *testing.T) {
 	t.Run("trailing garbage after valid record fails", func(t *testing.T) {
 		t.Parallel()
 		input := []byte(`{"category":"primitive","id":"id-ok","message":"ok"}{"bad":`)
-		if _, err := parseFindingsJSONL(input); err == nil {
+		if _, err := goplint.CollectBaselineFindingsFromStream(input); err == nil {
 			t.Fatal("expected decoding error for trailing garbage")
 		}
 	})
@@ -108,9 +108,9 @@ func TestParseFindingsJSONLIgnoresNonFindingKinds(t *testing.T) {
 		"",
 	}, "\n"))
 
-	findings, err := parseFindingsJSONL(input)
+	findings, err := goplint.CollectBaselineFindingsFromStream(input)
 	if err != nil {
-		t.Fatalf("parseFindingsJSONL() error = %v", err)
+		t.Fatalf("goplint.CollectBaselineFindingsFromStream() error = %v", err)
 	}
 	if got := len(findings[goplint.CategoryPrimitive]); got != 1 {
 		t.Fatalf("expected 1 primitive finding, got %d", got)

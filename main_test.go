@@ -319,7 +319,7 @@ func TestAggregateGlobalStalePatterns(t *testing.T) {
 	t.Run("deduplicates package coverage per pattern", func(t *testing.T) {
 		t.Parallel()
 		stream := append(
-			makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/a": {
 					"goplint": {
 						{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "dup.pattern" matched no diagnostics (reason: x)`},
@@ -327,7 +327,7 @@ func TestAggregateGlobalStalePatterns(t *testing.T) {
 					},
 				},
 			}),
-			makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/b": {
 					"goplint": {},
 				},
@@ -352,14 +352,14 @@ func TestAggregateGlobalStalePatterns(t *testing.T) {
 	t.Run("reports patterns stale in all packages", func(t *testing.T) {
 		t.Parallel()
 		stream := append(
-			makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/a": {
 					"goplint": {
 						{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: x)`},
 					},
 				},
 			}),
-			makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/b": {
 					"goplint": {
 						{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: y)`},
@@ -426,14 +426,14 @@ func TestAuditExceptionsGlobalExitBehavior(t *testing.T) {
 	t.Run("fails when globally stale patterns are found", func(t *testing.T) {
 		t.Parallel()
 		stream := append(
-			makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/a": {
 					"goplint": {
 						{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: x)`},
 					},
 				},
 			}),
-			makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/b": {
 					"goplint": {
 						{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: y)`},
@@ -460,14 +460,14 @@ func TestAuditExceptionsGlobalExitBehavior(t *testing.T) {
 	t.Run("succeeds when no globally stale patterns are found", func(t *testing.T) {
 		t.Parallel()
 		stream := append(
-			makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/a": {
 					"goplint": {
 						{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "only.in.a" matched no diagnostics (reason: x)`},
 					},
 				},
 			}),
-			makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/b": {
 					"goplint": {},
 				},
@@ -555,7 +555,7 @@ func TestExtractPatternFromStaleDiagnostic(t *testing.T) {
 
 	t.Run("prefers URL metadata", func(t *testing.T) {
 		t.Parallel()
-		diag := analysisDiagnostic{
+		diag := goplint.AnalysisDiagnostic{
 			Category: goplint.CategoryStaleException,
 			Message:  `stale exception: pattern "wrong" matched no diagnostics (reason: test)`,
 			URL: goplint.DiagnosticURLForFindingWithMeta(
@@ -571,7 +571,7 @@ func TestExtractPatternFromStaleDiagnostic(t *testing.T) {
 
 	t.Run("falls back to message parsing", func(t *testing.T) {
 		t.Parallel()
-		diag := analysisDiagnostic{
+		diag := goplint.AnalysisDiagnostic{
 			Category: goplint.CategoryStaleException,
 			Message:  `stale exception: pattern "pkg.Type.Legacy" matched no diagnostics (reason: legacy)`,
 		}
@@ -595,7 +595,7 @@ func TestTolerateAnalyzerExit(t *testing.T) {
 	t.Run("exit error with json output accepted", func(t *testing.T) {
 		t.Parallel()
 		exitErr := makeExitError(t)
-		stdout := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		stdout := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {"goplint": {}},
 		})
 		if err := tolerateAnalyzerExit(exitErr, stdout); err != nil {
@@ -631,7 +631,7 @@ func TestGenerateBaseline(t *testing.T) {
 			if !ok {
 				t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
 			}
-			stream := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			stream := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/pkg": {"goplint": {}},
 			})
 			if _, err := buf.Write(stream); err != nil {
@@ -689,7 +689,7 @@ func TestGenerateBaseline(t *testing.T) {
 			if !ok {
 				t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
 			}
-			if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/pkg": {"goplint": {}},
 			})); err != nil {
 				return err
@@ -723,7 +723,7 @@ func TestGenerateBaseline(t *testing.T) {
 			if !ok {
 				t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
 			}
-			if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+			if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/pkg": {
 					"goplint": {
 						{
@@ -776,7 +776,7 @@ func TestUpdateBaselineRoundTripSuppression(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
 		}
-		if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {"goplint": {}},
 		})); err != nil {
 			return err
@@ -833,7 +833,7 @@ func TestUpdateBaselineRoundTripSuppression(t *testing.T) {
 }
 
 // makeAnalysisJSON serializes the go/analysis -json output format for testing.
-func makeAnalysisJSON(t *testing.T, result analysisResult) []byte {
+func makeAnalysisJSON(t *testing.T, result goplint.AnalysisResult) []byte {
 	t.Helper()
 	data, err := json.Marshal(result)
 	if err != nil {

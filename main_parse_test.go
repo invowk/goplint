@@ -13,7 +13,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("single package with findings", func(t *testing.T) {
 		t.Parallel()
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					suppressibleDiagnostic("primitive", "struct field pkg.Foo.Bar uses primitive type string"),
@@ -22,7 +22,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := parseAnalysisJSON(input)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -39,16 +39,16 @@ func TestParseAnalysisJSON(t *testing.T) {
 		t.Parallel()
 		// Simulate the same diagnostic appearing in both the package and its test variant.
 		diag := suppressibleDiagnostic("primitive", "struct field pkg.Foo.Bar uses primitive type string")
-		pkg1 := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		pkg1 := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {"goplint": {diag}},
 		})
-		pkg2 := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		pkg2 := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg [example.com/pkg.test]": {"goplint": {diag}},
 		})
 		combined := append([]byte{}, pkg1...)
 		combined = append(combined, pkg2...)
 
-		findings, err := parseAnalysisJSON(combined)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(combined)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -61,7 +61,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 	t.Run("uses finding ID from diagnostic URL", func(t *testing.T) {
 		t.Parallel()
 		const findingID = "gpl3_deadbeef"
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					{
@@ -73,7 +73,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := parseAnalysisJSON(input)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -87,7 +87,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("handles CFA categories in baseline parsing", func(t *testing.T) {
 		t.Parallel()
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					{
@@ -104,7 +104,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := parseAnalysisJSON(input)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -122,7 +122,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			category = "primitive"
 			message  = "struct field pkg.Foo.Bar uses primitive type string"
 		)
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					{Category: category, Message: message},
@@ -130,7 +130,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := parseAnalysisJSON(input)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err != nil {
 			t.Fatalf("unexpected error for missing finding URL: %v", err)
 		}
@@ -150,7 +150,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			category = goplint.CategoryUnusedValidateResult
 			message  = "Validate() result discarded — error return is unused"
 		)
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					{
@@ -169,7 +169,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := parseAnalysisJSON(input)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -180,7 +180,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("filters out stale-exception diagnostics", func(t *testing.T) {
 		t.Parallel()
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					suppressibleDiagnostic("primitive", "real finding"),
@@ -189,7 +189,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := parseAnalysisJSON(input)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -204,7 +204,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("skips entries with empty category or message", func(t *testing.T) {
 		t.Parallel()
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					{Category: "", Message: "orphaned message"},
@@ -214,7 +214,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := parseAnalysisJSON(input)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -226,7 +226,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("filters non-suppressible categories", func(t *testing.T) {
 		t.Parallel()
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					{Category: goplint.CategoryUnknownDirective, Message: "unknown directive key"},
@@ -235,7 +235,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := parseAnalysisJSON(input)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -250,14 +250,14 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("unknown category returns error", func(t *testing.T) {
 		t.Parallel()
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					{Category: "totally-unknown-category", Message: "unexpected"},
 				},
 			},
 		})
-		_, err := parseAnalysisJSON(input)
+		_, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err == nil {
 			t.Fatal("expected error for unknown category")
 		}
@@ -265,7 +265,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("empty input returns empty findings", func(t *testing.T) {
 		t.Parallel()
-		findings, err := parseAnalysisJSON([]byte{})
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON([]byte{})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -276,7 +276,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("whitespace-only input returns empty findings", func(t *testing.T) {
 		t.Parallel()
-		findings, err := parseAnalysisJSON([]byte(" \n\t "))
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON([]byte(" \n\t "))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -287,7 +287,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("malformed JSON returns error", func(t *testing.T) {
 		t.Parallel()
-		_, err := parseAnalysisJSON([]byte("{invalid json"))
+		_, err := goplint.CollectBaselineFindingsFromAnalysisJSON([]byte("{invalid json"))
 		if err == nil {
 			t.Fatal("expected error for malformed JSON")
 		}
@@ -295,7 +295,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("truncated object after valid stream returns error", func(t *testing.T) {
 		t.Parallel()
-		good := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		good := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
 					suppressibleDiagnostic("primitive", "valid finding"),
@@ -303,7 +303,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 		input := append(append([]byte{}, good...), []byte(`{"example.com/bad":`)...)
-		_, err := parseAnalysisJSON(input)
+		_, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err == nil {
 			t.Fatal("expected error for truncated JSON stream")
 		}
@@ -311,7 +311,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 
 	t.Run("ignores non-goplint analyzer results", func(t *testing.T) {
 		t.Parallel()
-		input := makeAnalysisJSON(t, map[string]map[string][]analysisDiagnostic{
+		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"otherana": {
 					{Category: "other", Message: "not our concern"},
@@ -322,7 +322,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := parseAnalysisJSON(input)
+		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -336,13 +336,13 @@ func TestParseAnalysisJSON(t *testing.T) {
 	})
 }
 
-func suppressibleDiagnostic(category, message string) analysisDiagnostic {
+func suppressibleDiagnostic(category, message string) goplint.AnalysisDiagnostic {
 	return suppressibleDiagnosticWithSeed(category, message, message)
 }
 
-func suppressibleDiagnosticWithSeed(category, message, seed string) analysisDiagnostic {
+func suppressibleDiagnosticWithSeed(category, message, seed string) goplint.AnalysisDiagnostic {
 	id := goplint.StableFindingID(category, "main_parse_test", seed)
-	return analysisDiagnostic{
+	return goplint.AnalysisDiagnostic{
 		Category: category,
 		Message:  message,
 		URL:      goplint.DiagnosticURLForFinding(id),
