@@ -2442,12 +2442,12 @@ pattern = "runtime.lockFilePathWith.return.*"
 reason = "exec boundary — lock file path string"
 
 [[exceptions]]
-pattern = "runtime.isAlpineContainerImage.image"
-reason = "exec boundary — container image name for detection"
+pattern = "container.isAlpineContainerImage.image"
+reason = "container image policy — raw image name normalized before detection"
 
 [[exceptions]]
-pattern = "runtime.isWindowsContainerImage.image"
-reason = "exec boundary — container image name for detection"
+pattern = "container.isWindowsContainerImage.image"
+reason = "container image policy — raw image name normalized before detection"
 
 # --- cmd/invowk: CLI / Cobra Boundary ---
 # Cobra args, config paths, env vars, and rendering at the CLI boundary.
@@ -4405,3 +4405,31 @@ reason = "operation label for typed adapter error"
 [[exceptions]]
 pattern = "OperationError.Resource"
 reason = "resource path/tag for typed adapter error"
+
+[[exceptions]]
+pattern = "config.Config.DefaultRuntime.nonzero"
+reason = "required config value; zero is rejected by config validation"
+
+[[exceptions]]
+pattern = "config.RuntimeMode.container.enum-cue-missing-go"
+reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+
+[[exceptions]]
+pattern = "config.RuntimeMode.native.enum-cue-missing-go"
+reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+
+[[exceptions]]
+pattern = "config.RuntimeMode.virtual.enum-cue-missing-go"
+reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+
+[[exceptions]]
+pattern = "invowkfile.RuntimeMode.container.enum-cue-missing-go"
+reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+
+[[exceptions]]
+pattern = "invowkfile.RuntimeMode.native.enum-cue-missing-go"
+reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+
+[[exceptions]]
+pattern = "invowkfile.RuntimeMode.virtual.enum-cue-missing-go"
+reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
