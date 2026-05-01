@@ -485,6 +485,12 @@ func runTraversal(
 			if rc.checkBoundaryRequest {
 				inspectBoundaryRequestValidation(pass, n, cfg, bl)
 			}
+
+			// Cross-platform path: detect filepath.IsAbs(filepath.FromSlash(x))
+			// chains that miss Unix-style absolute paths on Windows.
+			if rc.checkCrossPlatformPath {
+				inspectCrossPlatformPath(pass, n, cfg, bl)
+			}
 		}
 	})
 	return traverseErr

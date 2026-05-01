@@ -598,6 +598,27 @@ func TestCheckRedundantConversion(t *testing.T) {
 	runAnalysisTest(t, testdata, h.Analyzer, "redundantconversion")
 }
 
+// TestCheckCrossPlatformPath exercises the --check-cross-platform-paths mode
+// against the crossplatformpath fixture, verifying:
+//   - filepath.IsAbs(filepath.FromSlash(x)) chains are flagged (single-line)
+//   - nativePath := filepath.FromSlash(x); IsAbs(nativePath) is flagged (multi-line)
+//   - if-init form mixing FromSlash and IsAbs is flagged
+//   - strings.HasPrefix("/") guarded forms are not flagged
+//   - IsAbs on a raw host string (no FromSlash) is not flagged
+//   - FromSlash without subsequent IsAbs is not flagged
+//   - //goplint:ignore on the function suppresses the diagnostic
+//   - Reassignment from a non-FromSlash source clears the tracker
+func TestCheckCrossPlatformPath(t *testing.T) {
+	t.Parallel()
+
+	testdata := analysistest.TestData()
+	h := newAnalyzerHarness()
+	resetFlags(t, h)
+	setFlag(t, h.Analyzer, "check-cross-platform-paths", "true")
+
+	runAnalysisTest(t, testdata, h.Analyzer, "crossplatformpath")
+}
+
 // TestAuditReviewDates exercises the --audit-review-dates mode against
 // a dedicated fixture with overdue, future, invalid, and blocked_by entries.
 // Verifies that:

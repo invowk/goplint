@@ -69,6 +69,7 @@ const (
 	CategoryRedundantConversion           = "redundant-conversion"
 	CategoryMissingStructValidateFields   = "missing-struct-validate-fields"
 	CategoryUnvalidatedBoundaryRequest    = "unvalidated-boundary-request"
+	CategoryCrossPlatformPath             = "cross-platform-path"
 )
 
 // NewAnalyzer constructs an analyzer with isolated flag state.

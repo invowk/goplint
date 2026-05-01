@@ -38,6 +38,7 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | Check validate delegation | `make build-goplint && ./bin/goplint -check-validate-delegation -config=tools/goplint/exceptions.toml ./...` |
 | Check nonzero fields | `make build-goplint && ./bin/goplint -check-nonzero -config=tools/goplint/exceptions.toml ./...` |
 | Check redundant conversions | `make build-goplint && ./bin/goplint -check-redundant-conversion -config=tools/goplint/exceptions.toml ./...` |
+| Check cross-platform paths | `make build-goplint && ./bin/goplint -check-cross-platform-paths -config=tools/goplint/exceptions.toml ./...` |
 | Check boundary request validation | `make build-goplint && ./bin/goplint -check-boundary-request-validation -config=tools/goplint/exceptions.toml ./...` |
 | Check enum CUE sync | `make build-goplint && ./bin/goplint -check-enum-sync -config=tools/goplint/exceptions.toml ./...` |
 | CFA cast validation (default) | `make build-goplint && ./bin/goplint -check-cast-validation -config=tools/goplint/exceptions.toml ./...` |
@@ -79,6 +80,7 @@ Each diagnostic emitted by the analyzer carries a `category` field (visible in `
 | `missing-struct-validate-fields` | `--check-validate-delegation` or `--check-all` | Struct with validatable fields but no Validate() method |
 | `wrong-func-option-type` | `--check-func-options` or `--check-all` | WithXxx() parameter type does not match the struct field type |
 | `redundant-conversion` | `--check-redundant-conversion` or `--check-all` | Type conversion with redundant intermediate basic-type hop |
+| `cross-platform-path` | `--check-cross-platform-paths` or `--check-all` | filepath.IsAbs(filepath.FromSlash(x)) chain misses Unix-style absolute paths on Windows |
 | `unvalidated-boundary-request` | `--check-boundary-request-validation` or `--check-all` | Exported Request/Options boundary uses a validatable parameter before checked `Validate()` |
 | `enum-cue-missing-go` | `--check-enum-sync` | CUE disjunction member not in Go Validate() switch |
 | `enum-cue-extra-go` | `--check-enum-sync` | Go Validate() switch case not in CUE disjunction |
@@ -87,7 +89,7 @@ Each diagnostic emitted by the analyzer carries a `category` field (visible in `
 | `overdue-review` | `--audit-review-dates` | Exception with `review_after` date that has passed |
 | `unknown-directive` | (always active) | Unrecognized key in `//goplint:` directive (typo detection) |
 
-The `--check-all` flag enables `--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, and `--check-boundary-request-validation` in a single invocation. `--check-all` includes CFA-backed checks by default. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
+The `--check-all` flag enables `--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, and `--check-cross-platform-paths` in a single invocation. `--check-all` includes CFA-backed checks by default. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
 
 ## Architecture
 
@@ -325,7 +327,7 @@ Eighteen additional analysis modes complement the primary primitive detection:
 
 ### `--check-all`
 
-Enables all DDD compliance checks (`--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`) in a single invocation. This is the recommended flag for comprehensive DDD compliance checks. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
+Enables all DDD compliance checks (`--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, `--check-cross-platform-paths`) in a single invocation. This is the recommended flag for comprehensive DDD compliance checks. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
 
 ### `--audit-exceptions`
 
@@ -609,6 +611,7 @@ All supplementary modes respect the TOML exception config:
 - `--check-validate-delegation`: missing Validate() excepted via `pkg.StructName.struct-validate-fields`; incomplete delegation via `pkg.StructName.FieldName.validate-delegation`
 - `--check-nonzero`: excepted via `pkg.StructName.FieldName.nonzero`
 - `--check-redundant-conversion`: excepted via `pkg.FuncName.redundant-conversion`
+- `--check-cross-platform-paths`: excepted via `pkg.FuncName.cross-platform-path`
 - `--check-boundary-request-validation`: excepted via `pkg.FuncName.param.boundary-request-validation` or `pkg.FuncName.boundary-request-validation`
 - `--check-enum-sync`: excepted via `pkg.TypeName.memberValue.enum-cue-missing-go` or `pkg.TypeName.memberValue.enum-cue-extra-go`
 
@@ -649,7 +652,7 @@ entries = [
 ]
 ```
 
-Sections: `[primitive]`, `[missing-validate]`, `[missing-stringer]`, `[missing-constructor]`, `[wrong-constructor-sig]`, `[missing-func-options]`, `[missing-immutability]`, `[wrong-validate-sig]`, `[wrong-stringer-sig]`, `[missing-struct-validate]`, `[wrong-struct-validate-sig]`, `[unvalidated-cast]`, `[unvalidated-cast-inconclusive]`, `[unused-validate-result]`, `[unused-constructor-error]`, `[missing-constructor-validate]`, `[missing-constructor-validate-inconclusive]`, `[incomplete-validate-delegation]`, `[nonzero-value-field]`, `[wrong-func-option-type]`, `[enum-cue-missing-go]`, `[enum-cue-extra-go]`, `[use-before-validate-same-block]`, `[use-before-validate-cross-block]`, `[use-before-validate-inconclusive]`, `[suggest-validate-all]`, `[missing-constructor-error-return]`, `[redundant-conversion]`, `[missing-struct-validate-fields]`, `[unvalidated-boundary-request]`. Empty sections are omitted.
+Sections: `[primitive]`, `[missing-validate]`, `[missing-stringer]`, `[missing-constructor]`, `[wrong-constructor-sig]`, `[missing-func-options]`, `[missing-immutability]`, `[wrong-validate-sig]`, `[wrong-stringer-sig]`, `[missing-struct-validate]`, `[wrong-struct-validate-sig]`, `[unvalidated-cast]`, `[unvalidated-cast-inconclusive]`, `[unused-validate-result]`, `[unused-constructor-error]`, `[missing-constructor-validate]`, `[missing-constructor-validate-inconclusive]`, `[incomplete-validate-delegation]`, `[nonzero-value-field]`, `[wrong-func-option-type]`, `[enum-cue-missing-go]`, `[enum-cue-extra-go]`, `[use-before-validate-same-block]`, `[use-before-validate-cross-block]`, `[use-before-validate-inconclusive]`, `[suggest-validate-all]`, `[missing-constructor-error-return]`, `[redundant-conversion]`, `[missing-struct-validate-fields]`, `[unvalidated-boundary-request]`, `[cross-platform-path]`. Empty sections are omitted.
 
 `messages = [...]` (legacy v1 format) is no longer accepted; baseline files must use `entries = [{id, message}]`.
 Baseline generation is fail-closed for ID integrity: suppressible diagnostics must

@@ -97,6 +97,7 @@ type flagState struct {
 	checkEnumSync               bool
 	suggestValidateAll          bool
 	checkBoundaryRequest        bool
+	checkCrossPlatformPath      bool
 
 	// runtime caches/state are intentionally analyzer-instance scoped.
 	overdueReviewMu   sync.Mutex
@@ -373,6 +374,18 @@ func modeFlagSpecs() []modeFlagSpec {
 			},
 		},
 		{
+			flagName:          "check-cross-platform-paths",
+			usage:             "report filepath.IsAbs(filepath.FromSlash(x)) chains that miss Unix-style absolute paths on Windows",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkCrossPlatformPath
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkCrossPlatformPath
+			},
+		},
+		{
 			flagName:          "suggest-validate-all",
 			usage:             "report structs with Validate() + validatable fields but no //goplint:validate-all directive (advisory)",
 			defaultValue:      false,
@@ -539,6 +552,7 @@ type runConfig struct {
 	checkEnumSync               bool
 	suggestValidateAll          bool
 	checkBoundaryRequest        bool
+	checkCrossPlatformPath      bool
 }
 
 func newRunConfigForState(state *flagState) runConfig {
