@@ -41,22 +41,6 @@ include_packages = [
 # they remove.
 
 [[exceptions]]
-pattern = "ExecuteRequest.Name"
-reason = "Cobra + interface boundary"
-
-[[exceptions]]
-pattern = "ExecuteRequest.Args"
-reason = "exec boundary (positional args passed to shell)"
-
-[[exceptions]]
-pattern = "ExecuteRequest.EnvVars"
-reason = "exec/OS boundary (KEY=VALUE env pairs)"
-
-[[exceptions]]
-pattern = "ExecuteRequest.UserEnv"
-reason = "exec/OS boundary (captured host environment)"
-
-[[exceptions]]
 pattern = "ExecutionContext.PositionalArgs"
 reason = "exec boundary (shell positional parameters)"
 
@@ -103,10 +87,6 @@ reason = "exec boundary"
 [[exceptions]]
 pattern = "containerExecPrep.env"
 reason = "exec boundary"
-
-[[exceptions]]
-pattern = "SpinCommandOptions.Command"
-reason = "exec command slice"
 
 [[exceptions]]
 pattern = "ShebangInfo.Args"
@@ -159,14 +139,6 @@ pattern = "Result.ErrOutput"
 reason = "raw captured stderr"
 
 [[exceptions]]
-pattern = "SpinResult.Stdout"
-reason = "raw captured output"
-
-[[exceptions]]
-pattern = "SpinResult.Stderr"
-reason = "raw captured output"
-
-[[exceptions]]
 pattern = "ModuleCollisionError.FirstSource"
 reason = "composite display string"
 
@@ -177,14 +149,6 @@ reason = "composite display string"
 [[exceptions]]
 pattern = "tuiwire.*.*"
 reason = "JSON wire format for delegated TUI protocol types"
-
-[[exceptions]]
-pattern = "tuiwire.*.*.*"
-reason = "JSON wire format for delegated TUI protocol params"
-
-[[exceptions]]
-pattern = "tuiwire.*.*.*.*"
-reason = "JSON wire format for delegated TUI protocol returns"
 
 [[exceptions]]
 pattern = "tuiserver.Client.*"
@@ -199,19 +163,11 @@ pattern = "tuiserver.Client.*.*.*"
 reason = "HTTP client adapter params/returns for delegated TUI protocol"
 
 [[exceptions]]
-pattern = "tuiserver.NewClient.*"
-reason = "HTTP client adapter constructor boundary"
-
-[[exceptions]]
 pattern = "tuiserver.Server.*"
 reason = "HTTP server adapter boundary for delegated TUI protocol"
 
 [[exceptions]]
 pattern = "tuiserver.Server.*.*"
-reason = "HTTP server adapter params/returns for delegated TUI protocol"
-
-[[exceptions]]
-pattern = "tuiserver.Server.*.*.*"
 reason = "HTTP server adapter params/returns for delegated TUI protocol"
 
 [[exceptions]]
@@ -225,14 +181,6 @@ reason = "crypto token generation boundary"
 [[exceptions]]
 pattern = "tuiserver.generateToken.return.*"
 reason = "crypto token generation boundary"
-
-[[exceptions]]
-pattern = "tuiserver.*.*.cast-validation"
-reason = "HTTP server/client adapter validates generated token and listen port at construction"
-
-[[exceptions]]
-pattern = "tuiserver.*.*.*.cast-validation"
-reason = "HTTP server/client adapter validates generated token and listen port at construction"
 
 # =============================================================================
 # Free-Form User Input
@@ -273,20 +221,12 @@ pattern = "EnvConfig.Vars"
 reason = "map key breaks maps.Copy compatibility"
 
 [[exceptions]]
-pattern = "Token.CommandID"
-reason = "composite string"
-
-[[exceptions]]
 pattern = "ConnectionInfo.User"
 reason = "always 'invowk'"
 
 [[exceptions]]
 pattern = "Server.addr"
 reason = "composite 'host:port'"
-
-[[exceptions]]
-pattern = "TagInfo.Name"
-reason = "go-git pass-through"
 
 [[exceptions]]
 pattern = "UnpackOptions.Source"
@@ -663,10 +603,6 @@ pattern = "modulesync.GitFetcher.struct-validate"
 reason = "service object; empty cacheDir valid for default"
 
 [[exceptions]]
-pattern = "modulesync.TagInfo.struct-validate"
-reason = "go-git pass-through; Name string already excepted"
-
-[[exceptions]]
 pattern = "modulesync.tagInfo.*"
 reason = "go-git pass-through tag metadata"
 
@@ -687,14 +623,6 @@ reason = "composition root; validity is runtime-dynamic"
 [[exceptions]]
 pattern = "discovery.DiscoveredCommandSet.struct-validate"
 reason = "maps populated post-construction"
-
-[[exceptions]]
-pattern = "audit.SymlinkRef.struct-validate"
-reason = "scanner snapshot DTO; fields populated from one filesystem walk and inspected read-only by checkers"
-
-[[exceptions]]
-pattern = "audit.scriptFileFacts.struct-validate"
-reason = "internal scanner snapshot DTO; fields populated together from filesystem stat/read facts"
 
 [[exceptions]]
 pattern = "runtime.ExecutionContext.struct-validate"
@@ -937,10 +865,6 @@ reason = "TUI convenience wrapper — display data params"
 [[exceptions]]
 pattern = "tui.TableFromCSV.*"
 reason = "TUI convenience wrapper — display data params"
-
-[[exceptions]]
-pattern = "tui.SpinWithCommand.*"
-reason = "exec boundary — command + args passed to shell"
 
 [[exceptions]]
 pattern = "tui.ParseSpinnerType.*"
@@ -1202,10 +1126,6 @@ reason = "CUE text value-parsing return"
 pattern = "invowkmod.parseModuleKey.*"
 reason = "CUE text key-parsing internal"
 
-[[exceptions]]
-pattern = "invowkmod.parseLockFileCUE.content"
-reason = "raw CUE source text input"
-
 # =============================================================================
 # Primitive Exceptions — cmd/invowk Cobra / Display / Config Boundary
 # =============================================================================
@@ -1231,10 +1151,6 @@ reason = "env map return — exec/OS boundary"
 [[exceptions]]
 pattern = "invowk.rootFlagValues.configPath"
 reason = "Cobra flag binding (resolved later to FilesystemPath)"
-
-[[exceptions]]
-pattern = "invowk.discoveryRequestCache.lookups"
-reason = "cache map key — internal optimization"
 
 [[exceptions]]
 pattern = "invowk.isArgEnvVar.*"
@@ -1424,18 +1340,6 @@ reason = "filesystem path for error formatting"
 # =============================================================================
 
 [[exceptions]]
-pattern = "sshserver.Server.GenerateToken.commandID"
-reason = "composite string (command identifier)"
-
-[[exceptions]]
-pattern = "sshserver.Server.GetConnectionInfo.commandID"
-reason = "composite string (command identifier)"
-
-[[exceptions]]
-pattern = "sshserver.Server.RevokeTokensForCommand.commandID"
-reason = "composite string (command identifier)"
-
-[[exceptions]]
 pattern = "sshserver.Server.passwordHandler.password"
 reason = "SSH auth boundary — raw credential"
 
@@ -1460,10 +1364,6 @@ pattern = "invowkfile.parseEnvShebang.args"
 reason = "exec boundary — shebang args"
 
 [[exceptions]]
-pattern = "invowkmod.extractModuleFromInvowkmod.*"
-reason = "CUE text extraction — raw content manipulation"
-
-[[exceptions]]
 pattern = "invowkmod.ExtractModuleFromCommand.*"
 reason = "command name parsing — composite string splitting"
 
@@ -1472,24 +1372,12 @@ pattern = "invowkfile.ExtractModuleFromCommand.cmd"
 reason = "command name parsing — composite string splitting"
 
 [[exceptions]]
-pattern = "invowkmod.downloadFile.*"
-reason = "HTTP URL + filesystem path — exec/network boundary"
-
-[[exceptions]]
-pattern = "invowkmod.downloadFile.return.*"
-reason = "filesystem path return — exec boundary"
-
-[[exceptions]]
 pattern = "platform.IsWindowsReservedName.name"
 reason = "OS-specific name checking — platform boundary"
 
 [[exceptions]]
 pattern = "platform.statFile.path"
 reason = "filesystem path — OS boundary"
-
-[[exceptions]]
-pattern = "config.validateIncludes.fieldName"
-reason = "config field name for error messages — display text"
 
 [[exceptions]]
 pattern = "execute.validateEnvVarNames.label"
@@ -1511,10 +1399,6 @@ reason = "relative path — filesystem boundary"
 pattern = "watch.Watcher.matchesPatterns.rel"
 reason = "relative path — filesystem boundary"
 
-[[exceptions]]
-pattern = "invowkmod.resolveIdentifier.*"
-reason = "identifier resolution — composite string parsing"
-
 # =============================================================================
 # Filesystem / filepath.Join Boundary (DDD Cost-Benefit Deferred)
 # =============================================================================
@@ -1529,12 +1413,6 @@ reason = "identifier resolution — composite string parsing"
 # config internal helpers — callers use filepath.Join results
 [[exceptions]]
 pattern = "config.fileExists.*"
-reason = "filepath.Join boundary — 3 callers pass raw string"
-review_after = "2027-03-01"
-blocked_by = "types.FilesystemPath adoption in config package"
-
-[[exceptions]]
-pattern = "config.loadCUEIntoViper.*"
 reason = "filepath.Join boundary — 3 callers pass raw string"
 review_after = "2027-03-01"
 blocked_by = "types.FilesystemPath adoption in config package"
@@ -1600,32 +1478,8 @@ pattern = "modulesync.computeNamespace.*"
 reason = "resolver helper formats namespace from resolved version string"
 
 [[exceptions]]
-pattern = "modulesync.extractModuleFromInvowkmod.*"
-reason = "resolver helper scans raw invowkmod CUE text"
-
-[[exceptions]]
 pattern = "modulesync.isValidVersionString.*"
 reason = "Git adapter filters raw tag strings before SemVer construction"
-
-[[exceptions]]
-pattern = "invowkmod.copyDir.*"
-reason = "filepath boundary"
-
-[[exceptions]]
-pattern = "invowkmod.copyFile.*"
-reason = "filepath boundary"
-
-[[exceptions]]
-pattern = "invowkmod.pruneVendorDir.*"
-reason = "filepath boundary"
-
-[[exceptions]]
-pattern = "invowkmod.findModuleInDir.*"
-reason = "filepath boundary"
-
-[[exceptions]]
-pattern = "invowkmod.findModuleInDir.return.*"
-reason = "filepath boundary return"
 
 [[exceptions]]
 pattern = "invowkmod.LoadLockFile.*"
@@ -1638,18 +1492,6 @@ reason = "filepath boundary"
 [[exceptions]]
 pattern = "invowkmod.parseLockFile.*"
 reason = "CUE content parsing boundary"
-
-[[exceptions]]
-pattern = "invowkmod.extractLockFileVersion.*"
-reason = "CUE content parsing boundary"
-
-[[exceptions]]
-pattern = "invowkmod.lockFileParserV1V2.Parse.*"
-reason = "CUE content parsing boundary"
-
-[[exceptions]]
-pattern = "invowkmod.lockFileParserV1V2.struct-validate-fields"
-reason = "internal parser config struct — not a domain entity"
 
 [[exceptions]]
 pattern = "fspath.AtomicWriteFile.*"
@@ -1772,12 +1614,6 @@ blocked_by = "CLI typed request pattern or Cobra typed flags"
 [[exceptions]]
 pattern = "invowk.configPathFromContext.return.*"
 reason = "Cobra flag binding return"
-review_after = "2027-09-01"
-blocked_by = "CLI typed request pattern or Cobra typed flags"
-
-[[exceptions]]
-pattern = "invowk.loadConfigWithFallback.*"
-reason = "Cobra flag binding path"
 review_after = "2027-09-01"
 blocked_by = "CLI typed request pattern or Cobra typed flags"
 
@@ -1907,12 +1743,6 @@ blocked_by = "typed exec output wrapper adoption"
 
 [[exceptions]]
 pattern = "container.BaseCLIEngine.RunCommandCombined.return.0"
-reason = "raw exec output []byte return"
-review_after = "2027-03-01"
-blocked_by = "typed exec output wrapper adoption"
-
-[[exceptions]]
-pattern = "tui.SpinWithCommand.return.0"
 reason = "raw exec output []byte return"
 review_after = "2027-03-01"
 blocked_by = "typed exec output wrapper adoption"
@@ -2053,10 +1883,6 @@ reason = "atomic int32 state loads — method-level state reads via CAS"
 
 # --- invowkmod: 4H tightened (2026-02-28) — 7 specific patterns replace 2 blankets ---
 
-[[exceptions]]
-pattern = "invowkmod.parseLockFileCUE.cast-validation"
-reason = "parse boundary — CUE-decoded lock file version string"
-
 # --- invowkfile: 4H tightened (2026-02-28) — 0 findings, blankets removed ---
 # invowkfile has no cast-validation findings (auto-skip contexts handle all casts).
 
@@ -2072,10 +1898,6 @@ reason = "round-trip from config entry.Path"
 [[exceptions]]
 pattern = "discovery.Discovery.discoverVendoredModulesWithDiagnostics.cast-validation"
 reason = "filepath.Join from OS-listed entry"
-
-[[exceptions]]
-pattern = "discovery.ValidateCommandTree.cast-validation"
-reason = "derived from valid command name parts"
 
 # --- provision package: 4H tightened (2026-02-28) — 0 findings, blankets removed ---
 # Provision package has no cast-validation findings (auto-skip contexts handle all casts).
@@ -2465,10 +2287,6 @@ reason = "container image policy — raw image name normalized before detection"
 # Cobra args, config paths, env vars, and rendering at the CLI boundary.
 
 [[exceptions]]
-pattern = "invowk.appDiscoveryService.GetCommand.name"
-reason = "CLI boundary — command name from Cobra args"
-
-[[exceptions]]
 pattern = "invowk.buildLeafCommand.cmdPart"
 reason = "CLI boundary — command path segment from Cobra"
 
@@ -2577,10 +2395,6 @@ pattern = "sshserver.copyBuffer.return.*"
 reason = "wire boundary — bytes copied int64"
 
 [[exceptions]]
-pattern = "config.loadWithOptions.return.*"
-reason = "config path return — resolved config file path"
-
-[[exceptions]]
 pattern = "cueutil.formatPath.return.*"
 reason = "CUE internals — formatted CUE path string"
 
@@ -2615,14 +2429,6 @@ pattern = "invowkmod.isValidVersionString.s"
 reason = "parse boundary — raw version string for validation"
 
 [[exceptions]]
-pattern = "invowkmod.isGitURL.s"
-reason = "parse boundary — raw URL string for git detection"
-
-[[exceptions]]
-pattern = "invowkmod.isSupportedGitURLPrefix.url"
-reason = "parse boundary — raw URL string for prefix check"
-
-[[exceptions]]
 pattern = "invowkmod.SemverResolver.ParseConstraint.s"
 reason = "parse boundary — raw constraint string input"
 
@@ -2635,40 +2441,12 @@ pattern = "invowkmod.FilterVersions.constraintStr"
 reason = "parse boundary — raw constraint string for filtering"
 
 [[exceptions]]
-pattern = "invowkmod.computeNamespace.version"
-reason = "parse boundary — raw version string for namespace computation"
-
-[[exceptions]]
 pattern = "invowkmod.ParseModuleName.folderName"
 reason = "filesystem boundary — directory name for module parsing"
 
 [[exceptions]]
-pattern = "invowkmod.extractFile.destPath"
-reason = "filesystem boundary — extraction destination path"
-
-[[exceptions]]
-pattern = "invowkmod.buildAmbiguousError.identifier"
-reason = "display text — identifier for error message"
-
-[[exceptions]]
-pattern = "invowkmod.extractModuleFromInvowkmod.return.*"
-reason = "parse boundary — extracted module ID from CUE source"
-
-[[exceptions]]
 pattern = "invowkmod.ExtractModuleFromCommand.return.*"
 reason = "parse boundary — extracted module ID from command name"
-
-[[exceptions]]
-pattern = "invowkmod.Create.return.*"
-reason = "filesystem boundary — created module directory path"
-
-[[exceptions]]
-pattern = "moduleops.Unpack.return.*"
-reason = "filesystem boundary — extracted module path"
-
-[[exceptions]]
-pattern = "moduleops.downloadFile.*"
-reason = "HTTP/filesystem adapter boundary — raw URL and temp file paths"
 
 [[exceptions]]
 pattern = "moduleops.extractFile.*"
@@ -2705,14 +2483,6 @@ reason = "display text — validation issue path context"
 [[exceptions]]
 pattern = "invowkmod.Module.checkSymlinkSafety.path"
 reason = "filesystem boundary — path for symlink safety check"
-
-[[exceptions]]
-pattern = "invowkmod.CommandScope.CanCall.targetCmd"
-reason = "display text — target command name for scope check"
-
-[[exceptions]]
-pattern = "invowkmod.CommandScope.CanCall.return.*"
-reason = "display text — rejection reason string"
 
 # --- invowkfile: Validation / Parse Internals ---
 
@@ -2773,14 +2543,6 @@ pattern = "invowkfile.ValidateFilename.name"
 reason = "parse boundary — raw filename for validation"
 
 [[exceptions]]
-pattern = "invowkfile.validatePortNumber.s"
-reason = "parse boundary — raw port number string"
-
-[[exceptions]]
-pattern = "invowkfile.isValidIPAddress.s"
-reason = "parse boundary — raw IP address string"
-
-[[exceptions]]
 pattern = "invowkfile.isAbsolutePath.path"
 reason = "parse boundary — raw path for absolute check"
 
@@ -2799,14 +2561,6 @@ reason = "parse boundary — regex pattern for quantifier check"
 [[exceptions]]
 pattern = "invowkfile.hasOverlappingAlternation.pattern"
 reason = "parse boundary — regex pattern for overlap check"
-
-[[exceptions]]
-pattern = "invowkfile.matchesSensitivePattern.path"
-reason = "parse boundary — raw path for sensitive pattern check"
-
-[[exceptions]]
-pattern = "invowkfile.matchesSensitivePattern.patternParts"
-reason = "parse boundary — pattern parts for matching"
 
 [[exceptions]]
 pattern = "invowkfile.regexpMatch.s"
@@ -2859,14 +2613,6 @@ reason = "display text — field name for validation error"
 [[exceptions]]
 pattern = "invowkfile.ValidationError.Message"
 reason = "display text — validation error message"
-
-[[exceptions]]
-pattern = "invowkfile.engineCandidate.name"
-reason = "exec boundary — container engine binary name"
-
-[[exceptions]]
-pattern = "invowkfile.engineCandidate.args"
-reason = "exec boundary — container engine detection args"
 
 [[exceptions]]
 pattern = "invowkfile.StructureValidator.validateFlag.seenNames"
@@ -2943,10 +2689,6 @@ reason = "exec/OS boundary — env map for runtime consumption"
 # --- 1G: ModuleShortName Unvalidated-Cast ---
 # Filesystem boundary — OS-listed directory names already validated by discovery.
 
-[[exceptions]]
-pattern = "discovery.getModuleShortName.cast-validation"
-reason = "filesystem boundary — module short name derived from validated module path"
-
 # --- Remaining Exec Boundary Primitives ---
 
 [[exceptions]]
@@ -2962,14 +2704,6 @@ reason = "exec boundary — binary path for container spawn"
 # =============================================================================
 # readStdinAll is a raw stdin reader. Its parameter is an error message string
 # and its return is raw user-piped content — neither is a domain value.
-
-[[exceptions]]
-pattern = "invowk.readStdinAll.noInputMsg"
-reason = "error message text, not a domain value"
-
-[[exceptions]]
-pattern = "invowk.readStdinAll.return.0"
-reason = "raw stdin content, not a domain value"
 
 # =============================================================================
 # Nonzero Error Type Fields
@@ -3019,10 +2753,6 @@ pattern = "commandsvc.ClassifiedError.Message"
 reason = "hint string for CLI rendering (typed via HintTimedOut/HintCancelled constants)"
 
 [[exceptions]]
-pattern = "commandsvc.executeInteractive.cmdName"
-reason = "display-only command name passed to TUI"
-
-[[exceptions]]
 pattern = "commandsvc.classifyExecutionError.return.*"
 reason = "return hint for CLI adapter rendering"
 
@@ -3062,22 +2792,6 @@ pattern = "deps.ValidateArguments.providedArgs"
 reason = "CLI boundary — positional args from Cobra"
 
 [[exceptions]]
-pattern = "deps.ValidateCustomCheckOutput.outputStr"
-reason = "exec boundary — shell command output"
-
-[[exceptions]]
-pattern = "deps.CheckCommandDependenciesExist.currentModule"
-reason = "module name from discovery — display/lookup only"
-
-[[exceptions]]
-pattern = "deps.CheckTransientExitCode.label"
-reason = "display-only label for error message"
-
-[[exceptions]]
-pattern = "deps.NewContainerValidationContext.script"
-reason = "exec boundary — shell script content for container exec"
-
-[[exceptions]]
 pattern = "deps.ShellEscapeSingleQuote.*"
 reason = "shell utility — raw string param by design"
 
@@ -3088,10 +2802,6 @@ reason = "shell utility — raw string return by design"
 [[exceptions]]
 pattern = "deps.CapabilityCheckScript.return.*"
 reason = "exec boundary — shell script content for container exec"
-
-[[exceptions]]
-pattern = "deps.Is*.path"
-reason = "OS boundary — filesystem path for os.Stat"
 
 # =============================================================================
 # Hexagonal Extraction — Container Engine (imageExists)
@@ -3223,10 +2933,6 @@ pattern = "runtime.NativeRuntime.struct-validate-fields"
 reason = "service object; config reference from constructor"
 
 [[exceptions]]
-pattern = "runtime.BuildRegistryOptions.struct-validate-fields"
-reason = "optional service-dep pointers (SSHServer, Config); nil means unused"
-
-[[exceptions]]
 pattern = "watch.Watcher.struct-validate-fields"
 reason = "service object; post-construction state (baseDir, WatchConfig)"
 
@@ -3273,10 +2979,6 @@ reason = "TUI display DTO; validatable fields are display config"
 [[exceptions]]
 pattern = "tui.ConfirmOptions.struct-validate-fields"
 reason = "TUI display DTO; validatable fields are display config"
-
-[[exceptions]]
-pattern = "tui.SpinResult.struct-validate-fields"
-reason = "TUI result DTO; ExitCode is display-only"
 
 [[exceptions]]
 pattern = "tui.ModalSize.struct-validate-fields"
@@ -3333,10 +3035,6 @@ reason = "TUI display DTO; validatable fields are display config"
 # --- Other Intentionally Deferred ---
 
 [[exceptions]]
-pattern = "modulesync.TagInfo.struct-validate-fields"
-reason = "go-git pass-through; Name string already excepted"
-
-[[exceptions]]
 pattern = "modulesync.GitFetcher.struct-validate-fields"
 reason = "service object; CacheDir from constructor"
 
@@ -3355,10 +3053,6 @@ reason = "wire boundary; Source is external path from caller"
 [[exceptions]]
 pattern = "moduleops.VendorOptions.struct-validate-fields"
 reason = "wire boundary; ModuleDir from caller"
-
-[[exceptions]]
-pattern = "invowkmod.Resolver.struct-validate-fields"
-reason = "service object; constructor-injected dependencies"
 
 [[exceptions]]
 pattern = "invowkmod.Constraint.struct-validate-fields"
@@ -3410,10 +3104,6 @@ reason = "existing Validate() is structural pipeline, not DDD field validator"
 
 # --- Implementation internal field ---
 
-[[exceptions]]
-pattern = "invowkfile.Implementation.resolvedScript.validate-delegation"
-reason = "unexported field; populated at runtime by resolve step, not at parse time"
-
 # --- ImplementationMatch nested pointer ---
 
 [[exceptions]]
@@ -3459,10 +3149,6 @@ pattern = "commandsvc.Result.DryRunData.validate-delegation"
 reason = "pointer to DryRunData; only populated for dry-run mode, validated separately"
 
 [[exceptions]]
-pattern = "commandsvc.DryRunData.ExecCtx.validate-delegation"
-reason = "pointer to ExecutionContext; validated at construction time"
-
-[[exceptions]]
 pattern = "invowkmod.ResolvedModule.TransitiveDeps.validate-delegation"
 reason = "slice of resolved modules; each validated during resolution"
 
@@ -3474,14 +3160,6 @@ reason = "flag definitions from parsed invowkfile; validated at parse time"
 
 [[exceptions]]
 pattern = "commandsvc.Request.ArgDefs.validate-delegation"
-reason = "argument definitions from parsed invowkfile; validated at parse time"
-
-[[exceptions]]
-pattern = "invowk.ExecuteRequest.FlagDefs.validate-delegation"
-reason = "flag definitions from parsed invowkfile; validated at parse time"
-
-[[exceptions]]
-pattern = "invowk.ExecuteRequest.ArgDefs.validate-delegation"
 reason = "argument definitions from parsed invowkfile; validated at parse time"
 
 [[exceptions]]
@@ -3522,10 +3200,6 @@ pattern = "runtime.NewExecutionContext.constructor-validate"
 reason = "factory function; context built from already-validated invowkfile data"
 
 [[exceptions]]
-pattern = "deps.NewContainerValidationContext.constructor-validate"
-reason = "factory function; returns stub context for dep validation"
-
-[[exceptions]]
 pattern = "invowkmod.NewCommandScope.constructor-validate"
 reason = "factory function; CommandScope populated from validated module data"
 
@@ -3546,14 +3220,6 @@ pattern = "runtime.NewExecutionContext.constructor-return-error"
 reason = "factory function; context built from already-validated data"
 
 [[exceptions]]
-pattern = "deps.NewContainerValidationContext.constructor-return-error"
-reason = "factory function; returns stub context"
-
-[[exceptions]]
-pattern = "invowkfile.NewCommandScope.constructor-return-error"
-reason = "factory function; populated from validated data"
-
-[[exceptions]]
 pattern = "invowkmod.NewCommandScope.constructor-return-error"
 reason = "factory function; populated from validated data"
 
@@ -3562,16 +3228,8 @@ reason = "factory function; populated from validated data"
 # =============================================================================
 
 [[exceptions]]
-pattern = "invowk.lookupCacheEntry.struct-validate-fields"
-reason = "unexported internal cache entry; populated by discovery"
-
-[[exceptions]]
 pattern = "commandsvc.resolvedDefinitions.struct-validate-fields"
 reason = "unexported internal resolution result; validated during resolution"
-
-[[exceptions]]
-pattern = "runtime.RegistryBuildResult.struct-validate-fields"
-reason = "lifecycle result; Registry is service object, Diagnostics validated at creation"
 
 [[exceptions]]
 pattern = "tui.SpinBuilder.struct-validate-fields"
@@ -3714,14 +3372,6 @@ pattern = "audit.ParseSeverity.s"
 reason = "parse boundary from CLI/LLM text into Severity"
 
 [[exceptions]]
-pattern = "audit.Correlator.applyRules.surfaceID"
-reason = "correlation groups findings by scanner surface identifier"
-
-[[exceptions]]
-pattern = "audit.Correlator.applyEscalation.surfaceID"
-reason = "correlation groups findings by scanner surface identifier"
-
-[[exceptions]]
 pattern = "audit.appendScriptsFromInvowkfile.surfaceID"
 reason = "scanner surface identifier propagated into script refs"
 
@@ -3793,10 +3443,6 @@ reason = "exec/OS boundary: internal helper receiving OS-resolved path"
 pattern = "deps.findMatchingCommand.currentModule"
 reason = "parse boundary: already extracted from typed ModuleID via string()"
 
-[[exceptions]]
-pattern = "deps.findMatchingCommand.alternatives"
-reason = "parse boundary: normalized from typed CommandName values"
-
 # =============================================================================
 
 # =============================================================================
@@ -3859,10 +3505,6 @@ pattern = "BuildOptions.Tag.nonzero"
 reason = "required value-field using a nonzero value type"
 
 [[exceptions]]
-pattern = "BuildRegistryOptions.SelectedRuntime.nonzero"
-reason = "required value-field using a nonzero value type"
-
-[[exceptions]]
 pattern = "Command.Name.nonzero"
 reason = "required value-field using a nonzero value type"
 
@@ -3908,10 +3550,6 @@ reason = "required value-field using a nonzero value type"
 
 [[exceptions]]
 pattern = "Config.InvowkBinaryPath.nonzero"
-reason = "required value-field using a nonzero value type"
-
-[[exceptions]]
-pattern = "Config.InvowkfilePath.nonzero"
 reason = "required value-field using a nonzero value type"
 
 [[exceptions]]
@@ -4175,10 +3813,6 @@ pattern = "Request.EnvInheritMode.nonzero"
 reason = "required value-field using a nonzero value type"
 
 [[exceptions]]
-pattern = "Request.InvowkfilePath.nonzero"
-reason = "required value-field using a nonzero value type"
-
-[[exceptions]]
 pattern = "Request.Platform.nonzero"
 reason = "required value-field using a nonzero value type"
 
@@ -4299,10 +3933,6 @@ pattern = "ValidationContext.Platform.nonzero"
 reason = "required value-field using a nonzero value type"
 
 [[exceptions]]
-pattern = "ValidationError.FilePath.nonzero"
-reason = "required value-field using a nonzero value type"
-
-[[exceptions]]
 pattern = "ValidationResult.InvowkfilePath.nonzero"
 reason = "required value-field using a nonzero value type"
 
@@ -4410,6 +4040,17 @@ reason = "resource path/tag for typed adapter error"
 pattern = "config.Config.DefaultRuntime.nonzero"
 reason = "required config value; zero is rejected by config validation"
 
+# =============================================================================
+# Type Alias Enum-Sync Exceptions
+# =============================================================================
+# These RuntimeMode aliases delegate enum identity and validation to
+# pkg/types.RuntimeMode. The per-package enum-sync analyzer sees the alias as a
+# distinct type because it cannot resolve the alias's Validate() switch across
+# package boundaries. NOTE: --audit-exceptions cannot detect these as
+# legitimately matched (audit-exceptions counts diagnostics emitted, not
+# diagnostics suppressed), so the global stale audit flags them as stale —
+# DO NOT REMOVE based on that signal alone.
+
 [[exceptions]]
 pattern = "config.RuntimeMode.container.enum-cue-missing-go"
 reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
@@ -4433,3 +4074,4 @@ reason = "package alias delegates runtime identity and validation to pkg/types.R
 [[exceptions]]
 pattern = "invowkfile.RuntimeMode.virtual.enum-cue-missing-go"
 reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+
