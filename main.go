@@ -298,7 +298,7 @@ func auditExceptionsGlobalWithRunner(originalArgs []string, runCommand commandRu
 		return fmt.Errorf("running global audit subprocess: %w", err)
 	}
 
-	stalePatterns, totalPatterns, totalPackages, err := aggregateGlobalStalePatterns(stdout)
+	stalePatterns, totalPatterns, totalPackages, err := goplint.CollectGlobalStaleExceptionPatterns(stdout)
 	if err != nil {
 		return fmt.Errorf("aggregating global stale exceptions: %w", err)
 	}
@@ -322,56 +322,6 @@ func auditExceptionsGlobalWithRunner(originalArgs []string, runCommand commandRu
 		return fmt.Errorf("%d globally stale exception patterns found", len(stalePatterns))
 	}
 	return nil
-}
-
-// aggregateGlobalStalePatterns parses go/analysis JSON output and returns
-// stale exception patterns that were reported as stale in all analyzed
-// packages. Aggregation is package-based (not diagnostic-count based), so
-// duplicate stale diagnostics in one package do not inflate global coverage.
-func aggregateGlobalStalePatterns(data []byte) (stalePatterns []string, totalPatterns, totalPackages int, err error) {
-	// pattern -> set(packagePath)
-	patternPackages := make(map[string]map[string]bool)
-	seenPackages := make(map[string]bool)
-
-	if err := goplint.ForEachAnalysisResult(data, func(result goplint.AnalysisResult) error {
-		for pkgPath, analyzers := range result {
-			seenPackages[pkgPath] = true
-			diags, ok := analyzers["goplint"]
-			if !ok {
-				continue
-			}
-			for _, d := range diags {
-				if d.Category != goplint.CategoryStaleException {
-					continue
-				}
-				pattern := extractPatternFromStaleDiagnostic(d)
-				if pattern == "" {
-					continue
-				}
-				if patternPackages[pattern] == nil {
-					patternPackages[pattern] = make(map[string]bool)
-				}
-				patternPackages[pattern][pkgPath] = true
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, 0, 0, fmt.Errorf("decoding JSON: %w", err)
-	}
-
-	totalPackages = len(seenPackages)
-	totalPatterns = len(patternPackages)
-	if totalPackages == 0 || totalPatterns == 0 {
-		return nil, totalPatterns, totalPackages, nil
-	}
-
-	for pattern, pkgSet := range patternPackages {
-		if len(pkgSet) == totalPackages {
-			stalePatterns = append(stalePatterns, pattern)
-		}
-	}
-	slices.Sort(stalePatterns)
-	return stalePatterns, totalPatterns, totalPackages, nil
 }
 
 // buildGlobalAuditArgs constructs args for the subprocess invocation by
@@ -472,29 +422,6 @@ func tolerateAnalyzerExit(runErr error, stdout []byte) error {
 		return fmt.Errorf("invalid analyzer JSON output: %w", err)
 	}
 	return nil
-}
-
-// extractPatternFromStaleMessage extracts the exception pattern from a
-// stale-exception diagnostic message. The message format is:
-// 'stale exception: pattern "X" matched no diagnostics (reason: Y)'
-func extractPatternFromStaleMessage(message string) string {
-	const prefix = `stale exception: pattern "`
-	_, after, found := strings.Cut(message, prefix)
-	if !found {
-		return ""
-	}
-	pattern, _, found := strings.Cut(after, `"`)
-	if !found {
-		return ""
-	}
-	return pattern
-}
-
-func extractPatternFromStaleDiagnostic(diag goplint.AnalysisDiagnostic) string {
-	if pattern := goplint.FindingMetaFromDiagnosticURL(diag.URL, "pattern"); pattern != "" {
-		return pattern
-	}
-	return extractPatternFromStaleMessage(diag.Message)
 }
 
 func runAnalyzerSubprocess(runCommand commandRunner, stderr io.Writer, subArgs []string) ([]byte, error) {
