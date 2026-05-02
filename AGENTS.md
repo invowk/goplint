@@ -81,6 +81,7 @@ Each diagnostic emitted by the analyzer carries a `category` field (visible in `
 | `wrong-func-option-type` | `--check-func-options` or `--check-all` | WithXxx() parameter type does not match the struct field type |
 | `redundant-conversion` | `--check-redundant-conversion` or `--check-all` | Type conversion with redundant intermediate basic-type hop |
 | `cross-platform-path` | `--check-cross-platform-paths` or `--check-all` | V1: filepath.IsAbs(filepath.FromSlash(x)) chain misses Unix-style absolute paths on Windows. V2: filepath.IsAbs called on a `//goplint:cue-fed-path` typed value without a preceding `strings.HasPrefix(x, "/")` guard. |
+| `pathmatrix-divergent-pass-relative` | `--check-pathmatrix-divergent` or `--check-all` | `pathmatrix.PassRelative` used on a platform-divergent input constant (`InputUNC`, `InputWindowsDriveAbs`, `InputWindowsRooted`) without an `OnWindows` override. Recommends `pathmatrix.PassHostNativeAbs(input)` instead. Test-side counterpart of the cross-platform-path bug class. |
 | `unvalidated-boundary-request` | `--check-boundary-request-validation` or `--check-all` | Exported Request/Options boundary uses a validatable parameter before checked `Validate()` |
 | `enum-cue-missing-go` | `--check-enum-sync` | CUE disjunction member not in Go Validate() switch |
 | `enum-cue-extra-go` | `--check-enum-sync` | Go Validate() switch case not in CUE disjunction |
@@ -648,6 +649,7 @@ All supplementary modes respect the TOML exception config:
 - `--check-nonzero`: excepted via `pkg.StructName.FieldName.nonzero`
 - `--check-redundant-conversion`: excepted via `pkg.FuncName.redundant-conversion`
 - `--check-cross-platform-paths`: excepted via `pkg.FuncName.cross-platform-path`
+- `--check-pathmatrix-divergent`: excepted via `pkg.FuncName.pathmatrix-divergent`
 - `--check-boundary-request-validation`: excepted via `pkg.FuncName.param.boundary-request-validation` or `pkg.FuncName.boundary-request-validation`
 - `--check-enum-sync`: excepted via `pkg.TypeName.memberValue.enum-cue-missing-go` or `pkg.TypeName.memberValue.enum-cue-extra-go`
 

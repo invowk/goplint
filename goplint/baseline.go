@@ -49,6 +49,7 @@ type BaselineConfig struct {
 	MissingStructValidateFields   BaselineCategory `toml:"missing-struct-validate-fields"`
 	UnvalidatedBoundaryRequest    BaselineCategory `toml:"unvalidated-boundary-request"`
 	CrossPlatformPath             BaselineCategory `toml:"cross-platform-path"`
+	PathmatrixDivergent           BaselineCategory `toml:"pathmatrix-divergent-pass-relative"`
 
 	// lookupByID is an O(1) index keyed by category → finding ID.
 	lookupByID map[string]map[string]bool

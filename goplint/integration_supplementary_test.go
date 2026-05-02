@@ -619,6 +619,28 @@ func TestCheckCrossPlatformPath(t *testing.T) {
 	runAnalysisTest(t, testdata, h.Analyzer, "crossplatformpath")
 }
 
+// TestCheckPathmatrixDivergent exercises the --check-pathmatrix-divergent
+// mode against the pathmatrixdivergent fixture, verifying the test-side
+// counterpart of the cross-platform-path bug class is caught at commit
+// time:
+//   - PassRelative on InputUNC, InputWindowsDriveAbs, InputWindowsRooted
+//     without an OnWindows override is flagged.
+//   - Binary-expression concatenation (`InputUNC + ".sh"`) is also flagged.
+//   - OnWindows override on the divergent field suppresses the finding.
+//   - PassHostNativeAbs (the recommended outcome) is not flagged.
+//   - PassRelative on non-divergent vectors is not flagged.
+//   - //goplint:ignore on the surrounding function suppresses.
+func TestCheckPathmatrixDivergent(t *testing.T) {
+	t.Parallel()
+
+	testdata := analysistest.TestData()
+	h := newAnalyzerHarness()
+	resetFlags(t, h)
+	setFlag(t, h.Analyzer, "check-pathmatrix-divergent", "true")
+
+	runAnalysisTest(t, testdata, h.Analyzer, "pathmatrixdivergent")
+}
+
 // TestAuditReviewDates exercises the --audit-review-dates mode against
 // a dedicated fixture with overdue, future, invalid, and blocked_by entries.
 // Verifies that:

@@ -380,6 +380,16 @@ func runTraversal(
 		if traverseErr != nil {
 			return
 		}
+
+		// Pathmatrix-divergent runs on test files (where pathmatrix is
+		// used) and is dispatched BEFORE the general test-file skip
+		// below. Production-code checks all skip _test.go files.
+		if rc.checkPathmatrixDivergent {
+			if fn, ok := n.(*ast.FuncDecl); ok {
+				inspectPathmatrixDivergent(pass, fn, cfg, bl)
+			}
+		}
+
 		// Skip test files entirely — test data legitimately uses primitives.
 		if isTestFile(pass, n.Pos()) {
 			return
@@ -498,6 +508,7 @@ func runTraversal(
 			if rc.checkCrossPlatformPath {
 				inspectCrossPlatformPath(pass, n, cfg, bl)
 			}
+
 		}
 	})
 	return traverseErr

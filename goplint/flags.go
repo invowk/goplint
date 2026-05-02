@@ -98,6 +98,7 @@ type flagState struct {
 	suggestValidateAll          bool
 	checkBoundaryRequest        bool
 	checkCrossPlatformPath      bool
+	checkPathmatrixDivergent    bool
 
 	// runtime caches/state are intentionally analyzer-instance scoped.
 	overdueReviewMu   sync.Mutex
@@ -386,6 +387,18 @@ func modeFlagSpecs() []modeFlagSpec {
 			},
 		},
 		{
+			flagName:          "check-pathmatrix-divergent",
+			usage:             "report pathmatrix.PassRelative on platform-divergent inputs (UNC/WindowsDriveAbs/WindowsRooted) without OnWindows override",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkPathmatrixDivergent
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkPathmatrixDivergent
+			},
+		},
+		{
 			flagName:          "suggest-validate-all",
 			usage:             "report structs with Validate() + validatable fields but no //goplint:validate-all directive (advisory)",
 			defaultValue:      false,
@@ -553,6 +566,7 @@ type runConfig struct {
 	suggestValidateAll          bool
 	checkBoundaryRequest        bool
 	checkCrossPlatformPath      bool
+	checkPathmatrixDivergent    bool
 }
 
 func newRunConfigForState(state *flagState) runConfig {

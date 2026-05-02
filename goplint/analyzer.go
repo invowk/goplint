@@ -70,6 +70,7 @@ const (
 	CategoryMissingStructValidateFields   = "missing-struct-validate-fields"
 	CategoryUnvalidatedBoundaryRequest    = "unvalidated-boundary-request"
 	CategoryCrossPlatformPath             = "cross-platform-path"
+	CategoryPathmatrixDivergent           = "pathmatrix-divergent-pass-relative"
 )
 
 // NewAnalyzer constructs an analyzer with isolated flag state.
