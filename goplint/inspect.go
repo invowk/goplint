@@ -376,7 +376,8 @@ func isKnownDirectiveKey(key string) bool {
 		"no-delegate",
 		"enum-cue",
 		"validates-type",
-		"trusted-boundary":
+		"trusted-boundary",
+		"cue-fed-path":
 		return true
 	default:
 		return false

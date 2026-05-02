@@ -80,7 +80,7 @@ Each diagnostic emitted by the analyzer carries a `category` field (visible in `
 | `missing-struct-validate-fields` | `--check-validate-delegation` or `--check-all` | Struct with validatable fields but no Validate() method |
 | `wrong-func-option-type` | `--check-func-options` or `--check-all` | WithXxx() parameter type does not match the struct field type |
 | `redundant-conversion` | `--check-redundant-conversion` or `--check-all` | Type conversion with redundant intermediate basic-type hop |
-| `cross-platform-path` | `--check-cross-platform-paths` or `--check-all` | filepath.IsAbs(filepath.FromSlash(x)) chain misses Unix-style absolute paths on Windows |
+| `cross-platform-path` | `--check-cross-platform-paths` or `--check-all` | V1: filepath.IsAbs(filepath.FromSlash(x)) chain misses Unix-style absolute paths on Windows. V2: filepath.IsAbs called on a `//goplint:cue-fed-path` typed value without a preceding `strings.HasPrefix(x, "/")` guard. |
 | `unvalidated-boundary-request` | `--check-boundary-request-validation` or `--check-all` | Exported Request/Options boundary uses a validatable parameter before checked `Validate()` |
 | `enum-cue-missing-go` | `--check-enum-sync` | CUE disjunction member not in Go Validate() switch |
 | `enum-cue-extra-go` | `--check-enum-sync` | Go Validate() switch case not in CUE disjunction |
@@ -320,6 +320,42 @@ func (e *Engine) Exec(ctx context.Context, opts RunOptions) error {
     // ...
 }
 ```
+
+### 11. Cue-Fed-Path Directive — cross-platform path detection (V2)
+
+Types marked with `//goplint:cue-fed-path` carry a `CueFedPathFact` exported via `analysis.Fact` propagation. The `--check-cross-platform-paths` analyzer treats values of these types as forward-slash CUE-fed paths and flags any `filepath.IsAbs` call on such a value that lacks a preceding `strings.HasPrefix(x, "/")` guard. The V1 rule (`filepath.FromSlash → filepath.IsAbs` chain) catches the most common bug shape; V2 closes the gap when callers skip `filepath.FromSlash` and call `IsAbs` directly on a CUE-fed-typed value — semantically identical bug, different syntactic shape.
+
+```go
+// FilesystemPath holds CUE-fed forward-slash paths.
+//
+//goplint:cue-fed-path
+type FilesystemPath string
+
+// FLAGGED — CueFedPath value passed to filepath.IsAbs without slash guard.
+func bad(p FilesystemPath) bool {
+    return filepath.IsAbs(string(p))
+}
+
+// NOT FLAGGED — strings.HasPrefix("/") guard precedes filepath.IsAbs.
+func good(p FilesystemPath) bool {
+    s := string(p)
+    if strings.HasPrefix(s, "/") {
+        return true
+    }
+    return filepath.IsAbs(s)
+}
+```
+
+Provenance is preserved through these single-arg, string-returning transformations: `string(...)`, `strings.TrimSpace`/`Trim`/`TrimLeft`/`TrimRight`/`TrimPrefix`/`TrimSuffix`, `filepath.FromSlash`/`ToSlash`/`Clean`, and `path.Clean`. Other transformations break provenance (documented false-negative).
+
+Currently annotated:
+- `pkg/types.FilesystemPath`
+- `pkg/invowkfile.WorkDir`
+- `pkg/invowkfile.ContainerfilePath`
+- `pkg/invowkfile.ScriptContent`
+- `pkg/invowkmod.SubdirectoryPath`
+
+When adding a new type that holds a CUE-fed forward-slash path, add the directive so V2 can enforce cross-platform absoluteness invariants.
 
 ## Supplementary Modes
 

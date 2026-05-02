@@ -2,7 +2,10 @@
 
 package checkall // want `stale exception: pattern "StalePattern.Field" matched no diagnostics`
 
-import "fmt"
+import (
+	"fmt"
+	checkallFilepath "path/filepath"
+)
 
 // Mode has both Validate and String — no supplementary diagnostics.
 type Mode string
@@ -239,4 +242,13 @@ func NewPriority(s string) (*Priority, error) { // want `parameter "s" of checka
 // redundantConversion performs a type conversion with a redundant string() hop.
 func redundantConversion(m Mode) MissingAll {
 	return MissingAll(string(m)) // want `redundant intermediate conversion to string in MissingAll\(string\(\.\.\.\)\); use MissingAll\(\.\.\.\) directly`
+}
+
+// --- Cross-platform path (--check-cross-platform-paths) ---
+
+// crossPlatformPathBug demonstrates the canonical FromSlash → IsAbs chain
+// that is unsafe on Windows.
+func crossPlatformPathBug(input string) bool { // want `parameter "input" of checkall\.crossPlatformPathBug uses primitive type string`
+	native := checkallFilepath.FromSlash(input)
+	return checkallFilepath.IsAbs(native) // want `filepath\.IsAbs called on filepath\.FromSlash result`
 }

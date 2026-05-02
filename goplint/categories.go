@@ -64,6 +64,7 @@ func diagnosticCategoryRegistry() []CategorySpec {
 		{Name: CategoryRedundantConversion, BaselinePolicy: BaselineSuppressible, BaselineLabel: "Redundant intermediate type conversions"},
 		{Name: CategoryMissingStructValidateFields, BaselinePolicy: BaselineSuppressible, BaselineLabel: "Structs with validatable fields but no Validate() method"},
 		{Name: CategoryUnvalidatedBoundaryRequest, BaselinePolicy: BaselineSuppressible, BaselineLabel: "Exported request/options boundaries using parameters before Validate()"},
+		{Name: CategoryCrossPlatformPath, BaselinePolicy: BaselineSuppressible, BaselineLabel: "filepath.IsAbs called on FromSlash result without strings.HasPrefix slash guard"},
 		{Name: CategoryUnknownDirective, BaselinePolicy: BaselineAlwaysVisible},
 		{Name: CategoryStaleException, BaselinePolicy: BaselineAuditOnly},
 		{Name: CategoryOverdueReview, BaselinePolicy: BaselineAuditOnly},

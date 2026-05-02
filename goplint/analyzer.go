@@ -87,6 +87,7 @@ func newAnalyzerWithState(state *flagState) *analysis.Analyzer {
 		FactTypes: []analysis.Fact{
 			(*NonZeroFact)(nil),
 			(*ValidatesTypeFact)(nil),
+			(*CueFedPathFact)(nil),
 		},
 	}
 	analyzer.Run = func(pass *analysis.Pass) (any, error) {

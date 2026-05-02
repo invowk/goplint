@@ -351,6 +351,8 @@ func runFactExportOnly(pass *analysis.Pass) {
 		case *ast.GenDecl:
 			// Export NonZeroFact for types with //goplint:nonzero directive.
 			exportNonZeroFacts(pass, n)
+			// Export CueFedPathFact for types with //goplint:cue-fed-path directive.
+			exportCueFedPathFacts(pass, n)
 		case *ast.FuncDecl:
 			// Export ValidatesTypeFact for functions with //goplint:validates-type directive.
 			exportValidatesTypeFacts(pass, n)
@@ -391,6 +393,11 @@ func runTraversal(
 
 		switch n := n.(type) {
 		case *ast.GenDecl:
+			// Export CueFedPathFact for types with //goplint:cue-fed-path
+			// directive. Done in source order so subsequent IsAbs checks
+			// in this package see the fact via pass.ImportObjectFact.
+			exportCueFedPathFacts(pass, n)
+
 			// Primary mode: check struct fields for primitives.
 			inspectStructFields(pass, n, cfg, bl)
 
