@@ -723,6 +723,10 @@ pattern = "moduleops.*.constructor"
 reason = "application adapter DTOs/options; constructed via struct literals at command boundaries"
 
 [[exceptions]]
+pattern = "llmconfig.*.constructor"
+reason = "application resolution DTOs/options; constructed via struct literals at command boundaries"
+
+[[exceptions]]
 pattern = "config.*.constructor"
 reason = "config DTOs; populated by Viper mapstructure"
 
@@ -3404,8 +3408,44 @@ pattern = "invowk.formatDuration.return.*"
 reason = "CLI display formatting helper"
 
 [[exceptions]]
-pattern = "invowk.buildProviderChecker.provider"
+pattern = "invowk.buildProviderCompleter.provider"
 reason = "CLI flag text parsed by LLM provider detection"
+
+[[exceptions]]
+pattern = "invowk.llmFlagValues.*"
+reason = "Cobra flag binding shared by audit and agent command authoring"
+
+[[exceptions]]
+pattern = "invowk.llmCompleterResult.*"
+reason = "CLI adapter result carrying runtime LLM provider dependencies"
+
+[[exceptions]]
+pattern = "invowk.normalizedLLMConcurrency.*"
+reason = "CLI flag normalization for LLM worker count"
+
+[[exceptions]]
+pattern = "invowk.normalizedLLMConcurrency.return.*"
+reason = "CLI flag normalization for LLM worker count"
+
+[[exceptions]]
+pattern = "invowkfile.SchemaCUE.return.*"
+reason = "raw embedded CUE schema text for documentation and agent prompts"
+
+[[exceptions]]
+pattern = "invowkmod.SchemaCUE.return.*"
+reason = "raw embedded CUE schema text for documentation and agent prompts"
+
+[[exceptions]]
+pattern = "agentcmd.*.*"
+reason = "LLM/filesystem boundary package carries raw prompt, CUE, diff, and path text"
+
+[[exceptions]]
+pattern = "agentcmd.*.*.*"
+reason = "LLM/filesystem boundary package carries raw prompt, CUE, diff, and path text"
+
+[[exceptions]]
+pattern = "agentcmd.CreateOptions.LoadDescription.return.*"
+reason = "LLM/filesystem boundary package carries raw prompt, CUE, diff, and path text"
 
 [[exceptions]]
 pattern = "invowk.WatchCommandNotFoundError.Name"
@@ -4017,6 +4057,26 @@ pattern = "matchLLMFindingToScript.byName"
 reason = "LLM wire attribution lookup uses JSON command names"
 
 [[exceptions]]
+pattern = "llm.JSONSchemaFormat.constructor"
+reason = "LLM structured-output wire DTO; literals keep provider schema requests readable at use-case boundary"
+
+[[exceptions]]
+pattern = "llm.JSONSchemaFormat.Name"
+reason = "LLM structured-output wire schema name"
+
+[[exceptions]]
+pattern = "CreateOptions.complete.return.0"
+reason = "LLM wire response text before JSON extraction"
+
+[[exceptions]]
+pattern = "CreateOptions.maxGenerationAttempts.return.0"
+reason = "bounded retry count for in-process generation loop"
+
+[[exceptions]]
+pattern = "ensureCurrentInvowkfileTarget.targetPath"
+reason = "CLI adapter boundary value passed directly to filepath operations"
+
+[[exceptions]]
 pattern = "matchLLMFindingToScript.nameCounts"
 reason = "LLM attribution uniqueness lookup"
 
@@ -4039,6 +4099,10 @@ reason = "resource path/tag for typed adapter error"
 [[exceptions]]
 pattern = "config.Config.DefaultRuntime.nonzero"
 reason = "required config value; zero is rejected by config validation"
+
+[[exceptions]]
+pattern = "config.GenerateDisplayCUE.return.0"
+reason = "terminal display rendering output"
 
 # =============================================================================
 # Type Alias Enum-Sync Exceptions
@@ -4074,4 +4138,3 @@ reason = "package alias delegates runtime identity and validation to pkg/types.R
 [[exceptions]]
 pattern = "invowkfile.RuntimeMode.virtual.enum-cue-missing-go"
 reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
-
