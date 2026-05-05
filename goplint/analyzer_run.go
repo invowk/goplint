@@ -509,6 +509,22 @@ func runTraversal(
 				inspectCrossPlatformPath(pass, n, cfg, bl)
 			}
 
+			if rc.checkCommandWaitDelay {
+				inspectCommandWaitDelay(pass, n, cfg, bl)
+			}
+
+			if rc.checkCueFedPathNativeClean {
+				inspectCueFedPathNativeClean(pass, n, cfg, bl)
+			}
+
+			if rc.checkPathBoundaryPrefix {
+				inspectPathBoundaryPrefix(pass, n, cfg, bl)
+			}
+
+			if rc.checkVolumeMountHostToSlash {
+				inspectVolumeMountHostToSlash(pass, n, cfg, bl)
+			}
+
 		}
 	})
 	return traverseErr

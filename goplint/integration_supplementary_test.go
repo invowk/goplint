@@ -641,6 +641,20 @@ func TestCheckPathmatrixDivergent(t *testing.T) {
 	runAnalysisTest(t, testdata, h.Analyzer, "pathmatrixdivergent")
 }
 
+func TestCheckWindowsPitfalls(t *testing.T) {
+	t.Parallel()
+
+	testdata := analysistest.TestData()
+	h := newAnalyzerHarness()
+	resetFlags(t, h)
+	setFlag(t, h.Analyzer, "check-command-waitdelay", "true")
+	setFlag(t, h.Analyzer, "check-cue-fed-path-native-clean", "true")
+	setFlag(t, h.Analyzer, "check-path-boundary-prefix", "true")
+	setFlag(t, h.Analyzer, "check-volume-mount-host-toslash", "true")
+
+	runAnalysisTest(t, testdata, h.Analyzer, "windowspitfalls")
+}
+
 // TestAuditReviewDates exercises the --audit-review-dates mode against
 // a dedicated fixture with overdue, future, invalid, and blocked_by entries.
 // Verifies that:

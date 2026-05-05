@@ -99,6 +99,10 @@ type flagState struct {
 	checkBoundaryRequest        bool
 	checkCrossPlatformPath      bool
 	checkPathmatrixDivergent    bool
+	checkCommandWaitDelay       bool
+	checkCueFedPathNativeClean  bool
+	checkPathBoundaryPrefix     bool
+	checkVolumeMountHostToSlash bool
 
 	// runtime caches/state are intentionally analyzer-instance scoped.
 	overdueReviewMu   sync.Mutex
@@ -399,6 +403,54 @@ func modeFlagSpecs() []modeFlagSpec {
 			},
 		},
 		{
+			flagName:          "check-command-waitdelay",
+			usage:             "report exec.CommandContext commands used without setting Cmd.WaitDelay before execution",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkCommandWaitDelay
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkCommandWaitDelay
+			},
+		},
+		{
+			flagName:          "check-cue-fed-path-native-clean",
+			usage:             "report CUE-fed or repo-relative path validators that use filepath cleanup before slash normalization",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkCueFedPathNativeClean
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkCueFedPathNativeClean
+			},
+		},
+		{
+			flagName:          "check-path-boundary-prefix",
+			usage:             "report path containment checks that use strings.HasPrefix without an exact path-segment boundary",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkPathBoundaryPrefix
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkPathBoundaryPrefix
+			},
+		},
+		{
+			flagName:          "check-volume-mount-host-toslash",
+			usage:             "report container volume mount strings that concatenate host paths without filepath.ToSlash",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkVolumeMountHostToSlash
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkVolumeMountHostToSlash
+			},
+		},
+		{
 			flagName:          "suggest-validate-all",
 			usage:             "report structs with Validate() + validatable fields but no //goplint:validate-all directive (advisory)",
 			defaultValue:      false,
@@ -567,6 +619,10 @@ type runConfig struct {
 	checkBoundaryRequest        bool
 	checkCrossPlatformPath      bool
 	checkPathmatrixDivergent    bool
+	checkCommandWaitDelay       bool
+	checkCueFedPathNativeClean  bool
+	checkPathBoundaryPrefix     bool
+	checkVolumeMountHostToSlash bool
 }
 
 func newRunConfigForState(state *flagState) runConfig {

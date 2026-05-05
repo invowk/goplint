@@ -248,7 +248,7 @@ Each diagnostic includes a `category` field for filtering:
 
 `url` encodes the stable finding ID used by baseline suppression and may include machine-readable query metadata (for example `ubv_scope=same-block|cross-block` and witness fields).
 
-Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constructor`, `wrong-constructor-sig`, `missing-func-options`, `missing-immutability`, `wrong-validate-sig`, `wrong-stringer-sig`, `missing-struct-validate`, `wrong-struct-validate-sig`, `unvalidated-cast`, `unvalidated-cast-inconclusive`, `unused-validate-result`, `unused-constructor-error`, `missing-constructor-validate`, `missing-constructor-validate-inconclusive`, `incomplete-validate-delegation`, `nonzero-value-field`, `wrong-func-option-type`, `enum-cue-missing-go`, `enum-cue-extra-go`, `use-before-validate-same-block`, `use-before-validate-cross-block`, `use-before-validate-inconclusive`, `suggest-validate-all`, `missing-constructor-error-return`, `redundant-conversion`, `missing-struct-validate-fields`, `unknown-directive`, `stale-exception`, `overdue-review`.
+Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constructor`, `wrong-constructor-sig`, `missing-func-options`, `missing-immutability`, `wrong-validate-sig`, `wrong-stringer-sig`, `missing-struct-validate`, `wrong-struct-validate-sig`, `unvalidated-cast`, `unvalidated-cast-inconclusive`, `unused-validate-result`, `unused-constructor-error`, `missing-constructor-validate`, `missing-constructor-validate-inconclusive`, `incomplete-validate-delegation`, `nonzero-value-field`, `wrong-func-option-type`, `enum-cue-missing-go`, `enum-cue-extra-go`, `use-before-validate-same-block`, `use-before-validate-cross-block`, `use-before-validate-inconclusive`, `suggest-validate-all`, `missing-constructor-error-return`, `redundant-conversion`, `missing-struct-validate-fields`, `unvalidated-boundary-request`, `cross-platform-path`, `pathmatrix-divergent-pass-relative`, `missing-command-waitdelay`, `cue-fed-path-native-clean`, `path-boundary-prefix`, `volume-mount-host-toslash`, `unknown-directive`, `stale-exception`, `overdue-review`.
 
 ## CLI Flags
 
@@ -264,6 +264,10 @@ Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constr
 | `-check-func-options` | bool | `false` | Report missing/incomplete functional options pattern |
 | `-check-immutability` | bool | `false` | Report constructor-backed structs with exported mutable fields |
 | `-check-struct-validate` | bool | `false` | Report constructor-backed structs missing `Validate()` |
+| `-check-command-waitdelay` | bool | `false` | Report `exec.CommandContext` commands used without `Cmd.WaitDelay` |
+| `-check-cue-fed-path-native-clean` | bool | `false` | Report CUE-fed/repo-relative path validators using native `filepath` cleanup before slash normalization |
+| `-check-path-boundary-prefix` | bool | `false` | Report path containment checks with unsafe broad prefix matching |
+| `-check-volume-mount-host-toslash` | bool | `false` | Report container volume mount host paths formatted without `filepath.ToSlash` |
 | `-ubv-mode` | string | `"escape"` | UBV semantics mode: `order` or `escape` |
 | `-cfg-backend` | string | `"ssa"` | Path-analysis backend selector: `ssa` or `ast` |
 | `-cfg-interproc-engine` | string | `"ifds"` | Interprocedural engine selector: `legacy`, `ifds`, or `compare` |

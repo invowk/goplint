@@ -50,6 +50,10 @@ type BaselineConfig struct {
 	UnvalidatedBoundaryRequest    BaselineCategory `toml:"unvalidated-boundary-request"`
 	CrossPlatformPath             BaselineCategory `toml:"cross-platform-path"`
 	PathmatrixDivergent           BaselineCategory `toml:"pathmatrix-divergent-pass-relative"`
+	MissingCommandWaitDelay       BaselineCategory `toml:"missing-command-waitdelay"`
+	CueFedPathNativeClean         BaselineCategory `toml:"cue-fed-path-native-clean"`
+	PathBoundaryPrefix            BaselineCategory `toml:"path-boundary-prefix"`
+	VolumeMountHostToSlash        BaselineCategory `toml:"volume-mount-host-toslash"`
 
 	// lookupByID is an O(1) index keyed by category → finding ID.
 	lookupByID map[string]map[string]bool
