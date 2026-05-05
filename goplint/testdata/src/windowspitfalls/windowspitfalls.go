@@ -33,8 +33,15 @@ type (
 		ContainerPath ContainerPath
 	}
 
+	commandRunner func(*exec.Cmd) error
+
 	//goplint:cue-fed-path
 	WorkDir string // want WorkDir:"cue-fed-path"
+
+	//goplint:path-domain=container
+	PortableContainerPath string // want PortableContainerPath:"path-domain=container"
+
+	ContainerishName string
 )
 
 func missingWaitDelay(ctx context.Context, command CommandName) error {
@@ -63,10 +70,21 @@ func missingWaitDelayPrepared(ctx context.Context, command CommandName) *Prepare
 	return &PreparedCommand{Cmd: cmd} // want `exec\.CommandContext command in windowspitfalls\.missingWaitDelayPrepared is used without setting Cmd\.WaitDelay`
 }
 
+func missingWaitDelayRunner(ctx context.Context, command CommandName, runner commandRunner) error {
+	cmd := exec.CommandContext(ctx, string(command))
+	return runner(cmd) // want `exec\.CommandContext command in windowspitfalls\.missingWaitDelayRunner is used without setting Cmd\.WaitDelay`
+}
+
 func preparedWaitDelaySet(ctx context.Context, command CommandName) *PreparedCommand {
 	cmd := exec.CommandContext(ctx, string(command))
 	cmd.WaitDelay = commandWaitDelay
 	return &PreparedCommand{Cmd: cmd}
+}
+
+func runnerWaitDelaySet(ctx context.Context, command CommandName, runner commandRunner) error {
+	cmd := exec.CommandContext(ctx, string(command))
+	cmd.WaitDelay = commandWaitDelay
+	return runner(cmd)
 }
 
 func ValidateWorkDirPath(p WorkDir) WorkDir {
@@ -117,4 +135,29 @@ func cobraBackground(cmd *cobra.Command) context.Context {
 
 func cobraCommandContext(cmd *cobra.Command) context.Context {
 	return cmd.Context()
+}
+
+//goplint:render
+func badContainerJoin(p PortableContainerPath) string {
+	return filepath.Join("/workspace", string(p)) // want `filepath\.Join called on container path-domain value PortableContainerPath`
+}
+
+//goplint:render
+func badContainerClean(p PortableContainerPath) string {
+	clean := string(p)
+	return filepath.Clean(clean) // want `filepath\.Clean called on container path-domain value PortableContainerPath`
+}
+
+func badContainerIsAbs(p PortableContainerPath) bool {
+	return filepath.IsAbs(string(p)) // want `filepath\.IsAbs called on container path-domain value PortableContainerPath`
+}
+
+//goplint:render
+func goodContainerJoin(p PortableContainerPath) string {
+	return path.Join("/workspace", string(p))
+}
+
+//goplint:render
+func unannotatedContainerishName(p ContainerishName) string {
+	return filepath.Clean(string(p))
 }

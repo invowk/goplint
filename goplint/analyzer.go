@@ -76,6 +76,7 @@ const (
 	CategoryPathBoundaryPrefix            = "path-boundary-prefix"
 	CategoryVolumeMountHostToSlash        = "volume-mount-host-toslash"
 	CategoryCobraCommandContext           = "cobra-command-context"
+	CategoryPathDomainNativeFilepath      = "path-domain-native-filepath"
 )
 
 // NewAnalyzer constructs an analyzer with isolated flag state.
@@ -94,6 +95,7 @@ func newAnalyzerWithState(state *flagState) *analysis.Analyzer {
 			(*NonZeroFact)(nil),
 			(*ValidatesTypeFact)(nil),
 			(*CueFedPathFact)(nil),
+			(*PathDomainFact)(nil),
 		},
 	}
 	analyzer.Run = func(pass *analysis.Pass) (any, error) {

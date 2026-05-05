@@ -21,3 +21,13 @@ func TestNonZeroFactAFact(t *testing.T) {
 	var fact analysis.Fact = &NonZeroFact{}
 	fact.(*NonZeroFact).AFact()
 }
+
+func TestPathDomainFactAFact(t *testing.T) {
+	t.Parallel()
+
+	var fact analysis.Fact = &PathDomainFact{Domain: "container"}
+	fact.(*PathDomainFact).AFact()
+	if got := fact.(*PathDomainFact).String(); got != "path-domain=container" {
+		t.Fatalf("PathDomainFact.String() = %q", got)
+	}
+}

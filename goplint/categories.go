@@ -71,6 +71,7 @@ func diagnosticCategoryRegistry() []CategorySpec {
 		{Name: CategoryPathBoundaryPrefix, BaselinePolicy: BaselineSuppressible, BaselineLabel: "path containment check uses an unsafe string prefix without a path-segment boundary"},
 		{Name: CategoryVolumeMountHostToSlash, BaselinePolicy: BaselineSuppressible, BaselineLabel: "container volume mount host path formatted without filepath.ToSlash before the colon"},
 		{Name: CategoryCobraCommandContext, BaselinePolicy: BaselineSuppressible, BaselineLabel: "Cobra command handler uses context.Background instead of command context"},
+		{Name: CategoryPathDomainNativeFilepath, BaselinePolicy: BaselineSuppressible, BaselineLabel: "path-domain annotated values sent through host-native filepath functions"},
 		{Name: CategoryUnknownDirective, BaselinePolicy: BaselineAlwaysVisible},
 		{Name: CategoryStaleException, BaselinePolicy: BaselineAuditOnly},
 		{Name: CategoryOverdueReview, BaselinePolicy: BaselineAuditOnly},

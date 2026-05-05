@@ -22,11 +22,14 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/tools/go/analysis/singlechecker"
 
 	"github.com/invowk/invowk/tools/goplint/goplint"
 )
+
+const analyzerSubprocessWaitDelay = 10 * time.Second
 
 var (
 	// ErrAnalyzerSubprocess indicates a failure running the analyzer subprocess.
@@ -438,6 +441,7 @@ func runAnalyzerSubprocess(runCommand commandRunner, stderr io.Writer, subArgs [
 	}
 
 	cmd := exec.CommandContext(context.Background(), selfPath, subArgs...)
+	cmd.WaitDelay = analyzerSubprocessWaitDelay
 	cmd.Stderr = stderr
 
 	var stdout bytes.Buffer

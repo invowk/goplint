@@ -353,6 +353,8 @@ func runFactExportOnly(pass *analysis.Pass) {
 			exportNonZeroFacts(pass, n)
 			// Export CueFedPathFact for types with //goplint:cue-fed-path directive.
 			exportCueFedPathFacts(pass, n)
+			// Export PathDomainFact for types with //goplint:path-domain directives.
+			exportPathDomainFacts(pass, n)
 		case *ast.FuncDecl:
 			// Export ValidatesTypeFact for functions with //goplint:validates-type directive.
 			exportValidatesTypeFacts(pass, n)
@@ -407,6 +409,8 @@ func runTraversal(
 			// directive. Done in source order so subsequent IsAbs checks
 			// in this package see the fact via pass.ImportObjectFact.
 			exportCueFedPathFacts(pass, n)
+			// Export PathDomainFact for path-domain annotated types.
+			exportPathDomainFacts(pass, n)
 
 			// Primary mode: check struct fields for primitives.
 			inspectStructFields(pass, n, cfg, bl)
@@ -527,6 +531,10 @@ func runTraversal(
 
 			if rc.checkCobraCommandContext {
 				inspectCobraCommandContext(pass, n, cfg, bl)
+			}
+
+			if rc.checkPathDomainNativeFilepath {
+				inspectPathDomainNativeFilepath(pass, n, cfg, bl)
 			}
 
 		}

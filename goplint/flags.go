@@ -54,56 +54,57 @@ const (
 // flagState contains one analyzer instance's parsed flag values. Keeping this
 // state instance-local avoids package-global mutable flag coupling.
 type flagState struct {
-	configPath                  string
-	baselinePath                string
-	emitFindingsPath            string
-	includePackages             string // comma-separated package prefixes (CLI override)
-	ubvMode                     string
-	cfgBackend                  string
-	cfgInterprocEngine          string
-	cfgMaxStates                int
-	cfgMaxDepth                 int
-	cfgInconclusivePolicy       string
-	cfgWitnessMaxSteps          int
-	cfgFeasibilityEngine        string
-	cfgRefinementMode           string
-	cfgRefinementMaxIterations  int
-	cfgFeasibilityMaxQueries    int
-	cfgFeasibilityTimeoutMS     int
-	cfgAliasMode                string
-	includePackagesExplicit     bool
-	configPathExplicit          bool
-	baselinePathExplicit        bool
-	emitFindingsPathExplicit    bool
-	auditExceptions             bool
-	checkAll                    bool
-	checkValidate               bool
-	checkStringer               bool
-	checkConstructors           bool
-	checkConstructorSig         bool
-	checkFuncOptions            bool
-	checkImmutability           bool
-	checkStructValidate         bool
-	checkCastValidation         bool
-	checkValidateUsage          bool
-	checkConstructorErrUsage    bool
-	checkConstructorValidates   bool
-	checkValidateDelegation     bool
-	checkNonZero                bool
-	checkUseBeforeValidate      bool
-	checkConstructorReturnError bool
-	checkRedundantConversion    bool
-	auditReviewDates            bool
-	checkEnumSync               bool
-	suggestValidateAll          bool
-	checkBoundaryRequest        bool
-	checkCrossPlatformPath      bool
-	checkPathmatrixDivergent    bool
-	checkCommandWaitDelay       bool
-	checkCueFedPathNativeClean  bool
-	checkPathBoundaryPrefix     bool
-	checkVolumeMountHostToSlash bool
-	checkCobraCommandContext    bool
+	configPath                    string
+	baselinePath                  string
+	emitFindingsPath              string
+	includePackages               string // comma-separated package prefixes (CLI override)
+	ubvMode                       string
+	cfgBackend                    string
+	cfgInterprocEngine            string
+	cfgMaxStates                  int
+	cfgMaxDepth                   int
+	cfgInconclusivePolicy         string
+	cfgWitnessMaxSteps            int
+	cfgFeasibilityEngine          string
+	cfgRefinementMode             string
+	cfgRefinementMaxIterations    int
+	cfgFeasibilityMaxQueries      int
+	cfgFeasibilityTimeoutMS       int
+	cfgAliasMode                  string
+	includePackagesExplicit       bool
+	configPathExplicit            bool
+	baselinePathExplicit          bool
+	emitFindingsPathExplicit      bool
+	auditExceptions               bool
+	checkAll                      bool
+	checkValidate                 bool
+	checkStringer                 bool
+	checkConstructors             bool
+	checkConstructorSig           bool
+	checkFuncOptions              bool
+	checkImmutability             bool
+	checkStructValidate           bool
+	checkCastValidation           bool
+	checkValidateUsage            bool
+	checkConstructorErrUsage      bool
+	checkConstructorValidates     bool
+	checkValidateDelegation       bool
+	checkNonZero                  bool
+	checkUseBeforeValidate        bool
+	checkConstructorReturnError   bool
+	checkRedundantConversion      bool
+	auditReviewDates              bool
+	checkEnumSync                 bool
+	suggestValidateAll            bool
+	checkBoundaryRequest          bool
+	checkCrossPlatformPath        bool
+	checkPathmatrixDivergent      bool
+	checkCommandWaitDelay         bool
+	checkCueFedPathNativeClean    bool
+	checkPathBoundaryPrefix       bool
+	checkVolumeMountHostToSlash   bool
+	checkCobraCommandContext      bool
+	checkPathDomainNativeFilepath bool
 
 	// runtime caches/state are intentionally analyzer-instance scoped.
 	overdueReviewMu   sync.Mutex
@@ -464,6 +465,18 @@ func modeFlagSpecs() []modeFlagSpec {
 			},
 		},
 		{
+			flagName:          "check-path-domain-native-filepath",
+			usage:             "report path-domain annotated values passed to host-native filepath functions",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkPathDomainNativeFilepath
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkPathDomainNativeFilepath
+			},
+		},
+		{
 			flagName:          "suggest-validate-all",
 			usage:             "report structs with Validate() + validatable fields but no //goplint:validate-all directive (advisory)",
 			defaultValue:      false,
@@ -587,56 +600,57 @@ func resetFlagStateDefaults(state *flagState) {
 // Reading flag bindings into this struct at run() entry ensures run()
 // never reads or mutates package-level state directly.
 type runConfig struct {
-	configPath                  string
-	configPathExplicit          bool
-	baselinePath                string
-	baselinePathExplicit        bool
-	emitFindingsPath            string
-	emitFindingsPathExplicit    bool
-	includePackages             string
-	includePackagesExplicit     bool
-	ubvMode                     string
-	cfgBackend                  string
-	cfgInterprocEngine          string
-	cfgMaxStates                int
-	cfgMaxDepth                 int
-	cfgInconclusivePolicy       string
-	cfgWitnessMaxSteps          int
-	cfgFeasibilityEngine        string
-	cfgRefinementMode           string
-	cfgRefinementMaxIterations  int
-	cfgFeasibilityMaxQueries    int
-	cfgFeasibilityTimeoutMS     int
-	cfgAliasMode                string
-	auditExceptions             bool
-	checkAll                    bool
-	checkValidate               bool
-	checkStringer               bool
-	checkConstructors           bool
-	checkConstructorSig         bool
-	checkFuncOptions            bool
-	checkImmutability           bool
-	checkStructValidate         bool
-	checkCastValidation         bool
-	checkValidateUsage          bool
-	checkConstructorErrUsage    bool
-	checkConstructorValidates   bool
-	checkValidateDelegation     bool
-	checkNonZero                bool
-	checkUseBeforeValidate      bool
-	checkConstructorReturnError bool
-	checkRedundantConversion    bool
-	auditReviewDates            bool
-	checkEnumSync               bool
-	suggestValidateAll          bool
-	checkBoundaryRequest        bool
-	checkCrossPlatformPath      bool
-	checkPathmatrixDivergent    bool
-	checkCommandWaitDelay       bool
-	checkCueFedPathNativeClean  bool
-	checkPathBoundaryPrefix     bool
-	checkVolumeMountHostToSlash bool
-	checkCobraCommandContext    bool
+	configPath                    string
+	configPathExplicit            bool
+	baselinePath                  string
+	baselinePathExplicit          bool
+	emitFindingsPath              string
+	emitFindingsPathExplicit      bool
+	includePackages               string
+	includePackagesExplicit       bool
+	ubvMode                       string
+	cfgBackend                    string
+	cfgInterprocEngine            string
+	cfgMaxStates                  int
+	cfgMaxDepth                   int
+	cfgInconclusivePolicy         string
+	cfgWitnessMaxSteps            int
+	cfgFeasibilityEngine          string
+	cfgRefinementMode             string
+	cfgRefinementMaxIterations    int
+	cfgFeasibilityMaxQueries      int
+	cfgFeasibilityTimeoutMS       int
+	cfgAliasMode                  string
+	auditExceptions               bool
+	checkAll                      bool
+	checkValidate                 bool
+	checkStringer                 bool
+	checkConstructors             bool
+	checkConstructorSig           bool
+	checkFuncOptions              bool
+	checkImmutability             bool
+	checkStructValidate           bool
+	checkCastValidation           bool
+	checkValidateUsage            bool
+	checkConstructorErrUsage      bool
+	checkConstructorValidates     bool
+	checkValidateDelegation       bool
+	checkNonZero                  bool
+	checkUseBeforeValidate        bool
+	checkConstructorReturnError   bool
+	checkRedundantConversion      bool
+	auditReviewDates              bool
+	checkEnumSync                 bool
+	suggestValidateAll            bool
+	checkBoundaryRequest          bool
+	checkCrossPlatformPath        bool
+	checkPathmatrixDivergent      bool
+	checkCommandWaitDelay         bool
+	checkCueFedPathNativeClean    bool
+	checkPathBoundaryPrefix       bool
+	checkVolumeMountHostToSlash   bool
+	checkCobraCommandContext      bool
+	checkPathDomainNativeFilepath bool
 }
 
 func newRunConfigForState(state *flagState) runConfig {

@@ -70,6 +70,12 @@ func inspectCommandWaitDelay(
 			}
 			v, method := commandMethodCall(pass, node)
 			if v == nil || !commandExecutionMethods[method] {
+				for _, runnerVar := range commandVarsPassedToRunner(pass, node) {
+					if _, ok := tracked[runnerVar]; ok && !hasWaitDelay[runnerVar] && !reported[runnerVar] {
+						reportCommandWaitDelay(pass, node, funcQualName, bl)
+						reported[runnerVar] = true
+					}
+				}
 				return true
 			}
 			if _, ok := tracked[v]; ok && !hasWaitDelay[v] && !reported[v] {
@@ -405,6 +411,64 @@ func commandVarsReturnedInPreparedCommand(pass *analysis.Pass, expr ast.Expr) []
 		}
 	}
 	return out
+}
+
+func commandVarsPassedToRunner(pass *analysis.Pass, call *ast.CallExpr) []*types.Var {
+	if pass == nil || pass.TypesInfo == nil || call == nil {
+		return nil
+	}
+	sig := signatureOfType(pass.TypesInfo.TypeOf(call.Fun))
+	if sig == nil || !signatureReturnsError(sig) {
+		return nil
+	}
+	params := sig.Params()
+	var out []*types.Var
+	for idx, arg := range call.Args {
+		if idx >= params.Len() || !isExecCmdPointerType(params.At(idx).Type()) {
+			continue
+		}
+		if v := varFromIdentExpr(pass, arg); v != nil {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func signatureOfType(t types.Type) *types.Signature {
+	t = types.Unalias(t)
+	if sig, ok := t.(*types.Signature); ok {
+		return sig
+	}
+	named, ok := t.(*types.Named)
+	if !ok {
+		return nil
+	}
+	sig, _ := types.Unalias(named.Underlying()).(*types.Signature)
+	return sig
+}
+
+func signatureReturnsError(sig *types.Signature) bool {
+	if sig == nil || sig.Results() == nil {
+		return false
+	}
+	for resultVar := range sig.Results().Variables() {
+		if isErrorType(resultVar.Type()) {
+			return true
+		}
+	}
+	return false
+}
+
+func isExecCmdPointerType(t types.Type) bool {
+	ptr, ok := types.Unalias(t).(*types.Pointer)
+	if !ok {
+		return false
+	}
+	named, ok := types.Unalias(ptr.Elem()).(*types.Named)
+	if !ok || named.Obj() == nil || named.Obj().Pkg() == nil {
+		return false
+	}
+	return named.Obj().Name() == "Cmd" && named.Obj().Pkg().Path() == "os/exec"
 }
 
 func repoPathParameterVars(pass *analysis.Pass, fn *ast.FuncDecl) map[*types.Var]bool {

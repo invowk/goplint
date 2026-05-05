@@ -55,6 +55,7 @@ type BaselineConfig struct {
 	PathBoundaryPrefix            BaselineCategory `toml:"path-boundary-prefix"`
 	VolumeMountHostToSlash        BaselineCategory `toml:"volume-mount-host-toslash"`
 	CobraCommandContext           BaselineCategory `toml:"cobra-command-context"`
+	PathDomainNativeFilepath      BaselineCategory `toml:"path-domain-native-filepath"`
 
 	// lookupByID is an O(1) index keyed by category → finding ID.
 	lookupByID map[string]map[string]bool

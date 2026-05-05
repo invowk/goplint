@@ -79,6 +79,7 @@ make update-baseline
 | Constructor + exported mutable fields | `--check-immutability` | `missing-immutability` |
 | Struct constructor without `Validate()` | `--check-struct-validate` | `missing-struct-validate` |
 | Wrong struct `Validate()` signature | `--check-struct-validate` | `wrong-struct-validate-sig` |
+| Host-native `filepath` on annotated non-host paths | `--check-path-domain-native-filepath` | `path-domain-native-filepath` |
 | Unknown directive key typo | always on | `unknown-directive` |
 | Stale exception pattern | `--audit-exceptions` | `stale-exception` |
 
@@ -132,7 +133,14 @@ type Foo struct {
     Bar string //goplint:ignore -- display-only
     Baz int    //nolint:goplint
 }
+
+//goplint:path-domain=container
+type ContainerPath string
 ```
+
+`path-domain` accepts explicit lowercase domains such as `container` for paths
+whose semantics are intentionally not the host OS semantics used by
+`path/filepath`.
 
 ### Auditing Stale Exceptions
 
