@@ -651,6 +651,7 @@ func TestCheckWindowsPitfalls(t *testing.T) {
 	setFlag(t, h.Analyzer, "check-cue-fed-path-native-clean", "true")
 	setFlag(t, h.Analyzer, "check-path-boundary-prefix", "true")
 	setFlag(t, h.Analyzer, "check-volume-mount-host-toslash", "true")
+	setFlag(t, h.Analyzer, "check-cobra-command-context", "true")
 
 	runAnalysisTest(t, testdata, h.Analyzer, "windowspitfalls")
 }

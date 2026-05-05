@@ -86,6 +86,7 @@ Each diagnostic emitted by the analyzer carries a `category` field (visible in `
 | `cue-fed-path-native-clean` | `--check-cue-fed-path-native-clean` or `--check-all` | Exported path validator sends CUE-fed/repo-relative input through native `filepath` cleanup before slash-normalized validation. |
 | `path-boundary-prefix` | `--check-path-boundary-prefix` or `--check-all` | Path containment check uses broad `strings.HasPrefix` without an exact `..` or separator-boundary check. |
 | `volume-mount-host-toslash` | `--check-volume-mount-host-toslash` or `--check-all` | Container volume mount formats a host path before `filepath.ToSlash`, producing invalid Windows mount specs. |
+| `cobra-command-context` | `--check-cobra-command-context` or `--check-all` | Cobra command handler uses `context.Background()` instead of `cmd.Context()`, dropping signal cancellation and caller deadlines. |
 | `unvalidated-boundary-request` | `--check-boundary-request-validation` or `--check-all` | Exported Request/Options boundary uses a validatable parameter before checked `Validate()` |
 | `enum-cue-missing-go` | `--check-enum-sync` | CUE disjunction member not in Go Validate() switch |
 | `enum-cue-extra-go` | `--check-enum-sync` | Go Validate() switch case not in CUE disjunction |
@@ -94,7 +95,7 @@ Each diagnostic emitted by the analyzer carries a `category` field (visible in `
 | `overdue-review` | `--audit-review-dates` | Exception with `review_after` date that has passed |
 | `unknown-directive` | (always active) | Unrecognized key in `//goplint:` directive (typo detection) |
 
-The `--check-all` flag enables `--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, `--check-cross-platform-paths`, `--check-pathmatrix-divergent`, `--check-command-waitdelay`, `--check-cue-fed-path-native-clean`, `--check-path-boundary-prefix`, and `--check-volume-mount-host-toslash` in a single invocation. `--check-all` includes CFA-backed checks by default. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
+The `--check-all` flag enables `--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, `--check-cross-platform-paths`, `--check-pathmatrix-divergent`, `--check-command-waitdelay`, `--check-cue-fed-path-native-clean`, `--check-path-boundary-prefix`, `--check-volume-mount-host-toslash`, and `--check-cobra-command-context` in a single invocation. `--check-all` includes CFA-backed checks by default. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
 
 ## Architecture
 
@@ -364,11 +365,11 @@ When adding a new type that holds a CUE-fed forward-slash path, add the directiv
 
 ## Supplementary Modes
 
-Eighteen additional analysis modes complement the primary primitive detection:
+Nineteen additional analysis modes complement the primary primitive detection:
 
 ### `--check-all`
 
-Enables all DDD compliance checks (`--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, `--check-cross-platform-paths`, `--check-pathmatrix-divergent`, `--check-command-waitdelay`, `--check-cue-fed-path-native-clean`, `--check-path-boundary-prefix`, `--check-volume-mount-host-toslash`) in a single invocation. This is the recommended flag for comprehensive DDD compliance checks. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
+Enables all DDD compliance checks (`--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, `--check-cross-platform-paths`, `--check-pathmatrix-divergent`, `--check-command-waitdelay`, `--check-cue-fed-path-native-clean`, `--check-path-boundary-prefix`, `--check-volume-mount-host-toslash`, `--check-cobra-command-context`) in a single invocation. This is the recommended flag for comprehensive DDD compliance checks. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
 
 ### `--audit-exceptions`
 
@@ -658,6 +659,7 @@ All supplementary modes respect the TOML exception config:
 - `--check-cue-fed-path-native-clean`: excepted via `pkg.FuncName.cue-fed-path-native-clean`
 - `--check-path-boundary-prefix`: excepted via `pkg.FuncName.path-boundary-prefix`
 - `--check-volume-mount-host-toslash`: excepted via `pkg.FuncName.volume-mount-host-toslash`
+- `--check-cobra-command-context`: excepted via `pkg.FuncName.cobra-command-context`
 - `--check-boundary-request-validation`: excepted via `pkg.FuncName.param.boundary-request-validation` or `pkg.FuncName.boundary-request-validation`
 - `--check-enum-sync`: excepted via `pkg.TypeName.memberValue.enum-cue-missing-go` or `pkg.TypeName.memberValue.enum-cue-extra-go`
 

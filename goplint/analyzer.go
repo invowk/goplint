@@ -75,6 +75,7 @@ const (
 	CategoryCueFedPathNativeClean         = "cue-fed-path-native-clean"
 	CategoryPathBoundaryPrefix            = "path-boundary-prefix"
 	CategoryVolumeMountHostToSlash        = "volume-mount-host-toslash"
+	CategoryCobraCommandContext           = "cobra-command-context"
 )
 
 // NewAnalyzer constructs an analyzer with isolated flag state.

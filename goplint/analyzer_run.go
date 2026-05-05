@@ -525,6 +525,10 @@ func runTraversal(
 				inspectVolumeMountHostToSlash(pass, n, cfg, bl)
 			}
 
+			if rc.checkCobraCommandContext {
+				inspectCobraCommandContext(pass, n, cfg, bl)
+			}
+
 		}
 	})
 	return traverseErr

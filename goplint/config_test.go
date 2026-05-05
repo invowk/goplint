@@ -500,6 +500,65 @@ func TestIsExcepted(t *testing.T) {
 	}
 }
 
+func TestIsCategoryExcepted(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		exceptions    []Exception
+		qualifiedName string
+		category      string
+		want          bool
+	}{
+		{
+			name:          "exact category match",
+			exceptions:    []Exception{{Pattern: "pkg.Func.command-waitdelay"}},
+			qualifiedName: "pkg.Func.command-waitdelay",
+			category:      "command-waitdelay",
+			want:          true,
+		},
+		{
+			name:          "stripped category match",
+			exceptions:    []Exception{{Pattern: "Func.command-waitdelay"}},
+			qualifiedName: "pkg.Func.command-waitdelay",
+			category:      "command-waitdelay",
+			want:          true,
+		},
+		{
+			name:          "wildcard owner with explicit category",
+			exceptions:    []Exception{{Pattern: "pkg.*.command-waitdelay"}},
+			qualifiedName: "pkg.Func.command-waitdelay",
+			category:      "command-waitdelay",
+			want:          true,
+		},
+		{
+			name:          "broad primitive wildcard does not suppress category",
+			exceptions:    []Exception{{Pattern: "pkg.*.*"}},
+			qualifiedName: "pkg.Func.command-waitdelay",
+			category:      "command-waitdelay",
+			want:          false,
+		},
+		{
+			name:          "category mismatch",
+			exceptions:    []Exception{{Pattern: "pkg.Func.path-boundary-prefix"}},
+			qualifiedName: "pkg.Func.command-waitdelay",
+			category:      "command-waitdelay",
+			want:          false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			cfg := &ExceptionConfig{Exceptions: tt.exceptions}
+			got := cfg.isCategoryExcepted(tt.qualifiedName, tt.category)
+			if got != tt.want {
+				t.Errorf("isCategoryExcepted(%q, %q) = %v, want %v", tt.qualifiedName, tt.category, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIsSkippedType(t *testing.T) {
 	t.Parallel()
 

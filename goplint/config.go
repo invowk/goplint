@@ -228,6 +228,36 @@ func (c *ExceptionConfig) isExcepted(qualifiedName string) bool {
 	return false
 }
 
+// isCategoryExcepted is like isExcepted, but it only considers exception
+// patterns whose final segment names the diagnostic category exactly. This
+// keeps broad primitive exceptions such as "pkg.*.*" from accidentally
+// suppressing product-safety checks that append ".<category>" to a function
+// name.
+func (c *ExceptionConfig) isCategoryExcepted(qualifiedName, category string) bool {
+	stripped := qualifiedName
+	if _, after, ok := strings.Cut(qualifiedName, "."); ok {
+		stripped = after
+	}
+
+	for i, exc := range c.Exceptions {
+		if !exceptionPatternHasCategory(exc.Pattern, category) {
+			continue
+		}
+		if matchPattern(exc.Pattern, qualifiedName) || matchPattern(exc.Pattern, stripped) {
+			if c.matchCounts != nil {
+				c.matchCounts[i]++
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func exceptionPatternHasCategory(pattern, category string) bool {
+	parts := strings.Split(pattern, ".")
+	return len(parts) > 0 && parts[len(parts)-1] == category
+}
+
 // isSkippedType checks whether a type name is in the skip_types list.
 func (c *ExceptionConfig) isSkippedType(typeName string) bool {
 	return slices.Contains(c.Settings.SkipTypes, typeName)

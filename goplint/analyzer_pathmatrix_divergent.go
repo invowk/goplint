@@ -53,7 +53,7 @@ func inspectPathmatrixDivergent(pass *analysis.Pass, fn *ast.FuncDecl, cfg *Exce
 
 	funcQualName := qualFuncName(pass, fn)
 	excKey := funcQualName + ".pathmatrix-divergent"
-	if cfg != nil && cfg.isExcepted(excKey) {
+	if cfg != nil && cfg.isCategoryExcepted(excKey, "pathmatrix-divergent") {
 		return
 	}
 

@@ -103,6 +103,7 @@ type flagState struct {
 	checkCueFedPathNativeClean  bool
 	checkPathBoundaryPrefix     bool
 	checkVolumeMountHostToSlash bool
+	checkCobraCommandContext    bool
 
 	// runtime caches/state are intentionally analyzer-instance scoped.
 	overdueReviewMu   sync.Mutex
@@ -451,6 +452,18 @@ func modeFlagSpecs() []modeFlagSpec {
 			},
 		},
 		{
+			flagName:          "check-cobra-command-context",
+			usage:             "report Cobra command handlers that use context.Background instead of cmd.Context",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkCobraCommandContext
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkCobraCommandContext
+			},
+		},
+		{
 			flagName:          "suggest-validate-all",
 			usage:             "report structs with Validate() + validatable fields but no //goplint:validate-all directive (advisory)",
 			defaultValue:      false,
@@ -623,6 +636,7 @@ type runConfig struct {
 	checkCueFedPathNativeClean  bool
 	checkPathBoundaryPrefix     bool
 	checkVolumeMountHostToSlash bool
+	checkCobraCommandContext    bool
 }
 
 func newRunConfigForState(state *flagState) runConfig {

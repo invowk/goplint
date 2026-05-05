@@ -27,11 +27,11 @@ func inspectCommandWaitDelay(
 	cfg *ExceptionConfig,
 	bl *BaselineConfig,
 ) {
-	if fn == nil || fn.Body == nil || shouldSkipFunc(fn) || hasIgnoreDirective(fn.Doc, nil) {
+	if fn == nil || fn.Body == nil || shouldSkipFunc(fn) {
 		return
 	}
 	funcQualName := qualFuncName(pass, fn)
-	if isExcepted(cfg, funcQualName+".command-waitdelay") {
+	if isPlatformCategoryExcepted(cfg, funcQualName+".command-waitdelay", "command-waitdelay") {
 		return
 	}
 
@@ -64,6 +64,10 @@ func inspectCommandWaitDelay(
 				delete(reported, v)
 			}
 		case *ast.CallExpr:
+			if commandContextImmediateExecution(pass, node) {
+				reportCommandWaitDelay(pass, node, funcQualName, bl)
+				return true
+			}
 			v, method := commandMethodCall(pass, node)
 			if v == nil || !commandExecutionMethods[method] {
 				return true
@@ -92,11 +96,11 @@ func inspectCueFedPathNativeClean(
 	cfg *ExceptionConfig,
 	bl *BaselineConfig,
 ) {
-	if fn == nil || fn.Body == nil || shouldSkipFunc(fn) || hasIgnoreDirective(fn.Doc, nil) {
+	if fn == nil || fn.Body == nil || shouldSkipFunc(fn) {
 		return
 	}
 	funcQualName := qualFuncName(pass, fn)
-	if isExcepted(cfg, funcQualName+".cue-fed-path-native-clean") {
+	if isPlatformCategoryExcepted(cfg, funcQualName+".cue-fed-path-native-clean", CategoryCueFedPathNativeClean) {
 		return
 	}
 	if !isExportedPathValidatorName(fn.Name.Name) {
@@ -143,11 +147,11 @@ func inspectPathBoundaryPrefix(
 	cfg *ExceptionConfig,
 	bl *BaselineConfig,
 ) {
-	if fn == nil || fn.Body == nil || shouldSkipFunc(fn) || hasIgnoreDirective(fn.Doc, nil) {
+	if fn == nil || fn.Body == nil || shouldSkipFunc(fn) {
 		return
 	}
 	funcQualName := qualFuncName(pass, fn)
-	if isExcepted(cfg, funcQualName+".path-boundary-prefix") {
+	if isPlatformCategoryExcepted(cfg, funcQualName+".path-boundary-prefix", CategoryPathBoundaryPrefix) {
 		return
 	}
 
@@ -208,11 +212,11 @@ func inspectVolumeMountHostToSlash(
 	cfg *ExceptionConfig,
 	bl *BaselineConfig,
 ) {
-	if fn == nil || fn.Body == nil || shouldSkipFunc(fn) || hasIgnoreDirective(fn.Doc, nil) {
+	if fn == nil || fn.Body == nil || shouldSkipFunc(fn) {
 		return
 	}
 	funcQualName := qualFuncName(pass, fn)
-	if isExcepted(cfg, funcQualName+".volume-mount-host-toslash") {
+	if isPlatformCategoryExcepted(cfg, funcQualName+".volume-mount-host-toslash", CategoryVolumeMountHostToSlash) {
 		return
 	}
 
@@ -256,6 +260,34 @@ func inspectVolumeMountHostToSlash(
 	})
 }
 
+func inspectCobraCommandContext(
+	pass *analysis.Pass,
+	fn *ast.FuncDecl,
+	cfg *ExceptionConfig,
+	bl *BaselineConfig,
+) {
+	if fn == nil || fn.Body == nil || shouldSkipFunc(fn) {
+		return
+	}
+	funcQualName := qualFuncName(pass, fn)
+	if isPlatformCategoryExcepted(cfg, funcQualName+".cobra-command-context", CategoryCobraCommandContext) {
+		return
+	}
+	cobraVars := cobraCommandParameterVars(pass, fn)
+	if len(cobraVars) == 0 {
+		return
+	}
+
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok || !isContextBackgroundCall(pass, call) {
+			return true
+		}
+		reportCobraCommandContext(pass, call, funcQualName, bl)
+		return true
+	})
+}
+
 func directChildren(n ast.Node) []ast.Node {
 	var children []ast.Node
 	ast.Inspect(n, func(child ast.Node) bool {
@@ -292,8 +324,14 @@ func reportVolumeMountHostToSlash(pass *analysis.Pass, node ast.Node, funcQualNa
 	reportFindingIfNotBaselined(pass, bl, node.Pos(), CategoryVolumeMountHostToSlash, findingID, msg)
 }
 
-func isExcepted(cfg *ExceptionConfig, key string) bool {
-	return cfg != nil && cfg.isExcepted(key)
+func reportCobraCommandContext(pass *analysis.Pass, node ast.Node, funcQualName string, bl *BaselineConfig) {
+	msg := fmt.Sprintf("Cobra command handler %s calls context.Background(); use cmd.Context() so signal cancellation and caller deadlines reach execution", funcQualName)
+	findingID := PackageScopedFindingID(pass, CategoryCobraCommandContext, funcQualName, stablePosKey(pass, node.Pos()))
+	reportFindingIfNotBaselined(pass, bl, node.Pos(), CategoryCobraCommandContext, findingID, msg)
+}
+
+func isPlatformCategoryExcepted(cfg *ExceptionConfig, key, category string) bool {
+	return cfg != nil && cfg.isCategoryExcepted(key, category)
 }
 
 func recordWaitDelayAssignment(
@@ -329,6 +367,14 @@ func commandMethodCall(pass *analysis.Pass, call *ast.CallExpr) (*types.Var, str
 		return nil, ""
 	}
 	return varFromIdentExpr(pass, sel.X), sel.Sel.Name
+}
+
+func commandContextImmediateExecution(pass *analysis.Pass, call *ast.CallExpr) bool {
+	sel, ok := stripParens(call.Fun).(*ast.SelectorExpr)
+	if !ok || sel.Sel == nil || !commandExecutionMethods[sel.Sel.Name] {
+		return false
+	}
+	return isExecCommandContextExpr(pass, sel.X)
 }
 
 func commandVarsReturnedInPreparedCommand(pass *analysis.Pass, expr ast.Expr) []*types.Var {
@@ -562,6 +608,49 @@ func isWriteStringHostPathCall(pass *analysis.Pass, call *ast.CallExpr) bool {
 		return false
 	}
 	return isLikelyHostPathExpr(pass, call.Args[0]) && !isFilepathToSlashCall(pass, call.Args[0])
+}
+
+func cobraCommandParameterVars(pass *analysis.Pass, fn *ast.FuncDecl) map[*types.Var]bool {
+	out := make(map[*types.Var]bool)
+	if pass == nil || pass.TypesInfo == nil || fn == nil || fn.Type == nil || fn.Type.Params == nil {
+		return out
+	}
+	for _, field := range fn.Type.Params.List {
+		if !isCobraCommandType(field.Type, pass.TypesInfo) {
+			continue
+		}
+		for _, name := range field.Names {
+			if v, ok := pass.TypesInfo.ObjectOf(name).(*types.Var); ok {
+				out[v] = true
+			}
+		}
+	}
+	return out
+}
+
+func isCobraCommandType(expr ast.Expr, info *types.Info) bool {
+	if expr == nil || info == nil {
+		return false
+	}
+	return isNamedCobraCommand(info.TypeOf(expr))
+}
+
+func isNamedCobraCommand(t types.Type) bool {
+	ptr, ok := types.Unalias(t).(*types.Pointer)
+	if ok {
+		t = ptr.Elem()
+	}
+	named, ok := types.Unalias(t).(*types.Named)
+	if !ok || named.Obj() == nil || named.Obj().Pkg() == nil {
+		return false
+	}
+	return named.Obj().Name() == "Command" && named.Obj().Pkg().Path() == "github.com/spf13/cobra"
+}
+
+func isContextBackgroundCall(pass *analysis.Pass, call *ast.CallExpr) bool {
+	return isPackageFuncMatch(pass, call, "context", func(name string) bool {
+		return name == "Background"
+	})
 }
 
 func unwrapStringConversion(pass *analysis.Pass, expr ast.Expr) ast.Expr {

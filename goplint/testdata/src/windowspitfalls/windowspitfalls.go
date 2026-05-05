@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 const commandWaitDelay = 10 * time.Second
@@ -38,6 +40,16 @@ type (
 func missingWaitDelay(ctx context.Context, command CommandName) error {
 	cmd := exec.CommandContext(ctx, string(command))
 	return cmd.Run() // want `exec\.CommandContext command in windowspitfalls\.missingWaitDelay is used without setting Cmd\.WaitDelay`
+}
+
+func directMissingWaitDelay(ctx context.Context, command CommandName) error {
+	return exec.CommandContext(ctx, string(command)).Run() // want `exec\.CommandContext command in windowspitfalls\.directMissingWaitDelay is used without setting Cmd\.WaitDelay`
+}
+
+//goplint:ignore -- command string is intentionally raw for this fixture.
+func ignoredFunctionStillNeedsWaitDelay(ctx context.Context, command CommandName) error {
+	cmd := exec.CommandContext(ctx, string(command))
+	return cmd.Run() // want `exec\.CommandContext command in windowspitfalls\.ignoredFunctionStillNeedsWaitDelay is used without setting Cmd\.WaitDelay`
 }
 
 func waitDelaySet(ctx context.Context, command CommandName) error {
@@ -97,4 +109,12 @@ func goodVolumeMount(host HostFilesystemPath) VolumeMountSpec {
 
 func (v VolumeMount) String() string {
 	return string(v.HostPath) + ":" + string(v.ContainerPath) // want `container volume mount host path in windowspitfalls\.VolumeMount\.String is formatted before filepath\.ToSlash`
+}
+
+func cobraBackground(cmd *cobra.Command) context.Context {
+	return context.Background() // want `Cobra command handler windowspitfalls\.cobraBackground calls context\.Background`
+}
+
+func cobraCommandContext(cmd *cobra.Command) context.Context {
+	return cmd.Context()
 }
