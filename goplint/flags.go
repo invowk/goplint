@@ -107,10 +107,11 @@ type flagState struct {
 	checkPathDomainNativeFilepath bool
 
 	// runtime caches/state are intentionally analyzer-instance scoped.
-	overdueReviewMu   sync.Mutex
-	overdueReviewSeen map[string]bool
-	configCache       sync.Map // map[configCacheKey]*configCacheEntry
-	baselineCache     sync.Map // map[baselineCacheKey]*baselineCacheEntry
+	overdueReviewMu    sync.Mutex
+	overdueReviewSeen  map[string]bool
+	configCache        sync.Map // map[configCacheKey]*configCacheEntry
+	baselineCache      sync.Map // map[baselineCacheKey]*baselineCacheEntry
+	calleeSummaryCache sync.Map // map[string]calleeSummaryEntry keyed by objectKey(func)+slot
 }
 
 type trackedStringFlag struct {
@@ -593,7 +594,7 @@ func resetFlagStateDefaults(state *flagState) {
 	state.overdueReviewMu.Unlock()
 	state.configCache = sync.Map{}
 	state.baselineCache = sync.Map{}
-	resetFirstArgSummaryCache()
+	state.calleeSummaryCache = sync.Map{}
 }
 
 // runConfig holds the resolved flag values for a single run() invocation.

@@ -19,18 +19,16 @@ func TestWriteRefinementTraceToSinkWritesTraceRecord(t *testing.T) {
 	t.Parallel()
 
 	path := filepath.Join(t.TempDir(), "findings.jsonl")
-	analyzer := NewAnalyzer()
-	if err := analyzer.Flags.Set("emit-findings-jsonl", path); err != nil {
-		t.Fatalf("set emit-findings-jsonl flag: %v", err)
-	}
 
 	fset := token.NewFileSet()
 	file := fset.AddFile("fixture.go", -1, 64)
 	pos := file.Pos(12)
 	pass := &analysis.Pass{
-		Analyzer: analyzer,
-		Fset:     fset,
+		Fset:   fset,
+		Report: func(analysis.Diagnostic) {},
 	}
+	restore := installDiagnosticReporter(pass, path)
+	defer restore()
 
 	result := interprocPathResult{
 		WitnessRecord: cfgWitnessRecord{
@@ -89,17 +87,15 @@ func TestWriteRefinementTraceToSinkSkipsWhenPhaseCDisabled(t *testing.T) {
 	t.Parallel()
 
 	path := filepath.Join(t.TempDir(), "findings.jsonl")
-	analyzer := NewAnalyzer()
-	if err := analyzer.Flags.Set("emit-findings-jsonl", path); err != nil {
-		t.Fatalf("set emit-findings-jsonl flag: %v", err)
-	}
 
 	fset := token.NewFileSet()
 	file := fset.AddFile("fixture.go", -1, 8)
 	pass := &analysis.Pass{
-		Analyzer: analyzer,
-		Fset:     fset,
+		Fset:   fset,
+		Report: func(analysis.Diagnostic) {},
 	}
+	restore := installDiagnosticReporter(pass, path)
+	defer restore()
 
 	writeRefinementTraceToSink(pass, file.Pos(1), interprocPathResult{})
 

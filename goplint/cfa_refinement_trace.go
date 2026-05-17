@@ -19,8 +19,8 @@ func writeRefinementTraceToSink(
 	if pass == nil || !result.PhaseC.Enabled {
 		return
 	}
-	path := emitFindingsPathFromPass(pass)
-	if path == "" {
+	reporter := reporterForPass(pass)
+	if reporter == nil {
 		return
 	}
 	record := FindingStreamRecord{
@@ -47,7 +47,7 @@ func writeRefinementTraceToSink(
 	if pass.Fset != nil && pos.IsValid() {
 		record.Posn = pass.Fset.Position(pos).String()
 	}
-	writeFindingStreamRecord(path, record)
+	reporter.WriteRecord(record)
 }
 
 func joinCFGBlocks(path []int32) string {

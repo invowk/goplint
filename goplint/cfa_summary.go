@@ -48,13 +48,11 @@ type calleeCallTarget struct {
 	expr ast.Expr
 }
 
-var calleeSummaryCache sync.Map // map[string]calleeSummaryEntry keyed by objectKey(func)+slot
-
-func resetFirstArgSummaryCache() {
-	calleeSummaryCache.Range(func(key, _ any) bool {
-		calleeSummaryCache.Delete(key)
-		return true
-	})
+func ensureCalleeSummaryCache(cache *sync.Map) *sync.Map {
+	if cache != nil {
+		return cache
+	}
+	return &sync.Map{}
 }
 
 func calledFunctionObject(pass *analysis.Pass, call *ast.CallExpr) *types.Func {
@@ -133,14 +131,16 @@ func callCalleeSummaryForTargetWithStack(
 	call *ast.CallExpr,
 	target castTarget,
 	scope summaryStackScope,
+	cache *sync.Map,
 ) (calleeTargetSummary, bool, pathOutcomeReason) {
+	cache = ensureCalleeSummaryCache(cache)
 	slots := callTargetSlotsMatchingCastTarget(pass, call, target)
 	if len(slots) == 0 {
 		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
 	}
 	best := pathOutcomeReasonUnresolvedTarget
 	for _, candidate := range slots {
-		summary, ok, reason := callCalleeSummaryForSlotWithStack(pass, call, candidate.slot, scope)
+		summary, ok, reason := callCalleeSummaryForSlotWithStack(pass, call, candidate.slot, scope, cache)
 		if ok {
 			return summary, true, reason
 		}
@@ -159,12 +159,14 @@ func callCalleeSummaryForSlotWithStack(
 	call *ast.CallExpr,
 	slot calleeTargetSlot,
 	scope summaryStackScope,
+	cache *sync.Map,
 ) (calleeTargetSummary, bool, pathOutcomeReason) {
+	cache = ensureCalleeSummaryCache(cache)
 	fnObj := calledFunctionObject(pass, call)
 	if fnObj == nil {
 		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
 	}
-	return calleeSummaryForFuncSlotWithStack(pass, fnObj, slot, scope)
+	return calleeSummaryForFuncSlotWithStack(pass, fnObj, slot, scope, cache)
 }
 
 func calleeSummaryForFuncSlotWithStack(
@@ -172,16 +174,18 @@ func calleeSummaryForFuncSlotWithStack(
 	fnObj *types.Func,
 	slot calleeTargetSlot,
 	scope summaryStackScope,
+	cache *sync.Map,
 ) (calleeTargetSummary, bool, pathOutcomeReason) {
 	if fnObj == nil {
 		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
 	}
+	cache = ensureCalleeSummaryCache(cache)
 	key := objectKey(fnObj)
 	if key == "" {
 		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
 	}
 	cacheKey := key + "|" + slot.cacheKey()
-	if cached, ok := calleeSummaryCache.Load(cacheKey); ok {
+	if cached, ok := cache.Load(cacheKey); ok {
 		entry := cached.(calleeSummaryEntry)
 		return entry.summary, entry.ok, entry.reason
 	}
@@ -189,10 +193,10 @@ func calleeSummaryForFuncSlotWithStack(
 		return calleeTargetSummary{}, false, pathOutcomeReasonRecursionCycle
 	}
 	scope.push(cacheKey)
-	summary, ok, reason := deriveCalleeSummaryForSlotWithStack(pass, fnObj, slot, scope)
+	summary, ok, reason := deriveCalleeSummaryForSlotWithStack(pass, fnObj, slot, scope, cache)
 	scope.pop(cacheKey)
 	summary.OutcomeReason = reason
-	calleeSummaryCache.Store(cacheKey, calleeSummaryEntry{summary: summary, ok: ok, reason: reason})
+	cache.Store(cacheKey, calleeSummaryEntry{summary: summary, ok: ok, reason: reason})
 	return summary, ok, reason
 }
 
@@ -201,6 +205,7 @@ func deriveCalleeSummaryForSlotWithStack(
 	fnObj *types.Func,
 	slot calleeTargetSlot,
 	scope summaryStackScope,
+	cache *sync.Map,
 ) (calleeTargetSummary, bool, pathOutcomeReason) {
 	fnDecl := findFuncDeclForObject(pass, fnObj)
 	if fnDecl == nil || fnDecl.Body == nil {
@@ -220,7 +225,7 @@ func deriveCalleeSummaryForSlotWithStack(
 	ubvSyncCalls := collectUBVClosureVarCalls(closureCalls)
 
 	methodCalls := collectMethodValueValidateCallSet(methodValueCalls)
-	methodCalls = mergeMethodValueValidateCallSets(methodCalls, collectCalleeValidatedCalls(pass, fnDecl.Body, scope))
+	methodCalls = mergeMethodValueValidateCallSets(methodCalls, collectCalleeValidatedCalls(pass, fnDecl.Body, scope, cache))
 
 	cfg := buildFuncCFGForPass(pass, fnDecl.Body)
 	entry := cfgEntryBlock(cfg)
@@ -261,6 +266,7 @@ func deriveCalleeSummaryForSlotWithStack(
 		methodCalls,
 		ubvModeEscape,
 		scope.seen,
+		cache,
 	)
 	if inBlockOutcome == pathOutcomeInconclusive {
 		return calleeTargetSummary{}, false, inBlockReason
@@ -279,6 +285,7 @@ func deriveCalleeSummaryForSlotWithStack(
 			budget.maxStates,
 			budget.maxDepth,
 			scope.seen,
+			cache,
 		)
 		if outcome == pathOutcomeInconclusive {
 			return calleeTargetSummary{}, false, reason
@@ -300,10 +307,11 @@ func cfgEntryBlock(cfg *gocfg.CFG) *gocfg.Block {
 	return cfg.Blocks[0]
 }
 
-func collectCalleeValidatedCalls(pass *analysis.Pass, body *ast.BlockStmt, scope summaryStackScope) methodValueValidateCallSet {
+func collectCalleeValidatedCalls(pass *analysis.Pass, body *ast.BlockStmt, scope summaryStackScope, cache *sync.Map) methodValueValidateCallSet {
 	if pass == nil || body == nil {
 		return nil
 	}
+	cache = ensureCalleeSummaryCache(cache)
 	var out methodValueValidateCallSet
 	ast.Inspect(body, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
@@ -311,7 +319,7 @@ func collectCalleeValidatedCalls(pass *analysis.Pass, body *ast.BlockStmt, scope
 			return true
 		}
 		for _, candidate := range allCallTargetSlots(call) {
-			summary, ok, _ := callCalleeSummaryForSlotWithStack(pass, call, candidate.slot, scope)
+			summary, ok, _ := callCalleeSummaryForSlotWithStack(pass, call, candidate.slot, scope, cache)
 			if !ok {
 				continue
 			}

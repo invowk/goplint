@@ -5,25 +5,32 @@ package goplint
 import (
 	"fmt"
 	"go/ast"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 	gocfg "golang.org/x/tools/go/cfg"
 )
 
 type interprocSolver struct {
-	pass    *analysis.Pass
-	backend string
-	engine  string
+	pass               *analysis.Pass
+	backend            string
+	engine             string
+	calleeSummaryCache *sync.Map
 }
 
-func newInterprocSolver(pass *analysis.Pass, backend, engine string) interprocSolver {
+func newInterprocSolver(pass *analysis.Pass, backend, engine string, caches ...*sync.Map) interprocSolver {
 	if backend == "" {
 		backend = defaultCFGBackend
 	}
+	var cache *sync.Map
+	if len(caches) > 0 {
+		cache = caches[0]
+	}
 	return interprocSolver{
-		pass:    pass,
-		backend: backend,
-		engine:  normalizeInterprocEngine(engine),
+		pass:               pass,
+		backend:            backend,
+		engine:             normalizeInterprocEngine(engine),
+		calleeSummaryCache: ensureCalleeSummaryCache(cache),
 	}
 }
 
@@ -300,6 +307,7 @@ func (s interprocSolver) evaluateUBVInBlockLegacy(input interprocUBVInBlockInput
 		input.MethodCalls,
 		input.Mode,
 		input.SummaryStack,
+		s.calleeSummaryCache,
 	)
 	result := interprocPathResultFromOutcome(outcome, reason, []int32{input.DefBlockIndex})
 	fact := ifdsUBVNeedsValidateBeforeUseFact{
@@ -336,6 +344,7 @@ func (s interprocSolver) evaluateUBVInBlockIFDS(input interprocUBVInBlockInput) 
 			input.Mode,
 			state,
 			input.SummaryStack,
+			s.calleeSummaryCache,
 		)
 		if reason != pathOutcomeReasonNone {
 			result := interprocPathResultFromOutcome(pathOutcomeInconclusive, reason, []int32{input.DefBlockIndex})
@@ -385,6 +394,7 @@ func (s interprocSolver) evaluateUBVCrossBlockLegacy(input interprocUBVCrossBloc
 		input.MaxStates,
 		input.MaxDepth,
 		input.SummaryStack,
+		s.calleeSummaryCache,
 	)
 	result := interprocPathResultFromOutcome(outcome, reason, witness)
 	fact := ifdsUBVNeedsValidateBeforeUseFact{
@@ -452,6 +462,7 @@ func (s interprocSolver) evaluateUBVCrossBlockIFDS(input interprocUBVCrossBlockI
 				input.Mode,
 				state,
 				input.SummaryStack,
+				s.calleeSummaryCache,
 			)
 		},
 		func(nodeID interprocNodeID, _ ast.Node, state ideValidationState) bool {
@@ -489,6 +500,7 @@ func (s interprocSolver) evaluateConstructorPathLegacy(input interprocConstructo
 		input.MaxStates,
 		input.MaxDepth,
 		input.SummaryStack,
+		s.calleeSummaryCache,
 	)
 	result := interprocPathResultFromOutcome(outcome, reason, witness)
 	fact := ifdsCtorReturnNeedsValidateFact{
@@ -528,7 +540,7 @@ func (s interprocSolver) evaluateConstructorPathIFDS(input interprocConstructorP
 	methodCalls := collectMethodValueValidateCallSet(methodValueCalls)
 	methodCalls = mergeMethodValueValidateCallSets(
 		methodCalls,
-		collectCalleeValidatedCalls(s.pass, input.Decl.Body, stackScopeFromMap(input.SummaryStack)),
+		collectCalleeValidatedCalls(s.pass, input.Decl.Body, stackScopeFromMap(input.SummaryStack), s.calleeSummaryCache),
 	)
 	bareReturnIncludesTarget := constructorBareReturnIncludesType(s.pass, input.Decl, input.ReturnTypeKey)
 	returnTargetKeys := collectConstructorReturnTargetKeys(s.pass, input.Decl, input.ReturnTypeKey, bareReturnIncludesTarget)
@@ -576,7 +588,7 @@ func (s interprocSolver) evaluateConstructorPathIFDS(input interprocConstructorP
 			if containsValidateOnReceiver(s.pass, node, matcher, syncLits, syncCalls, methodCalls) {
 				return ideEdgeFuncValidate, pathOutcomeReasonNone
 			}
-			if validated, reason := nodeUsesCalleeSummaryForType(s.pass, node, input.ReturnTypeKey, input.SummaryStack); validated {
+			if validated, reason := nodeUsesCalleeSummaryForType(s.pass, node, input.ReturnTypeKey, input.SummaryStack, s.calleeSummaryCache); validated {
 				return ideEdgeFuncValidate, pathOutcomeReasonNone
 			} else if reason != pathOutcomeReasonNone {
 				return ideEdgeFuncIdentity, reason
@@ -876,6 +888,7 @@ func ubvNodeEdgeTag(
 	mode string,
 	state ideValidationState,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 ) (ideEdgeFuncTag, pathOutcomeReason) {
 	if state != ideStateNeedsValidate {
 		return ideEdgeFuncIdentity, pathOutcomeReasonNone
@@ -887,7 +900,7 @@ func ubvNodeEdgeTag(
 		return ideEdgeFuncValidate, pathOutcomeReasonNone
 	}
 	if mode == ubvModeEscape {
-		outcome, reason := isVarEscapeTargetOutcomeWithSummaryStack(pass, node, target, syncLits, syncCalls, methodCalls, mode, summaryStack)
+		outcome, reason := isVarEscapeTargetOutcomeWithSummaryStack(pass, node, target, syncLits, syncCalls, methodCalls, mode, summaryStack, calleeSummaryCache)
 		switch outcome {
 		case pathOutcomeInconclusive:
 			return ideEdgeFuncIdentity, reason

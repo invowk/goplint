@@ -5,6 +5,7 @@ package goplint
 import (
 	"go/ast"
 	"strconv"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -34,6 +35,7 @@ func inspectUnvalidatedCastsCFA(
 	phaseC cfgPhaseCOptions,
 	cfgAliasMode string,
 	ssaRes *ssaResult,
+	calleeSummaryCache *sync.Map,
 ) error {
 	if fn.Body == nil {
 		return nil
@@ -61,7 +63,7 @@ func inspectUnvalidatedCastsCFA(
 	if funcCFG == nil {
 		return nil
 	}
-	solver := newInterprocSolver(pass, cfgBackend, cfgInterprocEngine)
+	solver := newInterprocSolver(pass, cfgBackend, cfgInterprocEngine, calleeSummaryCache)
 	compatTracker := newInterprocCompatTracker(cfgInterprocEngine)
 	refiner := newCFGRefinementController(phaseC)
 	effectiveBudget := adaptiveBlockVisitBudget(
@@ -97,6 +99,7 @@ func inspectUnvalidatedCastsCFA(
 				phaseC,
 				cfgAliasMode,
 				ssaRes,
+				calleeSummaryCache,
 			)
 		},
 	)
@@ -122,7 +125,7 @@ func inspectUnvalidatedCastsCFA(
 		pathSyncCalls = collectSynchronousClosureVarCalls(closureCalls)
 		pathMethodCalls = mergeMethodValueValidateCallSets(
 			collectMethodValueValidateCalls(pass, fn.Body),
-			collectCalleeValidatedCalls(pass, fn.Body, stackScopeFromMap(nil)),
+			collectCalleeValidatedCalls(pass, fn.Body, stackScopeFromMap(nil), calleeSummaryCache),
 		)
 		if checkUBV {
 			ubvSyncLits = collectUBVClosureLits(fn.Body)

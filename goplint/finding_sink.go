@@ -26,55 +26,132 @@ type FindingStreamRecord struct {
 
 var findingSinkWarnings sync.Map // map[string]*sync.Once
 
-func writeFindingToSink(pass *analysis.Pass, pos token.Pos, category, findingID, message string) {
-	writeFindingToSinkWithMeta(pass, pos, category, findingID, message, nil)
+var findingReporters sync.Map // map[*analysis.Pass]*diagnosticReporter
+
+type diagnosticReporter struct {
+	fset   *token.FileSet
+	report func(analysis.Diagnostic)
+	stream *findingStreamWriter
 }
 
-func writeFindingToSinkWithMeta(pass *analysis.Pass, pos token.Pos, category, findingID, message string, meta map[string]string) {
+type findingStreamWriter struct {
+	path     string
+	stderr   io.Writer
+	warnings *sync.Map
+}
+
+func installDiagnosticReporter(pass *analysis.Pass, findingsPath string) func() {
 	if pass == nil {
-		return
+		return func() {}
 	}
 
-	path := emitFindingsPathFromPass(pass)
-	if path == "" {
-		return
+	originalReport := pass.Report
+	reporter := &diagnosticReporter{
+		fset:   pass.Fset,
+		report: originalReport,
+	}
+	if findingsPath != "" {
+		reporter.stream = &findingStreamWriter{
+			path:     findingsPath,
+			stderr:   os.Stderr,
+			warnings: &findingSinkWarnings,
+		}
 	}
 
-	record := FindingStreamRecord{
-		Category: category,
-		ID:       findingID,
-		Message:  message,
-		Meta:     compactFindingMeta(meta),
+	pass.Report = reporter.Report
+	findingReporters.Store(pass, reporter)
+	return func() {
+		pass.Report = originalReport
+		findingReporters.Delete(pass)
 	}
-	if pass.Fset != nil && pos.IsValid() {
-		record.Posn = pass.Fset.Position(pos).String()
-	}
-
-	writeFindingStreamRecord(path, record)
 }
 
-func writeFindingStreamRecord(path string, record FindingStreamRecord) {
+func reporterForPass(pass *analysis.Pass) *diagnosticReporter {
+	if pass == nil {
+		return nil
+	}
+	value, ok := findingReporters.Load(pass)
+	if !ok {
+		return nil
+	}
+	reporter, _ := value.(*diagnosticReporter)
+	return reporter
+}
+
+func (r *diagnosticReporter) Report(d analysis.Diagnostic) {
+	if r == nil {
+		return
+	}
+	r.writeDiagnostic(d)
+	if r.report != nil {
+		r.report(d)
+	}
+}
+
+func (r *diagnosticReporter) WriteRecord(record FindingStreamRecord) {
+	if r == nil || r.stream == nil {
+		return
+	}
+	r.stream.Write(record)
+}
+
+func (r *diagnosticReporter) writeDiagnostic(d analysis.Diagnostic) {
+	if r == nil || r.stream == nil {
+		return
+	}
+	record, ok := findingStreamRecordFromDiagnostic(r.fset, d)
+	if !ok {
+		return
+	}
+	r.stream.Write(record)
+}
+
+func (w *findingStreamWriter) Write(record FindingStreamRecord) {
+	if w == nil || w.path == "" {
+		return
+	}
+	writeFindingStreamRecord(w.path, record, w.stderr, w.warnings)
+}
+
+func findingStreamRecordFromDiagnostic(fset *token.FileSet, diagnostic analysis.Diagnostic) (FindingStreamRecord, bool) {
+	findingID := FindingIDFromDiagnosticURL(diagnostic.URL)
+	if findingID == "" {
+		return FindingStreamRecord{}, false
+	}
+	record := FindingStreamRecord{
+		Category: diagnostic.Category,
+		ID:       findingID,
+		Message:  diagnostic.Message,
+		Meta:     compactFindingMeta(findingMetaFromDiagnosticURL(diagnostic.URL)),
+	}
+	if fset != nil && diagnostic.Pos.IsValid() {
+		record.Posn = fset.Position(diagnostic.Pos).String()
+	}
+	return record, true
+}
+
+func writeFindingStreamRecord(path string, record FindingStreamRecord, stderr io.Writer, warnings *sync.Map) {
 	line, err := json.Marshal(record)
 	if err != nil {
-		warnFindingSinkError(os.Stderr, &findingSinkWarnings, path, fmt.Errorf("encoding finding stream record: %w", err))
+		warnFindingSinkError(stderr, warnings, path, fmt.Errorf("encoding finding stream record: %w", err))
 		return
 	}
 
 	line = append(line, '\n')
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
-		warnFindingSinkError(os.Stderr, &findingSinkWarnings, path, fmt.Errorf("opening finding stream: %w", err))
+		warnFindingSinkError(stderr, warnings, path, fmt.Errorf("opening finding stream: %w", err))
 		return
 	}
 	if _, err := file.Write(line); err != nil {
 		if closeErr := file.Close(); closeErr != nil {
-			warnFindingSinkError(os.Stderr, &findingSinkWarnings, path, fmt.Errorf("closing finding stream after write failure: %w", closeErr))
+			warnFindingSinkError(stderr, warnings, path, fmt.Errorf("closing finding stream after write failure: %w", closeErr))
 		}
-		warnFindingSinkError(os.Stderr, &findingSinkWarnings, path, fmt.Errorf("writing finding stream: %w", err))
+		warnFindingSinkError(stderr, warnings, path, fmt.Errorf("writing finding stream: %w", err))
 		return
 	}
 	if err := file.Close(); err != nil {
-		warnFindingSinkError(os.Stderr, &findingSinkWarnings, path, fmt.Errorf("closing finding stream: %w", err))
+		warnFindingSinkError(stderr, warnings, path, fmt.Errorf("closing finding stream: %w", err))
 		return
 	}
 }
@@ -115,16 +192,4 @@ func warnFindingSinkError(stderr io.Writer, dedupe *sync.Map, path string, err e
 	onceValue, _ := dedupe.LoadOrStore(key, &sync.Once{})
 	once := onceValue.(*sync.Once)
 	once.Do(writeWarning)
-}
-
-func emitFindingsPathFromPass(pass *analysis.Pass) string {
-	if pass == nil || pass.Analyzer == nil {
-		return ""
-	}
-	flagSet := pass.Analyzer.Flags
-	flag := flagSet.Lookup("emit-findings-jsonl")
-	if flag == nil || flag.Value == nil {
-		return ""
-	}
-	return flag.Value.String()
 }

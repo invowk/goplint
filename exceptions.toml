@@ -634,7 +634,7 @@ reason = "strategy; nil Environ valid (os.Environ fallback)"
 
 [[exceptions]]
 pattern = "invowkmod.CommandScope.struct-validate"
-reason = "has AddDirectDep() mutation; DDD Entity"
+reason = "has AddDirectDependency() mutation; DDD Entity"
 
 [[exceptions]]
 pattern = "invowkmod.LockFile.struct-validate"
@@ -1366,14 +1366,6 @@ reason = "byte-level character check — parse primitive"
 [[exceptions]]
 pattern = "invowkfile.parseEnvShebang.args"
 reason = "exec boundary — shebang args"
-
-[[exceptions]]
-pattern = "invowkmod.ExtractModuleFromCommand.*"
-reason = "command name parsing — composite string splitting"
-
-[[exceptions]]
-pattern = "invowkfile.ExtractModuleFromCommand.cmd"
-reason = "command name parsing — composite string splitting"
 
 [[exceptions]]
 pattern = "platform.IsWindowsReservedName.name"
@@ -2449,10 +2441,6 @@ pattern = "invowkmod.ParseModuleName.folderName"
 reason = "filesystem boundary — directory name for module parsing"
 
 [[exceptions]]
-pattern = "invowkmod.ExtractModuleFromCommand.return.*"
-reason = "parse boundary — extracted module ID from command name"
-
-[[exceptions]]
 pattern = "moduleops.extractFile.*"
 reason = "ZIP/filesystem adapter boundary — destination path from validated archive extraction"
 
@@ -2681,10 +2669,6 @@ reason = "display/CLI boundary — command name list for Cobra registration"
 [[exceptions]]
 pattern = "invowkfile.CompositeValidator.Count.return.*"
 reason = "aggregate count — number of validation errors"
-
-[[exceptions]]
-pattern = "invowkfile.ExtractModuleFromCommand.return.*"
-reason = "parse boundary — extracted module ID from command string"
 
 [[exceptions]]
 pattern = "invowkfile.EnvConfig.GetVars.return.*"

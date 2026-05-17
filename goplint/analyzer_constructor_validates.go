@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/types"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -172,9 +173,10 @@ func inspectConstructorValidates(
 	cfgInconclusivePolicy string,
 	cfgWitnessMaxSteps int,
 	phaseC cfgPhaseCOptions,
+	calleeSummaryCache *sync.Map,
 ) error {
 	pkgName := packageName(pass.Pkg)
-	solver := newInterprocSolver(pass, cfgBackend, cfgInterprocEngine)
+	solver := newInterprocSolver(pass, cfgBackend, cfgInterprocEngine, calleeSummaryCache)
 	compatTracker := newInterprocCompatTracker(cfgInterprocEngine)
 	refiner := newCFGRefinementController(phaseC)
 	constructorUnsafeByIdentity := make(map[string]bool)

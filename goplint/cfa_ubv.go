@@ -4,6 +4,7 @@ package goplint
 
 import (
 	"go/ast"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 	gocfg "golang.org/x/tools/go/cfg"
@@ -375,6 +376,7 @@ func hasUseBeforeValidateInBlockMode(
 		methodCalls,
 		ubvMode,
 		nil,
+		nil,
 	)
 	return outcome != pathOutcomeSafe
 }
@@ -389,6 +391,7 @@ func hasUseBeforeValidateInBlockOutcomeModeWithSummaryStack(
 	methodCalls methodValueValidateCallSet,
 	ubvMode string,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 ) (pathOutcome, pathOutcomeReason) {
 	for i := startIdx; i < len(nodes); i++ {
 		node := nodes[i]
@@ -396,7 +399,7 @@ func hasUseBeforeValidateInBlockOutcomeModeWithSummaryStack(
 			if containsValidateCallTarget(pass, node, target, syncLits, syncCalls, methodCalls) {
 				return pathOutcomeSafe, pathOutcomeReasonNone
 			}
-			outcome, reason := isVarEscapeTargetOutcomeWithSummaryStack(pass, node, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack)
+			outcome, reason := isVarEscapeTargetOutcomeWithSummaryStack(pass, node, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack, calleeSummaryCache)
 			if outcome != pathOutcomeSafe {
 				return outcome, reason
 			}
@@ -441,6 +444,7 @@ func hasUseBeforeValidateCrossBlockOutcomeModeWithWitness(
 		maxStates,
 		maxDepth,
 		nil,
+		nil,
 	)
 }
 
@@ -456,6 +460,7 @@ func hasUseBeforeValidateCrossBlockModeWithSummaryStack(
 	maxStates int,
 	maxDepth int,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 ) (pathOutcome, pathOutcomeReason) {
 	outcome, reason, _ := hasUseBeforeValidateCrossBlockModeWithSummaryStackWithWitness(
 		pass,
@@ -469,6 +474,7 @@ func hasUseBeforeValidateCrossBlockModeWithSummaryStack(
 		maxStates,
 		maxDepth,
 		summaryStack,
+		calleeSummaryCache,
 	)
 	return outcome, reason
 }
@@ -485,6 +491,7 @@ func hasUseBeforeValidateCrossBlockModeWithSummaryStackWithWitness(
 	maxStates int,
 	maxDepth int,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 ) (pathOutcome, pathOutcomeReason, []int32) {
 	if defBlock == nil {
 		return pathOutcomeInconclusive, pathOutcomeReasonUnresolvedTarget, nil
@@ -538,6 +545,7 @@ func hasUseBeforeValidateCrossBlockModeWithSummaryStackWithWitness(
 		budget.maxStates,
 		budget.maxDepth,
 		summaryStack,
+		calleeSummaryCache,
 	)
 }
 
@@ -557,6 +565,7 @@ func dfsUseBeforeValidateModeWithSummaryStackWithWitness(
 	maxStates int,
 	maxDepth int,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 ) (pathOutcome, pathOutcomeReason, []int32) {
 	if maxDepth > 0 && depth > maxDepth {
 		return pathOutcomeInconclusive, pathOutcomeReasonDepthBudget, cloneCFGPath(path)
@@ -602,7 +611,7 @@ func dfsUseBeforeValidateModeWithSummaryStackWithWitness(
 					foundValidate = true
 					break
 				}
-				escapeOutcome, escapeReason := isVarEscapeTargetOutcomeWithSummaryStack(pass, node, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack)
+				escapeOutcome, escapeReason := isVarEscapeTargetOutcomeWithSummaryStack(pass, node, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack, calleeSummaryCache)
 				if escapeOutcome == pathOutcomeInconclusive {
 					ctx.memoStore(succ.Index, predecessor, pathOutcomeInconclusive, escapeReason, nextPath)
 					ctx.popActive(activeKey)
@@ -657,6 +666,7 @@ func dfsUseBeforeValidateModeWithSummaryStackWithWitness(
 			maxStates,
 			maxDepth,
 			summaryStack,
+			calleeSummaryCache,
 		)
 		if outcome != pathOutcomeSafe {
 			ctx.memoStore(succ.Index, predecessor, outcome, reason, witness)
@@ -694,6 +704,7 @@ func callUsesTargetOutcomeWithSummaryStack(
 	methodCalls methodValueValidateCallSet,
 	ubvMode string,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 ) (pathOutcome, pathOutcomeReason) {
 	if call == nil {
 		return pathOutcomeSafe, pathOutcomeReasonNone
@@ -710,7 +721,7 @@ func callUsesTargetOutcomeWithSummaryStack(
 		}
 	}
 	if ubvMode == ubvModeEscape {
-		summary, ok, summaryReason := callCalleeSummaryForTargetWithStack(pass, call, target, stackScopeFromMap(summaryStack))
+		summary, ok, summaryReason := callCalleeSummaryForTargetWithStack(pass, call, target, stackScopeFromMap(summaryStack), calleeSummaryCache)
 		if ok && summary.AlwaysValidatesTarget && !summary.EscapesTargetBeforeValidate {
 			return pathOutcomeSafe, pathOutcomeReasonNone
 		}
@@ -747,6 +758,7 @@ func isVarEscapeTargetOutcomeWithSummaryStack(
 	methodCalls methodValueValidateCallSet,
 	ubvMode string,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 ) (pathOutcome, pathOutcomeReason) {
 	escaped := false
 	reason := pathOutcomeReasonNone
@@ -771,7 +783,7 @@ func isVarEscapeTargetOutcomeWithSummaryStack(
 				return false
 			}
 		case *ast.GoStmt:
-			callOutcome, callReason := callUsesTargetOutcomeWithSummaryStack(pass, stmt.Call, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack)
+			callOutcome, callReason := callUsesTargetOutcomeWithSummaryStack(pass, stmt.Call, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack, calleeSummaryCache)
 			if callOutcome == pathOutcomeInconclusive {
 				reason = callReason
 				escaped = true
@@ -805,7 +817,7 @@ func isVarEscapeTargetOutcomeWithSummaryStack(
 				return false
 			}
 		case *ast.CallExpr:
-			callOutcome, callReason := callUsesTargetOutcomeWithSummaryStack(pass, stmt, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack)
+			callOutcome, callReason := callUsesTargetOutcomeWithSummaryStack(pass, stmt, target, syncLits, syncCalls, methodCalls, ubvMode, summaryStack, calleeSummaryCache)
 			if callOutcome == pathOutcomeInconclusive {
 				reason = callReason
 				escaped = true

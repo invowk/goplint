@@ -25,3 +25,22 @@ func TestShouldReportOverdueReviewFinding(t *testing.T) {
 		t.Fatal("overdueReviewSeen map should be initialized")
 	}
 }
+
+func TestFlagState_CalleeSummaryCacheIsAnalyzerScoped(t *testing.T) {
+	t.Parallel()
+
+	stateA := &flagState{}
+	stateB := &flagState{}
+	resetFlagStateDefaults(stateA)
+	resetFlagStateDefaults(stateB)
+
+	stateA.calleeSummaryCache.Store("callee|arg:0", calleeSummaryEntry{ok: true})
+	if _, ok := stateB.calleeSummaryCache.Load("callee|arg:0"); ok {
+		t.Fatal("callee summary cache leaked between analyzer states")
+	}
+
+	resetFlagStateDefaults(stateA)
+	if _, ok := stateA.calleeSummaryCache.Load("callee|arg:0"); ok {
+		t.Fatal("resetFlagStateDefaults() did not clear callee summary cache")
+	}
+}

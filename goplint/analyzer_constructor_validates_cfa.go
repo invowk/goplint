@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/types"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
 	gocfg "golang.org/x/tools/go/cfg"
@@ -21,6 +22,7 @@ func constructorReturnPathOutcomeWithWitness(
 	cfgMaxStates int,
 	cfgMaxDepth int,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 ) (pathOutcome, pathOutcomeReason, []int32) {
 	funcCFG := buildFuncCFGForBackend(pass, fn.Body, cfgBackend)
 	if funcCFG == nil || len(funcCFG.Blocks) == 0 {
@@ -39,7 +41,7 @@ func constructorReturnPathOutcomeWithWitness(
 	methodCalls := collectMethodValueValidateCallSet(methodValueCalls)
 	methodCalls = mergeMethodValueValidateCallSets(
 		methodCalls,
-		collectCalleeValidatedCalls(pass, fn.Body, stackScopeFromMap(summaryStack)),
+		collectCalleeValidatedCalls(pass, fn.Body, stackScopeFromMap(summaryStack), calleeSummaryCache),
 	)
 	bareReturnIncludesTarget := constructorBareReturnIncludesType(pass, fn, returnTypeKey)
 	returnTargetKeys := collectConstructorReturnTargetKeys(pass, fn, returnTypeKey, bareReturnIncludesTarget)
@@ -72,6 +74,7 @@ func constructorReturnPathOutcomeWithWitness(
 		methodCalls,
 		noReturnAliases,
 		summaryStack,
+		calleeSummaryCache,
 		0,
 		nil,
 		&seenStates,
@@ -94,6 +97,7 @@ func dfsConstructorUnvalidatedOutcome(
 	methodCalls methodValueValidateCallSet,
 	noReturnAliases noReturnAliasSet,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 	depth int,
 	path []int32,
 	seenStates *int,
@@ -114,7 +118,7 @@ func dfsConstructorUnvalidatedOutcome(
 			if containsValidateOnReceiver(pass, node, matcher, syncLits, syncCalls, methodCalls) {
 				return true
 			}
-			if validated, reason := nodeUsesCalleeSummaryForType(pass, node, returnTypeKey, summaryStack); validated {
+			if validated, reason := nodeUsesCalleeSummaryForType(pass, node, returnTypeKey, summaryStack, calleeSummaryCache); validated {
 				return true
 			} else if reason != pathOutcomeReasonNone {
 				inconclusiveReason = reason
@@ -153,6 +157,7 @@ func nodeUsesCalleeSummaryForType(
 	node ast.Node,
 	returnTypeKey string,
 	summaryStack map[string]bool,
+	calleeSummaryCache *sync.Map,
 ) (bool, pathOutcomeReason) {
 	if pass == nil || node == nil || returnTypeKey == "" {
 		return false, pathOutcomeReasonNone
@@ -174,6 +179,7 @@ func nodeUsesCalleeSummaryForType(
 				call,
 				candidate.slot,
 				scope,
+				calleeSummaryCache,
 			)
 			if ok && summary.AlwaysValidatesTarget && !summary.EscapesTargetBeforeValidate {
 				foundValidated = true

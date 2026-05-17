@@ -120,16 +120,45 @@ func FindingMetaFromDiagnosticURL(raw, key string) string {
 	if key == "" || !strings.HasPrefix(raw, DiagnosticURLPrefix) {
 		return ""
 	}
-	rest := strings.TrimPrefix(raw, DiagnosticURLPrefix)
-	_, query, found := strings.Cut(rest, "?")
-	if !found || query == "" {
-		return ""
-	}
-	values, err := url.ParseQuery(query)
-	if err != nil {
+	values := findingMetaValuesFromDiagnosticURL(raw)
+	if len(values) == 0 {
 		return ""
 	}
 	return values.Get(key)
+}
+
+func findingMetaFromDiagnosticURL(raw string) map[string]string {
+	values := findingMetaValuesFromDiagnosticURL(raw)
+	if len(values) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(values))
+	for key, value := range values {
+		if key == "" || len(value) == 0 || value[0] == "" {
+			continue
+		}
+		out[key] = value[0]
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func findingMetaValuesFromDiagnosticURL(raw string) url.Values {
+	if !strings.HasPrefix(raw, DiagnosticURLPrefix) {
+		return nil
+	}
+	rest := strings.TrimPrefix(raw, DiagnosticURLPrefix)
+	_, query, found := strings.Cut(rest, "?")
+	if !found || query == "" {
+		return nil
+	}
+	values, err := url.ParseQuery(query)
+	if err != nil {
+		return nil
+	}
+	return values
 }
 
 // reportDiagnostic emits a finding with category, message, and stable ID URL.
@@ -145,7 +174,9 @@ func reportDiagnosticWithMeta(
 	category, findingID, message string,
 	meta map[string]string,
 ) {
-	writeFindingToSinkWithMeta(pass, pos, category, findingID, message, meta)
+	if pass == nil || pass.Report == nil {
+		return
+	}
 	pass.Report(analysis.Diagnostic{
 		Pos:      pos,
 		Category: category,
