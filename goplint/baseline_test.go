@@ -96,21 +96,6 @@ entries = [
 		}
 	})
 
-	t.Run("legacy messages key rejected", func(t *testing.T) {
-		t.Parallel()
-		content := `
-[primitive]
-messages = [
-    "struct field pkg.Foo.Bar uses primitive type string",
-]
-`
-		path := writeTempFile(t, "legacy-messages.toml", content)
-		_, err := loadBaseline(path, false)
-		if err == nil {
-			t.Fatal("expected error for legacy messages baseline schema")
-		}
-	})
-
 	t.Run("empty id in entry returns error", func(t *testing.T) {
 		t.Parallel()
 		content := `

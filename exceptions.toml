@@ -101,6 +101,149 @@ pattern = "ResolveDockerfilePath.*"
 reason = "exec boundary — params/return passed to filepath operations"
 
 # =============================================================================
+# Virtual Runtime Adapter Boundaries
+# =============================================================================
+# The embedded Lua and virtual path bridges intentionally sit at stringly typed
+# VM/OS/CLI boundaries: Lua global names, argv vectors, environment maps, and
+# filesystem paths are validated at the bridge before crossing into Go APIs.
+
+[[exceptions]]
+pattern = "runtime.LuaInteractiveCommandSpec.AllowedBinaries"
+reason = "subprocess adapter argv boundary; values are validated by LuaInteractiveCommandSpec.Validate"
+
+[[exceptions]]
+pattern = "runtime.LuaScriptOptions.*"
+reason = "subprocess adapter DTO carrying script text, argv, and env strings; validated by LuaScriptOptions.Validate"
+
+[[exceptions]]
+pattern = "runtime.ShInteractiveCommandSpec.AllowedBinaries"
+reason = "subprocess adapter argv boundary; values are validated by ShInteractiveCommandSpec.Validate"
+
+[[exceptions]]
+pattern = "runtime.lua*.*"
+reason = "Lua VM bridge boundary for global names, argv, env, and Lua values"
+
+[[exceptions]]
+pattern = "runtime.lua*.*.*"
+reason = "Lua VM bridge method boundary for global names, argv, env, and Lua values"
+
+[[exceptions]]
+pattern = "runtime.lua*.*.*.*"
+reason = "Lua VM bridge method return boundary for captured output and exit codes"
+
+[[exceptions]]
+pattern = "runtime.installLua*.*"
+reason = "Lua VM bridge installation boundary for runtime env and path metadata"
+
+[[exceptions]]
+pattern = "runtime.runVirtualUtility.*"
+reason = "u-root command bridge boundary using argv/env strings from Lua"
+
+[[exceptions]]
+pattern = "runtime.runVirtualUtility.*.*"
+reason = "u-root command bridge returns process exit status from command execution"
+
+[[exceptions]]
+pattern = "runtime.validateLuaRequireName.*"
+reason = "Lua require bridge validates raw module names from Lua"
+
+[[exceptions]]
+pattern = "runtime.virtualPathResolver.*"
+reason = "virtual path resolver stores normalized OS path strings and logical anchor names"
+
+[[exceptions]]
+pattern = "runtime.virtualPathResolver.*.*"
+reason = "virtual path resolver methods accept and return OS path strings after validation"
+
+[[exceptions]]
+pattern = "runtime.virtualPathResolver.*.*.*"
+reason = "virtual path resolver methods return normalized OS path strings"
+
+[[exceptions]]
+pattern = "runtime.newVirtualPathResolver*.*"
+reason = "virtual path resolver factory accepts OS path strings from execution context"
+
+[[exceptions]]
+pattern = "runtime.standardVirtualAnchors*.*"
+reason = "anchor metadata is OS environment/path text normalized by the resolver"
+
+[[exceptions]]
+pattern = "runtime.standardVirtualAnchors*.*.*"
+reason = "anchor metadata returns OS environment/path text maps normalized by the resolver"
+
+[[exceptions]]
+pattern = "runtime.resolveVirtualFilesystemPaths.*"
+reason = "virtual filesystem resolver maps schema strings into normalized OS path strings"
+
+[[exceptions]]
+pattern = "runtime.resolveVirtualFilesystemPaths.*.*"
+reason = "virtual filesystem resolver returns normalized OS path string maps"
+
+[[exceptions]]
+pattern = "runtime.expandVirtualAnchorPath.*"
+reason = "anchor expansion helper operates on logical path strings before validation"
+
+[[exceptions]]
+pattern = "runtime.expandVirtualAnchorPath.*.*"
+reason = "anchor expansion helper returns path strings validated by the caller"
+
+[[exceptions]]
+pattern = "runtime.addVirtualRuntimeEnv.*"
+reason = "environment injection helper writes OS env string maps"
+
+[[exceptions]]
+pattern = "runtime.splitVirtualAnchorPath.*"
+reason = "logical path parser splits user-facing virtual path strings"
+
+[[exceptions]]
+pattern = "runtime.splitVirtualAnchorPath.*.*"
+reason = "logical path parser returns string segments before resolver validation"
+
+[[exceptions]]
+pattern = "invowkfile.VirtualFilesystemPaths.*.*.*"
+reason = "virtual filesystem schema API exposes validated platform-local path strings"
+
+[[exceptions]]
+pattern = "audit.*Lua*.*"
+reason = "Lua audit checker scans raw script text and environment names for deterministic findings"
+
+[[exceptions]]
+pattern = "audit.*Lua*.*.*"
+reason = "Lua audit checker returns raw script/environment names as deterministic finding inputs"
+
+[[exceptions]]
+pattern = "audit.lua*.*"
+reason = "Lua audit helper scans raw script/path strings for deterministic findings"
+
+[[exceptions]]
+pattern = "audit.isSensitiveEnvName.*"
+reason = "Lua audit helper classifies raw environment variable names"
+
+[[exceptions]]
+pattern = "audit.lineOf.*"
+reason = "audit diagnostic helper maps raw script text to display line numbers"
+
+[[exceptions]]
+pattern = "audit.lineOf.*.*"
+reason = "audit diagnostic helper returns display line numbers"
+
+[[exceptions]]
+pattern = "audit.containsString.*"
+reason = "audit helper compares raw finding-code/name strings"
+
+[[exceptions]]
+pattern = "audit.moduleScriptPathSet.*.*"
+reason = "audit discovery tracks filesystem paths as string set keys while walking module trees"
+
+[[exceptions]]
+pattern = "invowk.dryRun*.*"
+reason = "CLI dry-run helpers render human-readable safety metadata"
+
+[[exceptions]]
+pattern = "invowk.dryRun*.*.*"
+reason = "CLI dry-run helpers render human-readable safety metadata"
+
+# =============================================================================
 # Display-Only Fields
 # =============================================================================
 # Fields whose values are only rendered for human consumption, with no
@@ -590,8 +733,16 @@ pattern = "runtime.NativeRuntime.struct-validate"
 reason = "service object; shell='' valid for auto-detect"
 
 [[exceptions]]
-pattern = "runtime.VirtualRuntime.struct-validate"
+pattern = "runtime.ShRuntime.struct-validate"
 reason = "service object; invariants enforced by constructor"
+
+[[exceptions]]
+pattern = "runtime.LuaRuntime.struct-validate"
+reason = "service object; invariants enforced by constructor"
+
+[[exceptions]]
+pattern = "runtime.virtualHostBinaryPolicy.struct-validate-fields"
+reason = "execution policy helper; fields are assembled from already-validated runtime config and environment"
 
 # Service objects — module resolution
 [[exceptions]]
@@ -1161,6 +1312,10 @@ pattern = "invowk.isArgEnvVar.*"
 reason = "env var name pattern detection — raw text"
 
 [[exceptions]]
+pattern = "invowk.parseVirtualFilesystemPathsJSON.raw"
+reason = "internal CLI JSON flag boundary; decoded path keys and values are converted to value types and validated before use"
+
+[[exceptions]]
 pattern = "invowk.ParseSourceFilter.*"
 reason = "source filter display name parsing"
 
@@ -1272,8 +1427,164 @@ pattern = "runtime.NativeRuntime.appendPositionalArgs.args"
 reason = "exec boundary — shell positional args"
 
 [[exceptions]]
-pattern = "runtime.VirtualRuntime.tryUrootBuiltin.args"
+pattern = "runtime.ShRuntime.tryUrootBuiltin.args"
 reason = "exec boundary — command args"
+
+[[exceptions]]
+pattern = "runtime.ShScriptOptions.*"
+reason = "internal subprocess DTO for virtual-sh interactive execution"
+
+[[exceptions]]
+pattern = "runtime.virtualPathValidator.*"
+reason = "filesystem boundary helper for virtual runtime containment"
+
+[[exceptions]]
+pattern = "runtime.virtualPathValidator.*.*"
+reason = "filesystem boundary helper for virtual runtime containment"
+
+[[exceptions]]
+pattern = "runtime.virtualPathValidator.*.return.*"
+reason = "filesystem boundary helper for virtual runtime containment"
+
+[[exceptions]]
+pattern = "runtime.virtualHostBinaryPolicy.*"
+reason = "host binary execution policy mirrors OS PATH/PATHEXT inputs"
+
+[[exceptions]]
+pattern = "runtime.virtualHostBinaryPolicy.*.*"
+reason = "host binary execution policy mirrors OS PATH/PATHEXT inputs"
+
+[[exceptions]]
+pattern = "runtime.virtualHostBinaryPolicy.*.return.*"
+reason = "host binary execution policy mirrors OS PATH/PATHEXT inputs"
+
+[[exceptions]]
+pattern = "runtime.defaultTempRoots.return.*"
+reason = "platform filesystem boundary paths"
+
+[[exceptions]]
+pattern = "runtime.platformConfigDirs.return.*"
+reason = "platform filesystem boundary paths"
+
+[[exceptions]]
+pattern = "runtime.firstNonEmpty.*"
+reason = "platform environment fallback helper"
+
+[[exceptions]]
+pattern = "runtime.firstNonEmpty.return.*"
+reason = "platform environment fallback helper"
+
+[[exceptions]]
+pattern = "runtime.normalizedRoots.*"
+reason = "filesystem boundary helper for virtual runtime containment"
+
+[[exceptions]]
+pattern = "runtime.normalizedRoots.return.*"
+reason = "filesystem boundary helper for virtual runtime containment"
+
+[[exceptions]]
+pattern = "runtime.normalizeExistingOrParent.*"
+reason = "filesystem boundary helper for virtual runtime containment"
+
+[[exceptions]]
+pattern = "runtime.normalizeExistingOrParent.return.*"
+reason = "filesystem boundary helper for virtual runtime containment"
+
+[[exceptions]]
+pattern = "runtime.pathWithin.*"
+reason = "filesystem boundary helper for virtual runtime containment"
+
+[[exceptions]]
+pattern = "runtime.candidateExecutablePaths.*"
+reason = "host binary execution policy mirrors OS PATH/PATHEXT inputs"
+
+[[exceptions]]
+pattern = "runtime.candidateExecutablePaths.return.*"
+reason = "host binary execution policy mirrors OS PATH/PATHEXT inputs"
+
+[[exceptions]]
+pattern = "runtime.sameCleanPath.*"
+reason = "filesystem boundary helper for virtual runtime containment"
+
+[[exceptions]]
+pattern = "runtime.hostBinaryPolicy.env"
+reason = "exec/OS environment boundary"
+
+[[exceptions]]
+pattern = "runtime.allowedBinaryStrings.return.*"
+reason = "adapter from validated CUE value objects to OS exec policy strings"
+
+[[exceptions]]
+pattern = "runtime.SliceToEnv.*"
+reason = "exec/OS environment boundary"
+
+[[exceptions]]
+pattern = "runtime.SliceToEnv.return.*"
+reason = "exec/OS environment boundary"
+
+[[exceptions]]
+pattern = "runtime.reservedInvowkStateEnv.*"
+reason = "exec/OS environment boundary"
+
+[[exceptions]]
+pattern = "runtime.reservedInvowkStateEnv.return.*"
+reason = "exec/OS environment boundary"
+
+[[exceptions]]
+pattern = "runtime.compileLuaChunk.script"
+reason = "Lua interpreter boundary"
+
+[[exceptions]]
+pattern = "runtime.validateLuaInterpreter.scriptContent"
+reason = "Lua interpreter boundary"
+
+[[exceptions]]
+pattern = "runtime.parseLuaMemoryLimit.raw"
+reason = "Lua runtime limit parser boundary"
+
+[[exceptions]]
+pattern = "runtime.parseLuaMemoryLimit.return.*"
+reason = "Lua runtime limit parser boundary"
+
+[[exceptions]]
+pattern = "runtime.installInvowkLuaBridge.*"
+reason = "Lua bridge boundary maps Invowk execution state into golua tables"
+
+[[exceptions]]
+pattern = "runtime.luaCommandFunc.*"
+reason = "Lua bridge boundary maps Invowk execution state into golua tables"
+
+[[exceptions]]
+pattern = "runtime.luaCommandArgs.return.*"
+reason = "Lua bridge boundary converts script table values into exec args"
+
+[[exceptions]]
+pattern = "runtime.luaEnvTable.env"
+reason = "Lua bridge boundary maps environment strings into golua tables"
+
+[[exceptions]]
+pattern = "runtime.luaArgsTable.args"
+reason = "Lua bridge boundary maps positional args into golua tables"
+
+[[exceptions]]
+pattern = "runtime.runAllowedHostBinary.*"
+reason = "exec boundary for explicitly allowed host binaries"
+
+[[exceptions]]
+pattern = "runtime.runAllowedHostBinary.return.*"
+reason = "exec boundary for explicitly allowed host binaries"
+
+[[exceptions]]
+pattern = "invowk.runInternalExecSh._"
+reason = "Cobra command signature"
+
+[[exceptions]]
+pattern = "invowk.buildShEnv.*"
+reason = "internal virtual-sh subprocess environment boundary"
+
+[[exceptions]]
+pattern = "invowk.buildShEnv.return.*"
+reason = "internal virtual-sh subprocess environment boundary"
 
 [[exceptions]]
 pattern = "runtime.WithShellArgs.args"
@@ -2264,7 +2575,11 @@ pattern = "runtime.ContainerRuntime.generateImageTag.invowkfilePath"
 reason = "exec boundary — invowkfile path for image tag computation"
 
 [[exceptions]]
-pattern = "runtime.VirtualRuntime.Name.return.*"
+pattern = "runtime.ShRuntime.Name.return.*"
+reason = "display text — runtime display name"
+
+[[exceptions]]
+pattern = "runtime.LuaRuntime.Name.return.*"
 reason = "display text — runtime display name"
 
 [[exceptions]]
@@ -2579,6 +2894,10 @@ pattern = "invowkfile.IsShellInterpreter.interpreter"
 reason = "parse boundary — interpreter name for shell detection"
 
 [[exceptions]]
+pattern = "invowkfile.IsLuaInterpreter.interpreter"
+reason = "parse boundary — interpreter name for Lua detection"
+
+[[exceptions]]
 pattern = "invowkfile.GetExtensionForInterpreter.interpreter"
 reason = "parse boundary — interpreter name for extension lookup"
 
@@ -2703,6 +3022,10 @@ reason = "exec boundary — binary path for container spawn"
 
 [[exceptions]]
 pattern = "invowkfile.InvalidCapabilityNameError.Value.nonzero"
+reason = "error struct carries offending value for diagnostic output"
+
+[[exceptions]]
+pattern = "invowkfile.InvalidAllowedBinaryError.Value.nonzero"
 reason = "error struct carries offending value for diagnostic output"
 
 [[exceptions]]
@@ -3657,6 +3980,10 @@ pattern = "ExecutionContext.SelectedRuntime.nonzero"
 reason = "required value-field using a nonzero value type"
 
 [[exceptions]]
+pattern = "ExecutionContext.SelectedPlatform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
 pattern = "Finding.FilePath.nonzero"
 reason = "required value-field using a nonzero value type"
 
@@ -3889,6 +4216,10 @@ pattern = "RuntimeSelection.mode.nonzero"
 reason = "required value-field using a nonzero value type"
 
 [[exceptions]]
+pattern = "RuntimeSelection.platform.nonzero"
+reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
 pattern = "ScanContext.rootPath.nonzero"
 reason = "required value-field using a nonzero value type"
 
@@ -4108,7 +4439,11 @@ pattern = "config.RuntimeMode.native.enum-cue-missing-go"
 reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
 
 [[exceptions]]
-pattern = "config.RuntimeMode.virtual.enum-cue-missing-go"
+pattern = "config.RuntimeMode.virtual-lua.enum-cue-missing-go"
+reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+
+[[exceptions]]
+pattern = "config.RuntimeMode.virtual-sh.enum-cue-missing-go"
 reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
 
 [[exceptions]]
@@ -4120,5 +4455,9 @@ pattern = "invowkfile.RuntimeMode.native.enum-cue-missing-go"
 reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
 
 [[exceptions]]
-pattern = "invowkfile.RuntimeMode.virtual.enum-cue-missing-go"
+pattern = "invowkfile.RuntimeMode.virtual-lua.enum-cue-missing-go"
+reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+
+[[exceptions]]
+pattern = "invowkfile.RuntimeMode.virtual-sh.enum-cue-missing-go"
 reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
