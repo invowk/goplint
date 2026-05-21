@@ -641,6 +641,17 @@ func TestCheckPathmatrixDivergent(t *testing.T) {
 	runAnalysisTest(t, testdata, h.Analyzer, "pathmatrixdivergent")
 }
 
+func TestCheckTestHomeEnvPlatform(t *testing.T) {
+	t.Parallel()
+
+	testdata := analysistest.TestData()
+	h := newAnalyzerHarness()
+	resetFlags(t, h)
+	setFlag(t, h.Analyzer, "check-test-home-env", "true")
+
+	runAnalysisTest(t, testdata, h.Analyzer, "testhomeenv")
+}
+
 func TestCheckWindowsPitfalls(t *testing.T) {
 	t.Parallel()
 

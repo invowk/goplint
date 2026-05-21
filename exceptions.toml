@@ -922,6 +922,10 @@ pattern = "provision.*.constructor"
 reason = "provisioning DTOs; constructed via struct literals"
 
 [[exceptions]]
+pattern = "provisionenv.*.constructor"
+reason = "provisioning env contract DTOs; constructed via JSON decode or struct literals"
+
+[[exceptions]]
 pattern = "uroot.*.constructor"
 reason = "u-root utility types; constant struct literals"
 
@@ -3643,7 +3647,7 @@ pattern = "audit.llmFinding.*"
 reason = "LLM JSON response DTO; validated and converted before producing audit findings"
 
 [[exceptions]]
-pattern = "audit.LLMMalformedResponseError.RawResponse"
+pattern = "llm.MalformedResponseError.RawResponse"
 reason = "diagnostic payload preserving raw provider response for troubleshooting"
 
 [[exceptions]]
@@ -3862,6 +3866,22 @@ reason = "required value-field using a nonzero value type"
 [[exceptions]]
 pattern = "CommandInfo.Name.nonzero"
 reason = "required value-field using a nonzero value type"
+
+[[exceptions]]
+pattern = "Entry.Path.nonzero"
+reason = "required provisioned-module manifest path validated before use"
+
+[[exceptions]]
+pattern = "provisionedModuleCopy.SourcePath.nonzero"
+reason = "required provisioned-module source path validated before use"
+
+[[exceptions]]
+pattern = "ProvisionedModuleEntry.Path.nonzero"
+reason = "required provisioned-module discovery path validated before use"
+
+[[exceptions]]
+pattern = "ModuleEntry.Path.nonzero"
+reason = "required provisioned-module config path validated before use"
 
 [[exceptions]]
 pattern = "CommandInfo.SimpleName.nonzero"

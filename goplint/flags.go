@@ -99,6 +99,7 @@ type flagState struct {
 	checkBoundaryRequest          bool
 	checkCrossPlatformPath        bool
 	checkPathmatrixDivergent      bool
+	checkTestHomeEnvPlatform      bool
 	checkCommandWaitDelay         bool
 	checkCueFedPathNativeClean    bool
 	checkPathBoundaryPrefix       bool
@@ -406,6 +407,18 @@ func modeFlagSpecs() []modeFlagSpec {
 			},
 		},
 		{
+			flagName:          "check-test-home-env",
+			usage:             "report tests that set HOME directly instead of internal/testutil.SetHomeDir",
+			defaultValue:      false,
+			includeInCheckAll: true,
+			stateBoolField: func(fs *flagState) *bool {
+				return &fs.checkTestHomeEnvPlatform
+			},
+			runConfigBoolField: func(rc *runConfig) *bool {
+				return &rc.checkTestHomeEnvPlatform
+			},
+		},
+		{
 			flagName:          "check-command-waitdelay",
 			usage:             "report exec.CommandContext commands used without setting Cmd.WaitDelay before execution",
 			defaultValue:      false,
@@ -646,6 +659,7 @@ type runConfig struct {
 	checkBoundaryRequest          bool
 	checkCrossPlatformPath        bool
 	checkPathmatrixDivergent      bool
+	checkTestHomeEnvPlatform      bool
 	checkCommandWaitDelay         bool
 	checkCueFedPathNativeClean    bool
 	checkPathBoundaryPrefix       bool

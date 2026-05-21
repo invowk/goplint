@@ -395,6 +395,11 @@ func runTraversal(
 				inspectPathmatrixDivergent(pass, fn, cfg, bl)
 			}
 		}
+		if rc.checkTestHomeEnvPlatform {
+			if fn, ok := n.(*ast.FuncDecl); ok {
+				inspectTestHomeEnvPlatform(pass, fn, cfg, bl)
+			}
+		}
 
 		// Skip test files entirely — test data legitimately uses primitives.
 		if isTestFile(pass, n.Pos()) {
