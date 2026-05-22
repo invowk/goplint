@@ -100,6 +100,30 @@ reason = "full paths like /bin/bash; BinaryName rejects paths"
 pattern = "ResolveDockerfilePath.*"
 reason = "exec boundary — params/return passed to filepath operations"
 
+[[exceptions]]
+pattern = "acpclient.*.Validate"
+reason = "ACP foundation adapter mirrors generated protocol/process labels; invariants are enforced at SDK callback and RunPrompt boundaries"
+
+[[exceptions]]
+pattern = "acpclient.*.String"
+reason = "ACP foundation adapter value types are protocol labels where zero/empty values can be meaningful display or optional fields"
+
+[[exceptions]]
+pattern = "acpclient.*.constructor"
+reason = "ACP foundation adapter DTOs are internal protocol translation records, not domain aggregates"
+
+[[exceptions]]
+pattern = "acpclient.*.struct-validate-fields"
+reason = "ACP foundation adapter DTOs expose mediated protocol callback payloads; callback methods validate generated ACP inputs before translation"
+
+[[exceptions]]
+pattern = "acpclient.PermissionOutcome.SelectedOptionID.validate-delegation"
+reason = "SelectedOptionID is conditionally required only when the ACP permission outcome kind is selected"
+
+[[exceptions]]
+pattern = "acpclient.filesystemPathFromACP.path"
+reason = "ACP generated protocol supplies raw path text, converted to FilesystemPath and validated immediately"
+
 # =============================================================================
 # Virtual Runtime Adapter Boundaries
 # =============================================================================
