@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"slices"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -317,14 +318,14 @@ func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) ma
 }
 
 func latestClosureBindingBefore(events []closureBindingEvent, atPos token.Pos) (*ast.FuncLit, bool) {
-	for i := len(events) - 1; i >= 0; i-- {
-		if events[i].pos > atPos {
+	for _, event := range slices.Backward(events) {
+		if event.pos > atPos {
 			continue
 		}
-		if events[i].lit == nil {
+		if event.lit == nil {
 			return nil, false
 		}
-		return events[i].lit, true
+		return event.lit, true
 	}
 	return nil, false
 }
@@ -444,14 +445,14 @@ func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.Bloc
 }
 
 func latestValidateMethodBindingBefore(events []validateMethodValueBindingEvent, atPos token.Pos) (validateMethodValueBindingEvent, bool) {
-	for i := len(events) - 1; i >= 0; i-- {
-		if events[i].pos > atPos {
+	for _, event := range slices.Backward(events) {
+		if event.pos > atPos {
 			continue
 		}
-		if events[i].receiver == nil {
+		if event.receiver == nil {
 			return validateMethodValueBindingEvent{}, false
 		}
-		return events[i], true
+		return event, true
 	}
 	return validateMethodValueBindingEvent{}, false
 }
@@ -591,11 +592,11 @@ func executableClosureVarCall(
 	}
 
 	var matched *ast.FuncLit
-	for i := len(events) - 1; i >= 0; i-- {
-		if events[i].pos > call.Pos() {
+	for _, event := range slices.Backward(events) {
+		if event.pos > call.Pos() {
 			continue
 		}
-		matched = events[i].lit
+		matched = event.lit
 		break
 	}
 	if matched == nil {

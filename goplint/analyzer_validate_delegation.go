@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"slices"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -378,14 +379,14 @@ func collectDelegationAliasBindings(
 }
 
 func latestDelegationAliasFieldBefore(events []delegationAliasBindingEvent, atPos token.Pos) (string, bool) {
-	for i := len(events) - 1; i >= 0; i-- {
-		if events[i].pos > atPos {
+	for _, event := range slices.Backward(events) {
+		if event.pos > atPos {
 			continue
 		}
-		if events[i].fieldName == "" {
+		if event.fieldName == "" {
 			return "", false
 		}
-		return events[i].fieldName, true
+		return event.fieldName, true
 	}
 	return "", false
 }

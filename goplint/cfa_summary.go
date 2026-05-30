@@ -5,6 +5,7 @@ package goplint
 import (
 	"go/ast"
 	"go/types"
+	"slices"
 	"strconv"
 	"sync"
 
@@ -117,7 +118,7 @@ func (scope *summaryStackScope) pop(key string) {
 	if len(scope.order) == 0 {
 		return
 	}
-	for idx := len(scope.order) - 1; idx >= 0; idx-- {
+	for idx := range slices.Backward(scope.order) {
 		if scope.order[idx] != key {
 			continue
 		}

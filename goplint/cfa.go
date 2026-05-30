@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"slices"
 
 	"golang.org/x/tools/go/analysis"
 	gocfg "golang.org/x/tools/go/cfg"
@@ -391,11 +392,11 @@ func exprIsNoReturnFunc(pass *analysis.Pass, expr ast.Expr, aliases noReturnAlia
 }
 
 func latestNoReturnAliasBefore(events []noReturnFuncAliasEvent, atPos token.Pos) bool {
-	for i := len(events) - 1; i >= 0; i-- {
-		if events[i].pos > atPos {
+	for _, event := range slices.Backward(events) {
+		if event.pos > atPos {
 			continue
 		}
-		return events[i].noReturn
+		return event.noReturn
 	}
 	return false
 }
