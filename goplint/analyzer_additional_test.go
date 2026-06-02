@@ -44,3 +44,76 @@ func TestFlagState_CalleeSummaryCacheIsAnalyzerScoped(t *testing.T) {
 		t.Fatal("resetFlagStateDefaults() did not clear callee summary cache")
 	}
 }
+
+func TestSameStructTypeIdentity(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		structKey string
+		returnKey string
+		want      bool
+	}{
+		{name: "exact", structKey: "pkg.Box", returnKey: "pkg.Box", want: true},
+		{name: "generic struct base", structKey: "pkg.Box[T]", returnKey: "pkg.Box", want: true},
+		{name: "generic return base", structKey: "pkg.Box", returnKey: "pkg.Box[int]", want: true},
+		{name: "different type", structKey: "pkg.Box", returnKey: "pkg.Other", want: false},
+		{name: "empty struct key", structKey: "", returnKey: "pkg.Box", want: false},
+		{name: "empty return key", structKey: "pkg.Box", returnKey: "", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := sameStructTypeIdentity(tt.structKey, tt.returnKey); got != tt.want {
+				t.Fatalf("sameStructTypeIdentity(%q, %q) = %v, want %v", tt.structKey, tt.returnKey, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFindConstructorForStruct(t *testing.T) {
+	t.Parallel()
+
+	t.Run("generic type identity matches when return name differs", func(t *testing.T) {
+		t.Parallel()
+
+		structInfo := exportedStructInfo{name: "Box", typeKey: "pkg.Box[T]"}
+		ctor := &constructorFuncInfo{returnTypeName: "InstantiatedBox", returnTypeKey: "pkg.Box"}
+		got := findConstructorForStruct(structInfo, map[string]*constructorFuncInfo{
+			"NewBox": ctor,
+		})
+		if got != ctor {
+			t.Fatalf("findConstructorForStruct() = %p, want %p", got, ctor)
+		}
+	})
+
+	t.Run("exact constructor wins over lexicographic prefix", func(t *testing.T) {
+		t.Parallel()
+
+		structInfo := exportedStructInfo{name: "Config", typeKey: "pkg.Config"}
+		exact := &constructorFuncInfo{returnTypeName: "Config", returnTypeKey: "pkg.Config"}
+		prefix := &constructorFuncInfo{returnTypeName: "Config", returnTypeKey: "pkg.Config"}
+		got := findConstructorForStruct(structInfo, map[string]*constructorFuncInfo{
+			"NewConfigAlpha": prefix,
+			"NewConfig":      exact,
+		})
+		if got != exact {
+			t.Fatalf("findConstructorForStruct() = %p, want exact constructor %p", got, exact)
+		}
+	})
+
+	t.Run("interface return satisfies constructor", func(t *testing.T) {
+		t.Parallel()
+
+		structInfo := exportedStructInfo{name: "Client", typeKey: "pkg.Client"}
+		ctor := &constructorFuncInfo{returnTypeName: "Service", returnTypeKey: "pkg.Service", returnsInterface: true}
+		got := findConstructorForStruct(structInfo, map[string]*constructorFuncInfo{
+			"NewClient": ctor,
+		})
+		if got != ctor {
+			t.Fatalf("findConstructorForStruct() = %p, want interface-return constructor %p", got, ctor)
+		}
+	})
+}

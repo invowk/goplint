@@ -3,6 +3,7 @@
 package goplint
 
 import (
+	"go/ast"
 	"go/token"
 	"strconv"
 	"testing"
@@ -87,4 +88,75 @@ func TestReportValidateUsageFinding(t *testing.T) {
 			t.Fatalf("expected 0 diagnostics for baselined finding, got %d", len(diags))
 		}
 	})
+}
+
+func TestIsAllBlankForValidate(t *testing.T) {
+	t.Parallel()
+
+	call := &ast.CallExpr{}
+	assign := &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("kept"), ast.NewIdent("_")},
+		Rhs: []ast.Expr{ast.NewIdent("other"), call},
+	}
+	if !isAllBlankForValidate(assign, call) {
+		t.Fatal("isAllBlankForValidate() = false, want true for matching blank LHS")
+	}
+
+	nonBlank := &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("_"), ast.NewIdent("err")},
+		Rhs: []ast.Expr{ast.NewIdent("other"), call},
+	}
+	if isAllBlankForValidate(nonBlank, call) {
+		t.Fatal("isAllBlankForValidate() = true, want false for non-blank matching LHS")
+	}
+
+	outOfRange := &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("_")},
+		Rhs: []ast.Expr{ast.NewIdent("other"), call},
+	}
+	if isAllBlankForValidate(outOfRange, call) {
+		t.Fatal("isAllBlankForValidate() = true, want false when RHS index has no matching LHS")
+	}
+
+	absent := &ast.CallExpr{}
+	if isAllBlankForValidate(assign, absent) {
+		t.Fatal("isAllBlankForValidate() = true, want false for absent call")
+	}
+}
+
+func TestIsBlankValueSpecForValidate(t *testing.T) {
+	t.Parallel()
+
+	call := &ast.CallExpr{}
+	valueSpec := &ast.ValueSpec{
+		Names: []*ast.Ident{ast.NewIdent("kept"), ast.NewIdent("_")},
+		Values: []ast.Expr{
+			ast.NewIdent("other"),
+			call,
+		},
+	}
+	if !isBlankValueSpecForValidate(valueSpec, call) {
+		t.Fatal("isBlankValueSpecForValidate() = false, want true for matching blank name")
+	}
+
+	nonBlank := &ast.ValueSpec{
+		Names:  []*ast.Ident{ast.NewIdent("_"), ast.NewIdent("err")},
+		Values: []ast.Expr{ast.NewIdent("other"), call},
+	}
+	if isBlankValueSpecForValidate(nonBlank, call) {
+		t.Fatal("isBlankValueSpecForValidate() = true, want false for non-blank matching name")
+	}
+
+	outOfRange := &ast.ValueSpec{
+		Names:  []*ast.Ident{ast.NewIdent("_")},
+		Values: []ast.Expr{ast.NewIdent("other"), call},
+	}
+	if isBlankValueSpecForValidate(outOfRange, call) {
+		t.Fatal("isBlankValueSpecForValidate() = true, want false when value index has no matching name")
+	}
+
+	absent := &ast.CallExpr{}
+	if isBlankValueSpecForValidate(valueSpec, absent) {
+		t.Fatal("isBlankValueSpecForValidate() = true, want false for absent call")
+	}
 }
