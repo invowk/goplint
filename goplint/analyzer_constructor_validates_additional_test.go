@@ -92,6 +92,34 @@ func TestResolveDirectiveTypeIdentity(t *testing.T) {
 			t.Fatalf("resolveDirectiveTypeIdentity(empty) = (%q, %q), want empty", typeName, typePkgPath)
 		}
 	})
+
+	t.Run("alias disambiguates matching signature types", func(t *testing.T) {
+		t.Parallel()
+
+		currentPkg := types.NewPackage("example.com/current", "current")
+		otherPkg := types.NewPackage("example.com/other", "other")
+		modelPkg := types.NewPackage("example.com/model", "model")
+		otherServer := types.NewNamed(types.NewTypeName(0, otherPkg, "Server", nil), types.NewStruct(nil, nil), nil)
+		modelServer := types.NewNamed(types.NewTypeName(0, modelPkg, "Server", nil), types.NewStruct(nil, nil), nil)
+		sig := types.NewSignatureType(
+			nil,
+			nil,
+			nil,
+			types.NewTuple(types.NewVar(0, nil, "input", otherServer)),
+			types.NewTuple(types.NewVar(0, nil, "", modelServer)),
+			false,
+		)
+		fn := &ast.FuncDecl{Name: ast.NewIdent("helper")}
+		pass := &analysis.Pass{
+			Pkg:       currentPkg,
+			TypesInfo: &types.Info{Defs: map[*ast.Ident]types.Object{fn.Name: types.NewFunc(0, currentPkg, "helper", sig)}},
+		}
+
+		typeName, typePkgPath := resolveDirectiveTypeIdentity(pass, fn, "model.Server")
+		if typeName != "Server" || typePkgPath != "example.com/model" {
+			t.Fatalf("resolveDirectiveTypeIdentity(alias) = (%q, %q), want (%q, %q)", typeName, typePkgPath, "Server", "example.com/model")
+		}
+	})
 }
 
 func TestInferDirectiveTypePkgPath(t *testing.T) {
@@ -205,5 +233,81 @@ func NewServer() (*Server, error) {
 	decoyIdent := findIdentInFunc(t, fn, "decoy")
 	if matcher(pass, decoyIdent) {
 		t.Fatal("expected matcher to reject decoy variable")
+	}
+}
+
+func TestResolveReturnTypeValidateInfoPointerNamedResult(t *testing.T) {
+	t.Parallel()
+
+	src := `package testpkg
+type Server struct{}
+func (s *Server) Validate() error { return nil }
+
+func NewServer() (srv *Server, err error) {
+	return nil, nil
+}
+
+func NewOnlyError() error {
+	return nil
+}`
+
+	pass, file := buildTypedPassFromSource(t, src)
+	info := resolveReturnTypeValidateInfo(pass, findFuncDecl(t, file, "NewServer"))
+	if !info.HasValidate {
+		t.Fatal("expected NewServer return type to have Validate")
+	}
+	if info.TypeName != "Server" || info.TypePkgName != "testpkg" || info.TypePkgPath != "testpkg" {
+		t.Fatalf("return type identity = (%q, %q, %q), want Server/testpkg/testpkg", info.TypeName, info.TypePkgName, info.TypePkgPath)
+	}
+	if info.TypeKey != "testpkg.Server" {
+		t.Fatalf("return type key = %q, want %q", info.TypeKey, "testpkg.Server")
+	}
+
+	errorInfo := resolveReturnTypeValidateInfo(pass, findFuncDecl(t, file, "NewOnlyError"))
+	if errorInfo.HasValidate || errorInfo.TypeKey != "error" {
+		t.Fatalf("error-only return info = %+v, want non-validatable error info", errorInfo)
+	}
+}
+
+func TestBodyCallsValidateTransitiveFollowsBareAndMethodHelpers(t *testing.T) {
+	t.Parallel()
+
+	src := `package testpkg
+type Server struct{}
+func (s *Server) Validate() error { return nil }
+func (s *Server) init() error { return s.Validate() }
+
+type Other struct{}
+func (o *Other) init() error { return nil }
+
+func helper(s *Server) error { return s.Validate() }
+func nested(s *Server) error { return helper(s) }
+
+func bareCaller(s *Server) error { return nested(s) }
+func methodCaller(s *Server) error { return s.init() }
+func conditionalCaller(s *Server, ok bool) error {
+	if ok {
+		return helper(s)
+	}
+	return nil
+}
+func wrongMethodCaller(o *Other) error { return o.init() }`
+
+	pass, file := buildTypedPassFromSource(t, src)
+	returnTypeKey := typeIdentityKey(pass.Pkg.Scope().Lookup("Server").Type())
+	if !bodyCallsValidateTransitive(pass, findFuncDecl(t, file, "bareCaller").Body, "Server", "testpkg", returnTypeKey, nil, 0) {
+		t.Fatal("expected bare helper chain to validate Server")
+	}
+	if !bodyCallsValidateTransitive(pass, findFuncDecl(t, file, "methodCaller").Body, "Server", "testpkg", returnTypeKey, nil, 0) {
+		t.Fatal("expected method helper chain to validate Server")
+	}
+	if bodyCallsValidateTransitive(pass, findFuncDecl(t, file, "conditionalCaller").Body, "Server", "testpkg", returnTypeKey, nil, 0) {
+		t.Fatal("conditional helper call should not prove all paths validate")
+	}
+	if bodyCallsValidateTransitive(pass, findFuncDecl(t, file, "wrongMethodCaller").Body, "Server", "testpkg", returnTypeKey, nil, 0) {
+		t.Fatal("method call on another type should not validate Server")
+	}
+	if bodyCallsValidateTransitive(pass, findFuncDecl(t, file, "bareCaller").Body, "Server", "testpkg", returnTypeKey, nil, maxTransitiveDepth) {
+		t.Fatal("depth at maxTransitiveDepth should not recurse")
 	}
 }
