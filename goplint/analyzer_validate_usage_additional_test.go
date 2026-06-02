@@ -4,7 +4,9 @@ package goplint
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
+	"go/types"
 	"strconv"
 	"testing"
 
@@ -90,6 +92,48 @@ func TestReportValidateUsageFinding(t *testing.T) {
 	})
 }
 
+func TestInspectValidateUsageIgnoresUntypedReceiver(t *testing.T) {
+	t.Parallel()
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "fixture.go", `
+package fixture
+
+func run() {
+	untyped.Validate()
+}
+`, parser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse fixture: %v", err)
+	}
+
+	var body *ast.BlockStmt
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if ok && fn.Name.Name == "run" {
+			body = fn.Body
+			break
+		}
+	}
+	if body == nil {
+		t.Fatal("fixture function body not found")
+	}
+
+	var diags []analysis.Diagnostic
+	pass := &analysis.Pass{
+		TypesInfo: &types.Info{},
+		Report: func(diag analysis.Diagnostic) {
+			diags = append(diags, diag)
+		},
+	}
+
+	inspectValidateUsageInBody(pass, body, buildParentMap(body), "fixture.run", &ExceptionConfig{}, nil)
+
+	if len(diags) != 0 {
+		t.Fatalf("expected no diagnostics for untyped receiver, got %d", len(diags))
+	}
+}
+
 func TestIsAllBlankForValidate(t *testing.T) {
 	t.Parallel()
 
@@ -121,6 +165,14 @@ func TestIsAllBlankForValidate(t *testing.T) {
 	absent := &ast.CallExpr{}
 	if isAllBlankForValidate(assign, absent) {
 		t.Fatal("isAllBlankForValidate() = true, want false for absent call")
+	}
+
+	blankFirstAbsent := &ast.AssignStmt{
+		Lhs: []ast.Expr{ast.NewIdent("_")},
+		Rhs: []ast.Expr{ast.NewIdent("other")},
+	}
+	if isAllBlankForValidate(blankFirstAbsent, absent) {
+		t.Fatal("isAllBlankForValidate() = true, want false for absent call with blank first LHS")
 	}
 }
 
@@ -158,5 +210,13 @@ func TestIsBlankValueSpecForValidate(t *testing.T) {
 	absent := &ast.CallExpr{}
 	if isBlankValueSpecForValidate(valueSpec, absent) {
 		t.Fatal("isBlankValueSpecForValidate() = true, want false for absent call")
+	}
+
+	blankFirstAbsent := &ast.ValueSpec{
+		Names:  []*ast.Ident{ast.NewIdent("_")},
+		Values: []ast.Expr{ast.NewIdent("other")},
+	}
+	if isBlankValueSpecForValidate(blankFirstAbsent, absent) {
+		t.Fatal("isBlankValueSpecForValidate() = true, want false for absent call with blank first name")
 	}
 }

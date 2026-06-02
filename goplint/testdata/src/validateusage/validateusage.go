@@ -68,6 +68,11 @@ func correctUsageIfInit() {
 	}
 }
 
+func nonValidateSelectorIgnored() {
+	d := DddType("test")
+	d.String()
+}
+
 // --- Non-DDD type calls should NOT be flagged ---
 
 func nonDddTypeDiscarded() {
