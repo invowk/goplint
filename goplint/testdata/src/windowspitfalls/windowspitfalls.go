@@ -33,6 +33,28 @@ type (
 		ContainerPath ContainerPath
 	}
 
+	ContainerVolumeMount struct {
+		HostPath      HostFilesystemPath
+		ContainerPath ContainerPath
+	}
+
+	ContainerVolumeMountCustomWriter struct {
+		HostPath HostFilesystemPath
+	}
+
+	ContainerVolumeMountTwoArgWriter struct {
+		HostPath      HostFilesystemPath
+		ContainerPath ContainerPath
+	}
+
+	OtherMount struct {
+		HostPath HostFilesystemPath
+	}
+
+	hostWriter struct{}
+
+	twoArgWriter struct{}
+
 	commandRunner func(*exec.Cmd) error
 
 	//goplint:cue-fed-path
@@ -73,6 +95,32 @@ func missingWaitDelayPrepared(ctx context.Context, command CommandName) *Prepare
 func missingWaitDelayRunner(ctx context.Context, command CommandName, runner commandRunner) error {
 	cmd := exec.CommandContext(ctx, string(command))
 	return runner(cmd) // want `exec\.CommandContext command in windowspitfalls\.missingWaitDelayRunner is used without setting Cmd\.WaitDelay`
+}
+
+func missingWaitDelayDoubleRun(ctx context.Context, command CommandName) error {
+	cmd := exec.CommandContext(ctx, string(command))
+	if err := cmd.Run(); err != nil { // want `exec\.CommandContext command in windowspitfalls\.missingWaitDelayDoubleRun is used without setting Cmd\.WaitDelay`
+		return err
+	}
+	return cmd.Wait()
+}
+
+func missingWaitDelayRunnerTwice(ctx context.Context, command CommandName, runner commandRunner) error {
+	cmd := exec.CommandContext(ctx, string(command))
+	if err := runner(cmd); err != nil { // want `exec\.CommandContext command in windowspitfalls\.missingWaitDelayRunnerTwice is used without setting Cmd\.WaitDelay`
+		return err
+	}
+	return runner(cmd)
+}
+
+func missingWaitDelayPreparedPair(ctx context.Context, command CommandName) (*PreparedCommand, *PreparedCommand) {
+	cmd := exec.CommandContext(ctx, string(command))
+	return &PreparedCommand{Cmd: cmd}, &PreparedCommand{Cmd: cmd} // want `exec\.CommandContext command in windowspitfalls\.missingWaitDelayPreparedPair is used without setting Cmd\.WaitDelay`
+}
+
+func nonExecutionMethodIgnored(ctx context.Context, command CommandName) CommandName {
+	cmd := exec.CommandContext(ctx, string(command))
+	return CommandName(cmd.String())
 }
 
 func preparedWaitDelaySet(ctx context.Context, command CommandName) *PreparedCommand {
@@ -127,6 +175,40 @@ func goodVolumeMount(host HostFilesystemPath) VolumeMountSpec {
 
 func (v VolumeMount) String() string {
 	return string(v.HostPath) + ":" + string(v.ContainerPath) // want `container volume mount host path in windowspitfalls\.VolumeMount\.String is formatted before filepath\.ToSlash`
+}
+
+func (v ContainerVolumeMount) String() string {
+	var b strings.Builder
+	b.WriteString(string(v.HostPath)) // want `container volume mount host path in windowspitfalls\.ContainerVolumeMount\.String is formatted before filepath\.ToSlash`
+	b.WriteString(":")
+	b.WriteString(string(v.ContainerPath))
+	return b.String()
+}
+
+func (v OtherMount) String() string {
+	var b strings.Builder
+	b.WriteString(string(v.HostPath))
+	return b.String()
+}
+
+func (w hostWriter) WriteHostPath(host HostFilesystemPath) {
+	_ = host
+}
+
+func (w twoArgWriter) WriteString(host HostFilesystemPath, container ContainerPath) {
+	_, _ = host, container
+}
+
+func (v ContainerVolumeMountCustomWriter) String() string {
+	var w hostWriter
+	w.WriteHostPath(v.HostPath)
+	return ""
+}
+
+func (v ContainerVolumeMountTwoArgWriter) String() string {
+	var w twoArgWriter
+	w.WriteString(v.HostPath, v.ContainerPath)
+	return ""
 }
 
 func cobraBackground(cmd *cobra.Command) context.Context {
