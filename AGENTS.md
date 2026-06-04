@@ -20,10 +20,10 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | **Check Phase C refinement** | **`make check-cfg-refinement`** |
 | **Check Phase D alias mode** | **`make check-cfg-alias`** |
 | **Check baseline (regression gate)** | **`make check-baseline`** |
+| **Check exception governance** | **`make check-goplint-exceptions`** |
 | **Update baseline** | **`make update-baseline`** |
 | Run tests | `cd tools/goplint && go test ./goplint/` |
 | Run tests (race) | `cd tools/goplint && go test -race ./goplint/` |
-| Audit stale exceptions | `make build-goplint && ./bin/goplint -audit-exceptions -config=tools/goplint/exceptions.toml ./...` |
 | Check missing Validate | `make build-goplint && ./bin/goplint -check-validate -config=tools/goplint/exceptions.toml ./...` |
 | Check missing String | `make build-goplint && ./bin/goplint -check-stringer -config=tools/goplint/exceptions.toml ./...` |
 | Check missing constructors | `make build-goplint && ./bin/goplint -check-constructors -config=tools/goplint/exceptions.toml ./...` |
@@ -42,7 +42,6 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | Check boundary request validation | `make build-goplint && ./bin/goplint -check-boundary-request-validation -config=tools/goplint/exceptions.toml ./...` |
 | Check enum CUE sync | `make build-goplint && ./bin/goplint -check-enum-sync -config=tools/goplint/exceptions.toml ./...` |
 | CFA cast validation (default) | `make build-goplint && ./bin/goplint -check-cast-validation -config=tools/goplint/exceptions.toml ./...` |
-| Audit overdue reviews | `make build-goplint && ./bin/goplint -audit-review-dates -config=tools/goplint/exceptions.toml ./...` |
 
 ## Testing Parallelism
 
@@ -95,14 +94,14 @@ Each diagnostic emitted by the analyzer carries a `category` field (visible in `
 | `overdue-review` | `--audit-review-dates` | Exception with `review_after` date that has passed |
 | `unknown-directive` | (always active) | Unrecognized key in `//goplint:` directive (typo detection) |
 
-The `--check-all` flag enables `--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, `--check-cross-platform-paths`, `--check-pathmatrix-divergent`, `--check-command-waitdelay`, `--check-cue-fed-path-native-clean`, `--check-path-boundary-prefix`, `--check-volume-mount-host-toslash`, and `--check-cobra-command-context` in a single invocation. `--check-all` includes CFA-backed checks by default. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
+The `--check-all` flag enables `--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, `--check-cross-platform-paths`, `--check-pathmatrix-divergent`, `--check-command-waitdelay`, `--check-cue-fed-path-native-clean`, `--check-path-boundary-prefix`, `--check-volume-mount-host-toslash`, and `--check-cobra-command-context` in a single invocation. `--check-all` includes CFA-backed checks by default. Deliberately excludes `--audit-exceptions` and `--audit-review-dates` (config maintenance tools enforced by `make check-goplint-exceptions`), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
 
 ## Architecture
 
 ```
 tools/goplint/
 ├── main.go                 # singlechecker entry point + --update-baseline mode
-├── exceptions.toml         # ~390 intentional exception patterns (primitives, constructors, func-options, etc.)
+├── exceptions.toml         # governed intentional exception patterns (primitives, constructors, func-options, etc.)
 ├── baseline.toml           # accepted findings baseline (generated)
 ├── goplint/
 │   ├── analyzer.go                 # default Analyzer + NewAnalyzer factory
@@ -369,7 +368,7 @@ Nineteen additional analysis modes complement the primary primitive detection:
 
 ### `--check-all`
 
-Enables all DDD compliance checks (`--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, `--check-cross-platform-paths`, `--check-pathmatrix-divergent`, `--check-command-waitdelay`, `--check-cue-fed-path-native-clean`, `--check-path-boundary-prefix`, `--check-volume-mount-host-toslash`, `--check-cobra-command-context`) in a single invocation. This is the recommended flag for comprehensive DDD compliance checks. Deliberately excludes `--audit-exceptions`, `--audit-review-dates` (config maintenance tools with per-package false positives), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
+Enables all DDD compliance checks (`--check-validate`, `--check-stringer`, `--check-constructors`, `--check-constructor-sig`, `--check-func-options`, `--check-immutability`, `--check-struct-validate`, `--check-cast-validation`, `--check-validate-usage`, `--check-constructor-error-usage`, `--check-constructor-validates`, `--check-validate-delegation`, `--check-nonzero`, `--check-use-before-validate`, `--check-constructor-return-error`, `--check-redundant-conversion`, `--check-boundary-request-validation`, `--check-cross-platform-paths`, `--check-pathmatrix-divergent`, `--check-command-waitdelay`, `--check-cue-fed-path-native-clean`, `--check-path-boundary-prefix`, `--check-volume-mount-host-toslash`, `--check-cobra-command-context`) in a single invocation. This is the recommended flag for comprehensive DDD compliance checks. Deliberately excludes `--audit-exceptions` and `--audit-review-dates` (config maintenance tools enforced by `make check-goplint-exceptions`), `--check-enum-sync` (requires per-type opt-in directive and CUE schema files), and `--suggest-validate-all` (advisory mode).
 
 ### `--audit-exceptions`
 
@@ -715,11 +714,11 @@ Run `make update-baseline` after:
 
 ### CI integration
 
-The `goplint-baseline` and `goplint-tests` jobs in `lint.yml` are required checks. `goplint-baseline` runs `make check-baseline` (regression gate), while `goplint-tests` runs nested-module analyzer tests (`go test -race -count=1 ./...` and repeat runs) plus the semantic/IFDS/Phase C/Phase D script gates to catch tool-only regressions.
+The `goplint-baseline`, `goplint-exceptions`, and `goplint-tests` jobs in `lint.yml` are required checks. `goplint-baseline` runs `make check-baseline` (regression gate), `goplint-exceptions` runs `make check-goplint-exceptions` (global stale exception + review-date governance), and `goplint-tests` runs nested-module analyzer tests (`go test -race -count=1 ./...` and repeat runs) plus the semantic/IFDS/Phase C/Phase D script gates to catch tool-only regressions.
 
 ### Pre-commit hook
 
-The local hooks in `.pre-commit-config.yaml` now block on both `make check-baseline` and the semantic/IFDS/Phase C/Phase D behavior gates (`check-semantic-spec`, `check-ifds-compat`, `check-cfg-refinement`, `check-cfg-alias`) for goplint-relevant changes. Install with `make install-hooks`.
+The local hooks in `.pre-commit-config.yaml` now block on `make check-baseline`, `make check-goplint-exceptions`, and the semantic/IFDS/Phase C/Phase D behavior gates (`check-semantic-spec`, `check-ifds-compat`, `check-cfg-refinement`, `check-cfg-alias`) for goplint-relevant changes. Install with `make install-hooks`.
 
 ## Gotchas
 
@@ -733,7 +732,7 @@ The local hooks in `.pre-commit-config.yaml` now block on both `make check-basel
 - **`primitiveTypeName` needs `Unalias` too**: Even after `isPrimitive` correctly detects an alias as primitive, the diagnostic message must show the resolved type (`string`), not the alias name (`MyAlias`). Call `types.Unalias()` before `types.TypeString()`.
 - **Qualified name format**: The analyzer prefixes all names with the package name (`pkg.Type.Field`, `pkg.Func.param`). Exception patterns can be 2-segment (matched after stripping the package prefix) or 3-segment (exact match).
 - **CI baseline + analyzer tests are required**: `goplint-baseline` blocks merges on baseline regressions, and `goplint-tests` blocks merges on analyzer test/race regressions. The `goplint` full DDD scan remains advisory with `continue-on-error: true`. `make check-baseline` runs `-check-all -check-enum-sync -cfg-interproc-engine=legacy`.
-- **Per-package execution**: `go/analysis` analyzers run per-package. `--audit-exceptions` reports stale exceptions per-package — an exception that matches in package A but not package B will only be reported as stale during B's analysis. For a global stale audit, run against the full module (`./...`).
+- **Per-package execution**: `go/analysis` analyzers run per-package. `--audit-exceptions` reports stale exceptions per-package — an exception that matches in package A but not package B will only be reported as stale during B's analysis. Use `make check-goplint-exceptions` for the global gate.
 - **`findConstructorForStruct` determinism**: Prefers exact match (`"New" + structName`) over prefix matches. Among prefix matches, picks lexicographically first name. Prevents non-deterministic results from Go map iteration order when multiple variant constructors exist.
 - **CFA import alias**: CFA files use `gocfg "golang.org/x/tools/go/cfg"` to avoid collision with the `*ExceptionConfig` parameter commonly named `cfg` in analyzer functions.
 - **`--cfg-alias-mode=ssa` (Phase D)**: Opt-in SSA-based must-alias tracking. Enriches `castTarget.matchesExpr` so `y := x; y.Validate()` discharges `x`'s validation requirement. SSA is built on-demand via `buildSSAForPass()` (NOT a `Requires` prerequisite — adding to `Requires` causes `failed prerequisites` for stdlib imports in the `go/analysis` framework). NOT included in `--check-all`. The `"ssa"` here refers to `go/ssa` SSA form, distinct from `--cfg-backend=ssa` which means "type-aware `go/cfg` CFG." `make check-cfg-alias` is the dedicated proof gate: it compares the curated alias fixture under `off` vs `ssa`, requires copy/multi-hop alias improvement only under `ssa`, and keeps the no-alias/reassignment/partial-branch controls failing in both modes.

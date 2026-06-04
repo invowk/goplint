@@ -187,8 +187,9 @@ func calleeSummaryForFuncSlotWithStack(
 	}
 	cacheKey := key + "|" + slot.cacheKey()
 	if cached, ok := cache.Load(cacheKey); ok {
-		entry := cached.(calleeSummaryEntry)
-		return entry.summary, entry.ok, entry.reason
+		if entry, ok := cached.(calleeSummaryEntry); ok {
+			return entry.summary, entry.ok, entry.reason
+		}
 	}
 	if scope.contains(cacheKey) {
 		return calleeTargetSummary{}, false, pathOutcomeReasonRecursionCycle

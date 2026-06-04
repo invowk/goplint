@@ -374,8 +374,12 @@ func receiverImplementsError(pass *analysis.Pass, expr ast.Expr) bool {
 	if errorType == nil {
 		return false
 	}
-	return types.Implements(receiverType, errorType.Underlying().(*types.Interface)) ||
-		types.Implements(types.NewPointer(receiverType), errorType.Underlying().(*types.Interface))
+	errorInterface, ok := errorType.Underlying().(*types.Interface)
+	if !ok {
+		return false
+	}
+	return types.Implements(receiverType, errorInterface) ||
+		types.Implements(types.NewPointer(receiverType), errorInterface)
 }
 
 // isRawPrimitive reports whether t is a bare primitive type (string, int, etc.)

@@ -2,6 +2,9 @@
 #
 # golangci-lint configuration for tools/goplint module.
 # This module is linted separately from the root module.
+# Differences from the root config are intentional: this analyzer module enables
+# tool-focused checks such as wrapcheck, staticcheck, depguard, and perfsprint,
+# while omitting app/runtime policy that only applies to the root module.
 
 version = "2"
 
@@ -17,8 +20,15 @@ enable = [
     # using modern language and library features.
     "modernize",
 
+    # intrange: Finds loops that can use Go 1.22 integer range syntax.
+    "intrange",
+
     # forbidigo: Forbids identifiers.
     "forbidigo",
+
+    # forcetypeassert: Requires type assertions to check the ok result in
+    # production code.
+    "forcetypeassert",
 
     # usetesting: Reports uses of functions with replacement inside the testing
     # package. [auto-fix]
@@ -66,6 +76,9 @@ enable = [
     # noctx: Detects subprocess and API usage missing context-aware variants.
     "noctx",
 
+    # contextcheck: Detects calls that drop an inherited context.
+    "contextcheck",
+
     # nilnil: Detects simultaneous nil error and invalid value returns.
     "nilnil",
 
@@ -74,6 +87,9 @@ enable = [
 
     # tparallel: Enforces t.Parallel usage patterns in tests.
     "tparallel",
+
+    # paralleltest: Detects tests and subtests missing t.Parallel().
+    "paralleltest",
 
     # decorder: Enforces declaration ordering consistency.
     "decorder",
@@ -92,6 +108,9 @@ enable = [
 
     # revive: Fast style and maintainability linter.
     "revive",
+
+    # godoclint: Checks Go documentation comments for exported API clarity.
+    "godoclint",
 
     # wrapcheck: Requires external errors to be wrapped at boundaries.
     "wrapcheck",
@@ -163,6 +182,8 @@ pkg = "github.com/stretchr/testify"
 desc = "project uses standard testing library"
 
 [linters.settings.nolintlint]
+allow-unused = false
+require-explanation = true
 require-specific = true
 
 [linters.settings.goconst]
@@ -190,6 +211,11 @@ generated = "lax"
 # Enforce errors.AsType[T] in non-test code.
 [[linters.exclusions.rules]]
 linters = ["forbidigo"]
+path = "_test\\.go$"
+
+# Enforce checked type assertions and context propagation in production code.
+[[linters.exclusions.rules]]
+linters = ["forcetypeassert", "contextcheck"]
 path = "_test\\.go$"
 
 # go/analysis analyzers intentionally return (nil, nil) when no result export is needed.

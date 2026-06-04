@@ -114,7 +114,10 @@ func runWithState(pass *analysis.Pass, state *flagState) (any, error) {
 		return nil, nil
 	}
 
-	insp := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	insp, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	if !ok {
+		return nil, errors.New("inspect analyzer result has unexpected type")
+	}
 	needs := deriveRunNeeds(rc)
 	collectors := newRunCollectors(rc, needs)
 	var ssaRes *ssaResult
@@ -342,7 +345,10 @@ func loadRunInputs(state *flagState, rc runConfig) (*ExceptionConfig, *BaselineC
 // is still needed by downstream packages for constructor-validates and
 // nonzero field checking.
 func runFactExportOnly(pass *analysis.Pass) {
-	insp := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	insp, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+	if !ok {
+		return
+	}
 
 	nodeFilter := []ast.Node{
 		(*ast.GenDecl)(nil),
@@ -621,10 +627,6 @@ func runPostTraversalChecks(
 		inspectNonZero(pass, cfg, bl)
 	}
 
-	if rc.auditExceptions {
-		reportStaleExceptionsInline(pass, cfg)
-	}
-
 	if rc.auditReviewDates {
 		reportOverdueExceptions(pass, cfg, state)
 	}
@@ -638,6 +640,9 @@ func runPostTraversalChecks(
 	// Enum sync: compare Go Validate() switch cases against CUE disjunctions.
 	if rc.checkEnumSync {
 		inspectEnumSync(pass, cfg, bl)
+	}
+	if rc.auditExceptions {
+		reportStaleExceptionsInline(pass, cfg)
 	}
 	return nil
 }

@@ -20,6 +20,11 @@
 # Types that are never flagged regardless of context.
 skip_types = ["bool", "error", "context.Context", "any"]
 
+# Repository-wide review policy for broad or long-lived exception debt. Entries
+# with their own review_after dates override this with a more specific review.
+exception_review_after = "2027-06-04"
+exception_review_blocked_by = "annual goplint exception governance review"
+
 # File paths containing these substrings are excluded entirely.
 exclude_paths = [
     "specs/",             # Specification/contract files, not production code
@@ -1324,14 +1329,6 @@ pattern = "invowk.setConfigValue.*"
 reason = "Viper config key/value — framework boundary"
 
 [[exceptions]]
-pattern = "invowk.buildVirtualEnv.*"
-reason = "env var construction — exec/OS boundary"
-
-[[exceptions]]
-pattern = "invowk.buildVirtualEnv.return.*"
-reason = "env map return — exec/OS boundary"
-
-[[exceptions]]
 pattern = "invowk.rootFlagValues.configPath"
 reason = "Cobra flag binding (resolved later to FilesystemPath)"
 
@@ -1463,10 +1460,6 @@ pattern = "runtime.ShScriptOptions.*"
 reason = "internal subprocess DTO for virtual-sh interactive execution"
 
 [[exceptions]]
-pattern = "runtime.virtualPathValidator.*"
-reason = "filesystem boundary helper for virtual runtime containment"
-
-[[exceptions]]
 pattern = "runtime.virtualPathValidator.*.*"
 reason = "filesystem boundary helper for virtual runtime containment"
 
@@ -1488,10 +1481,6 @@ reason = "host binary execution policy mirrors OS PATH/PATHEXT inputs"
 
 [[exceptions]]
 pattern = "runtime.defaultTempRoots.return.*"
-reason = "platform filesystem boundary paths"
-
-[[exceptions]]
-pattern = "runtime.platformConfigDirs.return.*"
 reason = "platform filesystem boundary paths"
 
 [[exceptions]]
@@ -1577,22 +1566,6 @@ reason = "Lua runtime limit parser boundary"
 [[exceptions]]
 pattern = "runtime.installInvowkLuaBridge.*"
 reason = "Lua bridge boundary maps Invowk execution state into golua tables"
-
-[[exceptions]]
-pattern = "runtime.luaCommandFunc.*"
-reason = "Lua bridge boundary maps Invowk execution state into golua tables"
-
-[[exceptions]]
-pattern = "runtime.luaCommandArgs.return.*"
-reason = "Lua bridge boundary converts script table values into exec args"
-
-[[exceptions]]
-pattern = "runtime.luaEnvTable.env"
-reason = "Lua bridge boundary maps environment strings into golua tables"
-
-[[exceptions]]
-pattern = "runtime.luaArgsTable.args"
-reason = "Lua bridge boundary maps positional args into golua tables"
 
 [[exceptions]]
 pattern = "runtime.runAllowedHostBinary.*"
@@ -1846,10 +1819,6 @@ pattern = "invowkfile.ResolveInterpreter.scriptContent"
 reason = "script content boundary"
 
 [[exceptions]]
-pattern = "RuntimeConfig.ResolveInterpreterFromScript.scriptContent"
-reason = "script content boundary"
-
-[[exceptions]]
 pattern = "invowkfile.ValidateEnvVarName.*"
 reason = "callers use strings.TrimSpace(string(...)); map key boundary"
 
@@ -1878,15 +1847,6 @@ reason = "callers mix WorkDir->string and DotenvFilePath->string casts"
 pattern = "runtime.validateWorkDir.*"
 reason = "filepath boundary"
 
-[[exceptions]]
-pattern = "runtime.lockFilePath.return.*"
-reason = "filepath boundary"
-
-[[exceptions]]
-pattern = "runtime.acquireRunLockAt.*"
-reason = "filepath boundary"
-
-# container — image/provision chain
 [[exceptions]]
 pattern = "runtime.ContainerRuntime.ensureProvisionedImage.*"
 reason = "filepath boundary — invowkDir passed to provisioner"
@@ -1996,12 +1956,6 @@ reason = "Cobra args boundary — import path"
 # framework/IO helper signatures below.
 
 # Cobra RunE callback signatures with intentionally unused []string args
-[[exceptions]]
-pattern = "invowk.runInternalExecVirtual._"
-reason = "Cobra RunE signature boundary — unused []string args"
-review_after = "2027-03-01"
-blocked_by = "CLI typed handler adapter or Cobra callback API change"
-
 [[exceptions]]
 pattern = "invowk.runTuiInput._"
 reason = "Cobra RunE signature boundary — unused []string args"
@@ -2166,10 +2120,6 @@ pattern = "invowkfile.NewModuleMetadataFromInvowkmod.constructor-validate"
 reason = "non-validating factory for CUE parsing — validation deferred to caller"
 
 [[exceptions]]
-pattern = "invowkfile.NewModuleMetadataFromInvowkmod.constructor-return-error"
-reason = "trusted source conversion factory — input Invowkmod is pre-validated by CUE parser"
-
-[[exceptions]]
 pattern = "discovery.NewDiagnostic.constructor-validate"
 reason = "constructor validates parameters inline via typed Validate() calls"
 
@@ -2188,6 +2138,12 @@ reason = "constructor validates parameters inline — mode.Validate() + nil chec
 [[exceptions]]
 pattern = "commandsvc.NewWatchPlan.constructor-validate"
 reason = "constructor validates assembled plan before returning"
+
+[[exceptions]]
+pattern = "commandsvc.NewWatchSession.constructor-validate"
+reason = "constructor validates the assembled WatchSession after checking plan and execute callback; analyzer misses the pointer-local Validate call"
+review_after = "2027-06-04"
+blocked_by = "constructor-validates analyzer pointer-local validation recognition"
 
 # =============================================================================
 # Cast Validation Exceptions (CFA unvalidated-cast)
@@ -2611,10 +2567,6 @@ pattern = "runtime.LuaRuntime.Name.return.*"
 reason = "display text — runtime display name"
 
 [[exceptions]]
-pattern = "runtime.lockFilePathWith.return.*"
-reason = "exec boundary — lock file path string"
-
-[[exceptions]]
 pattern = "container.isAlpineContainerImage.image"
 reason = "container image policy — raw image name normalized before detection"
 
@@ -2990,10 +2942,6 @@ pattern = "invowkfile.validateRuntimeConfig.implIndex"
 reason = "collection index — implementation position in list"
 
 [[exceptions]]
-pattern = "invowkfile.RuntimeConfig.GetEffectiveInterpreter.return.*"
-reason = "exec boundary — resolved interpreter binary path"
-
-[[exceptions]]
 pattern = "invowkfile.Implementation.ResolveScript.return.*"
 reason = "exec boundary — resolved script content"
 
@@ -3139,16 +3087,6 @@ pattern = "deps.ShellEscapeSingleQuote.return.*"
 reason = "shell utility — raw string return by design"
 
 [[exceptions]]
-pattern = "deps.CapabilityCheckScript.return.*"
-reason = "exec boundary — shell script content for container exec"
-
-# =============================================================================
-# Hexagonal Extraction — Container Engine (imageExists)
-# =============================================================================
-# Internal CLI subcommand plumbing. Inline //goplint:ignore directives do
-# not suppress param/return findings — only struct field findings.
-
-[[exceptions]]
 pattern = "container.BaseCLIEngine.imageExistsSubCmd"
 reason = "engine-internal CLI subcommand name, not a domain value"
 
@@ -3183,21 +3121,8 @@ pattern = "commandsvc.DryRunData.constructor"
 reason = "internal data carrier constructed inline in service"
 
 [[exceptions]]
-pattern = "commandsvc.RuntimeRegistryResult.constructor"
-reason = "internal result struct from CreateRuntimeRegistry()"
-
-# =============================================================================
-# Hexagonal Extraction — Unvalidated Cast Exceptions
-# =============================================================================
-# DependencyMessage casts from fmt.Sprintf output — pre-formatted display text.
-
-[[exceptions]]
 pattern = "deps.*.cast-validation"
 reason = "DependencyMessage display-text casts from fmt.Sprintf — pre-formatted, not raw input"
-
-[[exceptions]]
-pattern = "runtime.VirtualScriptOptions.*"
-reason = "internal CLI subprocess adapter DTO carries script text, argv, and env strings across a process boundary"
 
 [[exceptions]]
 pattern = "commandadapters.NewDiscoveryService.constructor-validate"
@@ -3230,10 +3155,6 @@ reason = "request-local cache entries are validated when produced by discovery; 
 
 # --- Service Objects / Lifecycle State Machines ---
 # Construction guarantees internal consistency; Validate() is not meaningful.
-
-[[exceptions]]
-pattern = "commandsvc.RuntimeRegistryResult.struct-validate-fields"
-reason = "lifecycle DTO; Registry is a service pointer, Diagnostics from runtime"
 
 [[exceptions]]
 pattern = "container.BaseCLIEngine.struct-validate-fields"
@@ -3731,10 +3652,6 @@ pattern = "invowk.auditJSONSummary.*"
 reason = "CLI JSON summary DTO fields are derived counts and duration"
 
 [[exceptions]]
-pattern = "invowk.renderAuditText.scanPath"
-reason = "CLI display label for scan target"
-
-[[exceptions]]
 pattern = "invowk.severityIcon.return.*"
 reason = "CLI display glyph selected from typed severity"
 
@@ -3743,24 +3660,8 @@ pattern = "invowk.formatDuration.return.*"
 reason = "CLI display formatting helper"
 
 [[exceptions]]
-pattern = "invowk.buildProviderCompleter.provider"
-reason = "CLI flag text parsed by LLM provider detection"
-
-[[exceptions]]
 pattern = "invowk.llmFlagValues.*"
 reason = "Cobra flag binding shared by audit and agent command authoring"
-
-[[exceptions]]
-pattern = "invowk.llmCompleterResult.*"
-reason = "CLI adapter result carrying runtime LLM provider dependencies"
-
-[[exceptions]]
-pattern = "invowk.normalizedLLMConcurrency.*"
-reason = "CLI flag normalization for LLM worker count"
-
-[[exceptions]]
-pattern = "invowk.normalizedLLMConcurrency.return.*"
-reason = "CLI flag normalization for LLM worker count"
 
 [[exceptions]]
 pattern = "invowkfile.SchemaCUE.return.*"
@@ -3813,19 +3714,6 @@ reason = "exec/OS boundary: dir comes from OS-resolved filesystem path"
 [[exceptions]]
 pattern = "invowkmod.hashFileContent.path"
 reason = "exec/OS boundary: internal helper receiving OS-resolved path"
-
-[[exceptions]]
-pattern = "deps.findMatchingCommand.currentModule"
-reason = "parse boundary: already extracted from typed ModuleID via string()"
-
-# =============================================================================
-
-# =============================================================================
-# Nonzero Value-Type Fields
-# =============================================================================
-# Enabling method-level goplint:nonzero facts made these current value-field
-# uses explicit. They are required command/schema/result values or diagnostic
-# payload fields, not optional fields that should become pointers.
 
 [[exceptions]]
 pattern = "AmbiguousCommandError.CommandName.nonzero"
@@ -4476,32 +4364,48 @@ reason = "terminal display rendering output"
 
 [[exceptions]]
 pattern = "config.RuntimeMode.container.enum-cue-missing-go"
-reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+reason = "type alias delegates RuntimeMode validation to pkg/types.RuntimeMode; enum-sync cannot follow cross-package alias validation"
+review_after = "2027-06-04"
+blocked_by = "enum-sync alias validation support"
 
 [[exceptions]]
 pattern = "config.RuntimeMode.native.enum-cue-missing-go"
-reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+reason = "type alias delegates RuntimeMode validation to pkg/types.RuntimeMode; enum-sync cannot follow cross-package alias validation"
+review_after = "2027-06-04"
+blocked_by = "enum-sync alias validation support"
 
 [[exceptions]]
 pattern = "config.RuntimeMode.virtual-lua.enum-cue-missing-go"
-reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+reason = "type alias delegates RuntimeMode validation to pkg/types.RuntimeMode; enum-sync cannot follow cross-package alias validation"
+review_after = "2027-06-04"
+blocked_by = "enum-sync alias validation support"
 
 [[exceptions]]
 pattern = "config.RuntimeMode.virtual-sh.enum-cue-missing-go"
-reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+reason = "type alias delegates RuntimeMode validation to pkg/types.RuntimeMode; enum-sync cannot follow cross-package alias validation"
+review_after = "2027-06-04"
+blocked_by = "enum-sync alias validation support"
 
 [[exceptions]]
 pattern = "invowkfile.RuntimeMode.container.enum-cue-missing-go"
-reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+reason = "type alias delegates RuntimeMode validation to pkg/types.RuntimeMode; enum-sync cannot follow cross-package alias validation"
+review_after = "2027-06-04"
+blocked_by = "enum-sync alias validation support"
 
 [[exceptions]]
 pattern = "invowkfile.RuntimeMode.native.enum-cue-missing-go"
-reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+reason = "type alias delegates RuntimeMode validation to pkg/types.RuntimeMode; enum-sync cannot follow cross-package alias validation"
+review_after = "2027-06-04"
+blocked_by = "enum-sync alias validation support"
 
 [[exceptions]]
 pattern = "invowkfile.RuntimeMode.virtual-lua.enum-cue-missing-go"
-reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+reason = "type alias delegates RuntimeMode validation to pkg/types.RuntimeMode; enum-sync cannot follow cross-package alias validation"
+review_after = "2027-06-04"
+blocked_by = "enum-sync alias validation support"
 
 [[exceptions]]
 pattern = "invowkfile.RuntimeMode.virtual-sh.enum-cue-missing-go"
-reason = "package alias delegates runtime identity and validation to pkg/types.RuntimeMode"
+reason = "type alias delegates RuntimeMode validation to pkg/types.RuntimeMode; enum-sync cannot follow cross-package alias validation"
+review_after = "2027-06-04"
+blocked_by = "enum-sync alias validation support"

@@ -4,6 +4,8 @@
 
 [settings]
 skip_types = ["bool", "error"]
+exception_review_after = "2020-03-01"
+exception_review_blocked_by = "global exception review"
 
 # Overdue entry — review date in the past.
 [[exceptions]]

@@ -140,7 +140,7 @@ func writeStderrf(stderr io.Writer, format string, args ...any) error {
 //
 // Returns "" if not found or if the flag is present without a value.
 func extractUpdateBaselinePath(args []string) string {
-	for i := range len(args) {
+	for i := range args {
 		arg := args[i]
 		matched, value, hasInlineValue := parseFlagToken(arg, "update-baseline")
 		if !matched {
@@ -247,7 +247,7 @@ func buildSubprocessArgs(args []string) []string {
 
 // hasFlag checks if any CLI arg matches the given flag name (with or without leading dashes).
 func hasFlag(args []string, flagName string) bool {
-	for i := range len(args) {
+	for i := range args {
 		matched, value, hasInlineValue := parseFlagToken(args[i], flagName)
 		if !matched {
 			continue

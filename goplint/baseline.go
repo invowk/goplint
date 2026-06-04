@@ -243,11 +243,15 @@ func (b *BaselineConfig) categoriesByName() map[string]BaselineCategory {
 		if field.Type != categoryType {
 			continue
 		}
-		tag := strings.Split(field.Tag.Get("toml"), ",")[0]
+		tag, _, _ := strings.Cut(field.Tag.Get("toml"), ",")
 		if tag == "" || tag == "-" {
 			continue
 		}
-		categories[tag] = value.Field(i).Interface().(BaselineCategory)
+		category, ok := value.Field(i).Interface().(BaselineCategory)
+		if !ok {
+			continue
+		}
+		categories[tag] = category
 	}
 	return categories
 }

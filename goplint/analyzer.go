@@ -544,37 +544,72 @@ func reportOverdueExceptions(pass *analysis.Pass, cfg *ExceptionConfig, state *f
 		return
 	}
 
-	now := time.Now()
 	pos := pass.Files[0].Package
+	reportOverdueReviewDate(
+		pass,
+		pos,
+		state,
+		"settings.exception_review_after",
+		cfg.Settings.ExceptionReviewAfter,
+		cfg.Settings.ExceptionReviewBlockedBy,
+		true,
+	)
 
 	for _, exc := range cfg.Exceptions {
-		if exc.ReviewAfter == "" {
-			continue
-		}
-		reviewDate, err := time.Parse("2006-01-02", exc.ReviewAfter)
-		if err != nil {
-			msg := fmt.Sprintf(
-				"exception pattern %q has invalid review_after date %q: %v",
-				exc.Pattern, exc.ReviewAfter, err)
-			findingID := StableFindingID(CategoryOverdueReview, exc.Pattern, "invalid-date")
-			if !shouldReportOverdueReviewFinding(state, findingID) {
-				continue
-			}
-			reportDiagnostic(pass, pos, CategoryOverdueReview, findingID, msg)
-			continue
-		}
-		if now.After(reviewDate) {
-			msg := fmt.Sprintf(
-				"exception pattern %q is past its review date %s",
-				exc.Pattern, exc.ReviewAfter)
-			if exc.BlockedBy != "" {
-				msg += fmt.Sprintf(" (blocked by: %s)", exc.BlockedBy)
-			}
-			findingID := StableFindingID(CategoryOverdueReview, exc.Pattern)
-			if !shouldReportOverdueReviewFinding(state, findingID) {
-				continue
-			}
-			reportDiagnostic(pass, pos, CategoryOverdueReview, findingID, msg)
-		}
+		reportOverdueReviewDate(pass, pos, state, exc.Pattern, exc.ReviewAfter, exc.BlockedBy, false)
 	}
+}
+
+func reportOverdueReviewDate(
+	pass *analysis.Pass,
+	pos token.Pos,
+	state *flagState,
+	subject string,
+	reviewAfter string,
+	blockedBy string,
+	settingsReview bool,
+) {
+	if reviewAfter == "" {
+		return
+	}
+	reviewDate, err := time.Parse("2006-01-02", reviewAfter)
+	if err != nil {
+		msg := reviewDateInvalidMessage(subject, reviewAfter, err, settingsReview)
+		findingID := StableFindingID(CategoryOverdueReview, subject, "invalid-date")
+		if !shouldReportOverdueReviewFinding(state, findingID) {
+			return
+		}
+		reportDiagnostic(pass, pos, CategoryOverdueReview, findingID, msg)
+		return
+	}
+	if !time.Now().After(reviewDate) {
+		return
+	}
+	msg := reviewDateOverdueMessage(subject, reviewAfter, settingsReview)
+	if blockedBy != "" {
+		msg += fmt.Sprintf(" (blocked by: %s)", blockedBy)
+	}
+	findingID := StableFindingID(CategoryOverdueReview, subject)
+	if !shouldReportOverdueReviewFinding(state, findingID) {
+		return
+	}
+	reportDiagnostic(pass, pos, CategoryOverdueReview, findingID, msg)
+}
+
+func reviewDateInvalidMessage(subject string, reviewAfter string, err error, settingsReview bool) string {
+	if settingsReview {
+		return fmt.Sprintf(
+			"exception review %q has invalid review_after date %q: %v",
+			subject, reviewAfter, err)
+	}
+	return fmt.Sprintf(
+		"exception pattern %q has invalid review_after date %q: %v",
+		subject, reviewAfter, err)
+}
+
+func reviewDateOverdueMessage(subject string, reviewAfter string, settingsReview bool) string {
+	if settingsReview {
+		return fmt.Sprintf("exception review %q is past its review date %s", subject, reviewAfter)
+	}
+	return fmt.Sprintf("exception pattern %q is past its review date %s", subject, reviewAfter)
 }

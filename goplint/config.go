@@ -49,6 +49,14 @@ type Settings struct {
 	// (all packages emit diagnostics). Third-party packages are still
 	// analyzed for fact export but their findings are suppressed.
 	IncludePackages []string `toml:"include_packages"`
+	// ExceptionReviewAfter is an optional ISO date for the repository-wide
+	// exception review policy. Used by --audit-review-dates to keep broad or
+	// long-lived exception debt reviewable even when individual entries do not
+	// need their own date.
+	ExceptionReviewAfter string `toml:"exception_review_after,omitempty"`
+	// ExceptionReviewBlockedBy documents the condition or work item that must
+	// be resolved before the repository-wide exception review can retire debt.
+	ExceptionReviewBlockedBy string `toml:"exception_review_blocked_by,omitempty"`
 }
 
 // Exception represents a single exception rule for an intentional
@@ -138,9 +146,11 @@ func configTemplate(cfg *ExceptionConfig) *ExceptionConfig {
 	}
 	return &ExceptionConfig{
 		Settings: Settings{
-			SkipTypes:       slices.Clone(cfg.Settings.SkipTypes),
-			ExcludePaths:    slices.Clone(cfg.Settings.ExcludePaths),
-			IncludePackages: slices.Clone(cfg.Settings.IncludePackages),
+			SkipTypes:                slices.Clone(cfg.Settings.SkipTypes),
+			ExcludePaths:             slices.Clone(cfg.Settings.ExcludePaths),
+			IncludePackages:          slices.Clone(cfg.Settings.IncludePackages),
+			ExceptionReviewAfter:     cfg.Settings.ExceptionReviewAfter,
+			ExceptionReviewBlockedBy: cfg.Settings.ExceptionReviewBlockedBy,
 		},
 		Exceptions: slices.Clone(cfg.Exceptions),
 	}
@@ -152,9 +162,11 @@ func cloneExceptionConfig(template *ExceptionConfig) *ExceptionConfig {
 	}
 	clone := &ExceptionConfig{
 		Settings: Settings{
-			SkipTypes:       slices.Clone(template.Settings.SkipTypes),
-			ExcludePaths:    slices.Clone(template.Settings.ExcludePaths),
-			IncludePackages: slices.Clone(template.Settings.IncludePackages),
+			SkipTypes:                slices.Clone(template.Settings.SkipTypes),
+			ExcludePaths:             slices.Clone(template.Settings.ExcludePaths),
+			IncludePackages:          slices.Clone(template.Settings.IncludePackages),
+			ExceptionReviewAfter:     template.Settings.ExceptionReviewAfter,
+			ExceptionReviewBlockedBy: template.Settings.ExceptionReviewBlockedBy,
 		},
 		Exceptions:  slices.Clone(template.Exceptions),
 		matchCounts: make(map[int]int, len(template.Exceptions)),

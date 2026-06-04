@@ -147,20 +147,18 @@ whose semantics are intentionally not the host OS semantics used by
 After refactors remove excepted code, entries in `exceptions.toml` become stale:
 
 ```bash
-make build-goplint
-./bin/goplint -audit-exceptions -config=tools/goplint/exceptions.toml ./... 2>&1 | sort -u
+make check-goplint-exceptions
 ```
 
-> Note: `--audit-exceptions` reports per-package (a `go/analysis` limitation). Pipe through `sort -u` for deduplicated results.
-
-For CI-friendly global stale detection:
+The target runs full-mode global stale detection and review-date governance:
 
 ```bash
 make build-goplint
-./bin/goplint -audit-exceptions -global -config=tools/goplint/exceptions.toml ./...
+./bin/goplint -check-all -check-enum-sync -audit-exceptions -global -config=tools/goplint/exceptions.toml ./cmd/... ./internal/... ./pkg/...
+./bin/goplint -check-all -check-enum-sync -audit-review-dates -config=tools/goplint/exceptions.toml ./cmd/... ./internal/... ./pkg/...
 ```
 
-`-global` aggregates stale patterns by package coverage and exits non-zero when globally stale patterns are found.
+`-global` aggregates stale patterns by package coverage and exits non-zero when globally stale patterns are found. The settings-level `exception_review_after` policy in `exceptions.toml` keeps broad or long-lived exception debt reviewable even when an individual exception does not need a narrower date.
 
 ## Baseline Comparison
 
@@ -291,6 +289,7 @@ Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constr
 | `-cfg-inconclusive-policy` | string | `"error"` | Inconclusive CFA policy: `error`, `warn`, or `off` |
 | `-cfg-witness-max-steps` | int | `12` | Maximum CFG witness steps encoded in inconclusive metadata |
 | `-audit-exceptions` | bool | `false` | Report stale exception patterns |
+| `-audit-review-dates` | bool | `false` | Report overdue exception review dates |
 | `-global` | bool | `false` | Aggregate `-audit-exceptions` globally and fail on globally stale patterns |
 | `-update-baseline` | string | `""` | Generate baseline TOML at the given path |
 | `-json` | bool | `false` | JSON output (built-in from `go/analysis`) |
@@ -300,7 +299,7 @@ Categories: `primitive`, `missing-validate`, `missing-stringer`, `missing-constr
 ```
 tools/goplint/
 ├── main.go                 # Entry point + --update-baseline subprocess mode
-├── exceptions.toml         # Intentional primitive exceptions (~85 patterns)
+├── exceptions.toml         # Governed intentional exception patterns
 ├── baseline.toml           # Accepted findings baseline (generated)
 ├── go.mod                  # Separate Go module (avoids polluting main go.mod)
 └── goplint/

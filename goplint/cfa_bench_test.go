@@ -59,7 +59,7 @@ func heavy(input string) error {
 		blockVisitBudget{maxStates: defaultCFGMaxStates, maxDepth: defaultCFGMaxDepth},
 	)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _, _ = hasPathToReturnWithoutValidateOutcomeWithWitness(
 			nil,
 			cfg,
@@ -111,7 +111,7 @@ func heavy(input string) error {
 		blockVisitBudget{maxStates: defaultCFGMaxStates, maxDepth: defaultCFGMaxDepth},
 	)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _, _ = hasUseBeforeValidateCrossBlockOutcomeModeWithWitness(
 			nil,
 			defBlock,

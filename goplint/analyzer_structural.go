@@ -103,8 +103,7 @@ func trackConstructorDetails(pass *analysis.Pass, fn *ast.FuncDecl, seen map[str
 		// Check if the last parameter is a variadic option type.
 		if info.paramCount > 0 {
 			lastField := fn.Type.Params.List[len(fn.Type.Params.List)-1]
-			if _, isEllipsis := lastField.Type.(*ast.Ellipsis); isEllipsis {
-				ellipsis := lastField.Type.(*ast.Ellipsis)
+			if ellipsis, isEllipsis := lastField.Type.(*ast.Ellipsis); isEllipsis {
 				elemType := pass.TypesInfo.TypeOf(ellipsis.Elt)
 				if elemType != nil {
 					if targetName, ok := isOptionFuncType(elemType); ok {

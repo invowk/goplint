@@ -40,6 +40,8 @@ func TestLoadConfig(t *testing.T) {
 [settings]
 skip_types = ["bool", "error"]
 exclude_paths = ["specs/"]
+exception_review_after = "2099-01-01"
+exception_review_blocked_by = "scheduled repository exception review"
 
 [[exceptions]]
 pattern = "Foo.Bar"
@@ -63,6 +65,12 @@ reason = "wildcard test"
 		}
 		if len(cfg.Settings.ExcludePaths) != 1 {
 			t.Errorf("expected 1 exclude_paths, got %d", len(cfg.Settings.ExcludePaths))
+		}
+		if cfg.Settings.ExceptionReviewAfter != "2099-01-01" {
+			t.Errorf("expected exception review date, got %q", cfg.Settings.ExceptionReviewAfter)
+		}
+		if cfg.Settings.ExceptionReviewBlockedBy != "scheduled repository exception review" {
+			t.Errorf("expected exception review blocker, got %q", cfg.Settings.ExceptionReviewBlockedBy)
 		}
 		if len(cfg.Exceptions) != 2 {
 			t.Errorf("expected 2 exceptions, got %d", len(cfg.Exceptions))

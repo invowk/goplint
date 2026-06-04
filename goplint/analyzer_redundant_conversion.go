@@ -65,7 +65,8 @@ func inspectRedundantConversions(
 
 		// Step 3: Is the inner target a basic (non-named) type?
 		innerTarget := types.Unalias(innerTV.Type)
-		if _, isBasic := innerTarget.(*types.Basic); !isBasic {
+		innerBasic, isBasic := innerTarget.(*types.Basic)
+		if !isBasic {
 			return true
 		}
 
@@ -90,7 +91,7 @@ func inspectRedundantConversions(
 
 		// Build diagnostic.
 		outerName := qualifiedTypeName(outerTarget, pass.Pkg)
-		basicName := innerTarget.(*types.Basic).Name()
+		basicName := innerBasic.Name()
 
 		excKey := funcQualName + ".redundant-conversion"
 		if cfg.isExcepted(excKey) {

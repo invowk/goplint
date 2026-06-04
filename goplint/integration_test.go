@@ -137,6 +137,8 @@ func TestResetFlagsCompleteness(t *testing.T) {
 // deliberate exclusion of --audit-exceptions.
 //
 // NOT parallel: shares h.Analyzer.Flags state.
+//
+//nolint:paralleltest // Subtests mutate shared analyzer flag state intentionally.
 func TestNewRunConfig(t *testing.T) {
 	h := newAnalyzerHarness()
 

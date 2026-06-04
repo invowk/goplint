@@ -800,7 +800,7 @@ func collectDelegatedHelperParams(body *ast.BlockStmt, paramNames []string) []in
 	})
 
 	var result []int
-	for i := range len(paramNames) {
+	for i := range paramNames {
 		if delegated[i] {
 			result = append(result, i)
 		}

@@ -190,6 +190,10 @@ func warnFindingSinkError(stderr io.Writer, dedupe *sync.Map, path string, err e
 
 	key := path + "|" + err.Error()
 	onceValue, _ := dedupe.LoadOrStore(key, &sync.Once{})
-	once := onceValue.(*sync.Once)
+	once, ok := onceValue.(*sync.Once)
+	if !ok {
+		writeWarning()
+		return
+	}
 	once.Do(writeWarning)
 }

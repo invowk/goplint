@@ -4,7 +4,7 @@
 // The diagnostics are driven by the TOML config, not by this source code.
 // The "want" annotations are on the package line because reportOverdueExceptions
 // anchors diagnostics to pass.Files[0].Package.
-package auditreviewdates // want `exception pattern "overdue.pattern" is past its review date 2020-01-01` `exception pattern "overdue.with.blocked" is past its review date 2020-06-15 \(blocked by: upstream type proposal\)` `exception pattern "invalid.date.pattern" has invalid review_after date "not-a-date"`
+package auditreviewdates // want `exception review "settings.exception_review_after" is past its review date 2020-03-01 \(blocked by: global exception review\)` `exception pattern "overdue.pattern" is past its review date 2020-01-01` `exception pattern "overdue.with.blocked" is past its review date 2020-06-15 \(blocked by: upstream type proposal\)` `exception pattern "invalid.date.pattern" has invalid review_after date "not-a-date"`
 
 // Example is a minimal struct to make this a non-empty package.
 type Example struct {

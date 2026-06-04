@@ -153,6 +153,7 @@ func TestDispatch(t *testing.T) {
 	})
 
 	t.Run("update-baseline success delegates to handler", func(t *testing.T) {
+		t.Parallel()
 		called := false
 		deps := dispatchDeps{
 			generateBaseline: func(outputPath string, _ []string) error {
@@ -175,6 +176,7 @@ func TestDispatch(t *testing.T) {
 	})
 
 	t.Run("global true delegates to audit handler", func(t *testing.T) {
+		t.Parallel()
 		called := false
 		deps := dispatchDeps{
 			generateBaseline: func(_ string, _ []string) error { return nil },
