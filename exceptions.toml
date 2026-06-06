@@ -1688,10 +1688,6 @@ pattern = "platform.statFile.path"
 reason = "filesystem path — OS boundary"
 
 [[exceptions]]
-pattern = "execute.validateEnvVarNames.label"
-reason = "display label for validation errors"
-
-[[exceptions]]
 pattern = "watch.validatePatterns.label"
 reason = "display label for validation errors"
 
@@ -3412,6 +3408,14 @@ reason = "pointer to DryRunData; only populated for dry-run mode, validated sepa
 pattern = "invowkmod.ResolvedModule.TransitiveDeps.validate-delegation"
 reason = "slice of resolved modules; each validated during resolution"
 
+[[exceptions]]
+pattern = "invowkmod.Invowkmod.Version.validate-delegation"
+reason = "module metadata version declarations use ValidateDeclaredSemVer to reject v-prefixed Git tag syntax"
+
+[[exceptions]]
+pattern = "invowkmod.ModuleRequirement.Version.validate-delegation"
+reason = "module requirement constraints use ValidateDeclaredSemVerConstraint to reject v-prefixed Git tag syntax"
+
 # --- Missing delegation for Arg/Flag defs in Request structs ---
 
 [[exceptions]]
@@ -3710,10 +3714,6 @@ reason = "display-only: returns formatted CUE text for error messages"
 [[exceptions]]
 pattern = "invowkmod.computeModuleHash.dir"
 reason = "exec/OS boundary: dir comes from OS-resolved filesystem path"
-
-[[exceptions]]
-pattern = "invowkmod.hashFileContent.path"
-reason = "exec/OS boundary: internal helper receiving OS-resolved path"
 
 [[exceptions]]
 pattern = "AmbiguousCommandError.CommandName.nonzero"
