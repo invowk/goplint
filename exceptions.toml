@@ -3688,6 +3688,62 @@ pattern = "agentcmd.CreateOptions.LoadDescription.return.*"
 reason = "LLM/filesystem boundary package carries raw prompt, CUE, diff, and path text"
 
 [[exceptions]]
+pattern = "agentcmd.ChangeOptions.LoadDescription.return.*"
+reason = "LLM/filesystem boundary package carries raw prompt, CUE, diff, and path text"
+
+[[exceptions]]
+pattern = "agentcmd.ModuleResult.PrintJSON.return.*"
+reason = "CLI print boundary returns rendered JSON text for stdout"
+
+[[exceptions]]
+pattern = "agentcmd.commandGenerationOptions.complete.return.0"
+reason = "LLM wire response text before JSON extraction"
+
+[[exceptions]]
+pattern = "agentcmd.commandGenerationOptions.maxGenerationAttempts.return.0"
+reason = "bounded retry count for in-process generation loop"
+
+[[exceptions]]
+pattern = "agentcmd.moduleGenerationOptions.complete.return.0"
+reason = "LLM wire response text before JSON extraction"
+
+[[exceptions]]
+pattern = "agentcmd.moduleGenerationOptions.maxGenerationAttempts.return.0"
+reason = "bounded retry count for in-process generation loop"
+
+[[exceptions]]
+pattern = "invowk.renderAgentModWriteResult.verb"
+reason = "CLI display verb selected at the Cobra rendering boundary"
+
+[[exceptions]]
+pattern = "invowk.validateCommandAuthoringInput.description"
+reason = "Cobra boundary receives raw free-form authoring request text"
+
+[[exceptions]]
+pattern = "invowk.validateCommandAuthoringInput.fromFile"
+reason = "Cobra boundary receives raw filesystem flag text before loading"
+
+[[exceptions]]
+pattern = "invowk.validateModuleAuthoringInput.description"
+reason = "Cobra boundary receives raw free-form authoring request text"
+
+[[exceptions]]
+pattern = "invowk.validateModuleAuthoringInput.fromFile"
+reason = "Cobra boundary receives raw filesystem flag text before loading"
+
+[[exceptions]]
+pattern = "invowk.validateAuthoringDescription.description"
+reason = "Cobra boundary receives raw free-form authoring request text"
+
+[[exceptions]]
+pattern = "invowk.validateAuthoringDescription.fromFile"
+reason = "Cobra boundary receives raw filesystem flag text before loading"
+
+[[exceptions]]
+pattern = "invowk.validateAuthoringDescription.target"
+reason = "CLI validation helper uses target text only to render human-facing errors"
+
+[[exceptions]]
 pattern = "invowk.WatchCommandNotFoundError.Name"
 reason = "display-only command name in watch error detail"
 
@@ -4310,14 +4366,6 @@ reason = "LLM structured-output wire DTO; literals keep provider schema requests
 [[exceptions]]
 pattern = "llm.JSONSchemaFormat.Name"
 reason = "LLM structured-output wire schema name"
-
-[[exceptions]]
-pattern = "CreateOptions.complete.return.0"
-reason = "LLM wire response text before JSON extraction"
-
-[[exceptions]]
-pattern = "CreateOptions.maxGenerationAttempts.return.0"
-reason = "bounded retry count for in-process generation loop"
 
 [[exceptions]]
 pattern = "ensureCurrentInvowkfileTarget.targetPath"
