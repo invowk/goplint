@@ -323,15 +323,11 @@ pattern = "tuiwire.*.*"
 reason = "JSON wire format for delegated TUI protocol types"
 
 [[exceptions]]
-pattern = "tuiserver.Client.*"
+pattern = "tuiclient.Client.*"
 reason = "HTTP client adapter boundary for delegated TUI protocol"
 
 [[exceptions]]
-pattern = "tuiserver.Client.*.*"
-reason = "HTTP client adapter params/returns for delegated TUI protocol"
-
-[[exceptions]]
-pattern = "tuiserver.Client.*.*.*"
+pattern = "tuiclient.Client.*.*"
 reason = "HTTP client adapter params/returns for delegated TUI protocol"
 
 [[exceptions]]
@@ -790,6 +786,10 @@ reason = "go-git pass-through tag metadata"
 [[exceptions]]
 pattern = "invowkfile.StructureValidator.struct-validate"
 reason = "zero-field struct; no invariants"
+
+[[exceptions]]
+pattern = "invowkfile.FieldValidator.struct-validate"
+reason = "zero-field struct; Validator interface owns the Validate(ctx, inv) method shape"
 
 [[exceptions]]
 pattern = "invowkmod.SemverResolver.struct-validate"
