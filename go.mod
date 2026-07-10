@@ -1,6 +1,6 @@
 module github.com/invowk/invowk/tools/goplint
 
-go 1.26.4
+go 1.26.5
 
 require (
 	cuelang.org/go v0.16.1
