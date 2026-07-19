@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: MPL-2.0
+
+format_version = 2
+samples = 5
+go_toolchain = "go1.26"
+runner_class = "github-hosted-ubuntu-x64-4cpu-reviewed"
+calibrated_on = "2026-07-19"
+calibration_source = "actions-run-29683768391"
+
+[benchmarks.BenchmarkProtocolCanonicalSolver]
+observed_ns_per_op_samples = [92204, 77591, 77715, 78211, 78606]
+observed_median_ns_per_op = 78211
+max_ns_per_op = 106000
+max_bytes_per_op = 45000
+max_allocs_per_op = 600
+
+[benchmarks.BenchmarkProtocolRecursiveTabulation]
+observed_ns_per_op_samples = [107188, 105650, 106677, 105404, 105804]
+observed_median_ns_per_op = 105804
+max_ns_per_op = 143000
+max_bytes_per_op = 75000
+max_allocs_per_op = 1500
+max_path_edges_per_op = 32
+min_summary_reuses_per_op = 1
+
+[benchmarks.BenchmarkProtocolAliasJoin]
+max_ns_per_op = 30000
+max_bytes_per_op = 20000
+max_allocs_per_op = 100
+
+[benchmarks.BenchmarkProtocolRefinementEvidence]
+max_ns_per_op = 50000
+max_bytes_per_op = 50000
+max_allocs_per_op = 100
+
+[benchmarks.BenchmarkProtocolReferenceInterpreter]
+observed_ns_per_op_samples = [1590966, 1585556, 1577626, 1585028, 1577400]
+observed_median_ns_per_op = 1585028
+max_ns_per_op = 2140000
+max_bytes_per_op = 500000
+max_allocs_per_op = 13000
+
+[benchmarks.BenchmarkProtocolGeneratedAnalyzer]
+observed_ns_per_op_samples = [222483425, 222192863, 222069890, 222906259, 223403658]
+observed_median_ns_per_op = 222483425
+max_ns_per_op = 301000000
+max_bytes_per_op = 140000000
+max_allocs_per_op = 1250000
+
+[benchmarks.BenchmarkConstructorSuccessfulReturnClassification]
+observed_ns_per_op_samples = [526218, 525541, 524855, 533657, 526327]
+observed_median_ns_per_op = 526218
+max_ns_per_op = 711000
+max_bytes_per_op = 300000
+max_allocs_per_op = 4200
+
+[benchmarks.BenchmarkProtocolPackageProcedureInventory]
+max_ns_per_op = 100
+max_bytes_per_op = 128
+max_allocs_per_op = 4
+
+[repository_full_scan]
+observed_median_wall_ms = 283850
+observed_median_peak_bytes = 4506923008
+max_wall_ms = 384000
+max_peak_bytes = 6442450944

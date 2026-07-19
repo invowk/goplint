@@ -296,7 +296,11 @@ Important implementation surfaces:
   observations and causal manifest runner;
 - `internal/cleantreeevidence/`: temporary-index exact-tree capture and replay;
 - `testdata/mutation/`: targeted soundness mutation manifest;
-- `bench/thresholds.toml`: reviewed benchmark policy.
+- `bench/thresholds.toml`: reviewed Fedora workstation benchmark policy.
+- `bench/thresholds.github-ubuntu-x64-4cpu.toml`: reviewed GitHub-hosted CI
+  benchmark policy selected by the lint workflow. Keep runner-class timing
+  limits separate; allocation, memory, state-count, and population checks stay
+  blocking in both policies.
 
 See [the current semantic reference](../../docs/goplint/current-techniques-and-semantics.md)
 and [the evidence index](../../docs/goplint/evidence-index.md) for the maintained

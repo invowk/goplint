@@ -2,7 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-THRESHOLDS_FILE="${1:-$ROOT_DIR/tools/goplint/bench/thresholds.toml}"
+THRESHOLDS_FILE="${1:-${GOPLINT_BENCH_THRESHOLDS:-$ROOT_DIR/tools/goplint/bench/thresholds.toml}}"
+if [[ "$THRESHOLDS_FILE" != /* ]]; then
+  THRESHOLDS_FILE="$ROOT_DIR/$THRESHOLDS_FILE"
+fi
 
 if [[ ! -f "$THRESHOLDS_FILE" ]]; then
   echo "threshold file not found: $THRESHOLDS_FILE" >&2
