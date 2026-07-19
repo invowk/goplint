@@ -342,8 +342,14 @@ func TestAuditExceptionsGlobalExitBehavior(t *testing.T) {
 			if !ok {
 				t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
 			}
-			_, err := buf.Write(stream)
-			return err
+			if _, err := buf.Write(stream); err != nil {
+				return err
+			}
+			return os.WriteFile(findingsPathFromCommand(t, cmd), []byte(strings.Join([]string{
+				`{"package":"example.com/a","category":"stale-exception","id":"id-a","message":"stale exception: pattern \"shared.pattern\" matched no diagnostics (reason: x)","meta":{"pattern":"shared.pattern"}}`,
+				`{"package":"example.com/b","category":"stale-exception","id":"id-b","message":"stale exception: pattern \"shared.pattern\" matched no diagnostics (reason: y)","meta":{"pattern":"shared.pattern"}}`,
+				"",
+			}, "\n")), 0o644)
 		}
 
 		err := auditExceptionsGlobalWithRunner([]string{"--global", "./..."}, runner, io.Discard)
@@ -358,7 +364,14 @@ func TestAuditExceptionsGlobalExitBehavior(t *testing.T) {
 			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 				"example.com/a": {
 					"goplint": {
-						{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "only.in.a" matched no diagnostics (reason: x)`},
+						{
+							Category: goplint.CategoryStaleException,
+							Message:  `stale exception: pattern "only.in.a" matched no diagnostics (reason: x)`,
+							URL: goplint.DiagnosticURLForFindingWithMeta(
+								goplint.StableFindingID(goplint.CategoryStaleException, "only.in.a"),
+								map[string]string{"pattern": "only.in.a"},
+							),
+						},
 					},
 				},
 			}),
@@ -374,8 +387,12 @@ func TestAuditExceptionsGlobalExitBehavior(t *testing.T) {
 			if !ok {
 				t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
 			}
-			_, err := buf.Write(stream)
-			return err
+			if _, err := buf.Write(stream); err != nil {
+				return err
+			}
+			return os.WriteFile(findingsPathFromCommand(t, cmd), []byte(
+				`{"package":"example.com/a","category":"stale-exception","id":"id-a","message":"stale exception: pattern \"only.in.a\" matched no diagnostics (reason: x)","meta":{"pattern":"only.in.a"}}`+"\n",
+			), 0o644)
 		}
 
 		if err := auditExceptionsGlobalWithRunner([]string{"--global", "./..."}, runner, io.Discard); err != nil {
@@ -548,6 +565,60 @@ func TestGenerateBaseline(t *testing.T) {
 		}
 	})
 
+	t.Run("inconclusive finding aborts update without replacing baseline", func(t *testing.T) {
+		t.Parallel()
+
+		const (
+			category = goplint.CategoryUnvalidatedBoundaryRequest
+			message  = "proof incomplete"
+			posn     = "pkg/a.go:10:2"
+		)
+		runner := func(cmd *exec.Cmd) error {
+			buf, ok := cmd.Stdout.(*bytes.Buffer)
+			if !ok {
+				t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
+			}
+			diagnostic := goplint.AnalysisDiagnostic{
+				Category: category,
+				Posn:     posn,
+				Message:  message,
+				URL: goplint.DiagnosticURLForFindingWithMeta("gpl3_inconclusive", map[string]string{
+					"cfg_outcome_status": "inconclusive",
+				}),
+			}
+			if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
+				"example.com/pkg": {"goplint": {diagnostic}},
+			})); err != nil {
+				return err
+			}
+			stream := []byte(
+				`{"category":"` + category + `","id":"gpl3_inconclusive","message":"` + message +
+					`","posn":"` + posn + `","meta":{"cfg_outcome_status":"inconclusive"}}` + "\n",
+			)
+			if err := os.WriteFile(findingsPathFromCommand(t, cmd), stream, 0o644); err != nil {
+				return err
+			}
+			return makeExitError(t)
+		}
+
+		outPath := filepath.Join(t.TempDir(), "baseline.toml")
+		const original = "# reviewed baseline\n"
+		if err := os.WriteFile(outPath, []byte(original), 0o644); err != nil {
+			t.Fatalf("write original baseline: %v", err)
+		}
+		err := generateBaselineWithRunner(outPath, []string{"--update-baseline", outPath, "./..."}, runner, io.Discard)
+		if err == nil || !errors.Is(err, ErrAnalyzerSubprocess) || !strings.Contains(err.Error(), "always visible") {
+			t.Fatalf("generateBaselineWithRunner() error = %v, want always-visible subprocess rejection", err)
+		}
+		data, readErr := os.ReadFile(outPath)
+		if readErr != nil {
+			t.Fatalf("read original baseline: %v", readErr)
+		}
+		if string(data) != original {
+			t.Fatalf("baseline changed after failed update:\n%s", data)
+		}
+	})
+
 	t.Run("empty findings stream with analyzer findings fails closed", func(t *testing.T) {
 		t.Parallel()
 		runner := func(cmd *exec.Cmd) error {
@@ -560,10 +631,8 @@ func TestGenerateBaseline(t *testing.T) {
 					"goplint": {
 						{
 							Category: "primitive",
+							Posn:     "pkg/a.go:10:2",
 							Message:  "struct field pkg.A.B uses primitive type string",
-							URL: goplint.DiagnosticURLForFinding(
-								goplint.StableFindingID("primitive", "main_test", "empty-stream-check"),
-							),
 						},
 					},
 				},
@@ -580,6 +649,62 @@ func TestGenerateBaseline(t *testing.T) {
 		}
 		if !errors.Is(err, ErrFindingsStreamEmpty) {
 			t.Fatalf("expected fail-closed findings stream error, got %v", err)
+		}
+	})
+
+	t.Run("analysis JSON without URLs matches canonical findings stream", func(t *testing.T) {
+		t.Parallel()
+		runner := func(cmd *exec.Cmd) error {
+			buf, ok := cmd.Stdout.(*bytes.Buffer)
+			if !ok {
+				t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
+			}
+			const (
+				message = "struct field pkg.A.B uses primitive type string"
+				posn    = "pkg/a.go:10:2"
+			)
+			if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
+				"example.com/pkg": {"goplint": {{Category: "primitive", Posn: posn, Message: message}}},
+			})); err != nil {
+				return err
+			}
+			findingsPath := findingsPathFromCommand(t, cmd)
+			return os.WriteFile(findingsPath, []byte(
+				`{"category":"primitive","id":"gpl3_canonical","message":"`+message+`","posn":"`+posn+`"}`+"\n",
+			), 0o644)
+		}
+
+		outPath := filepath.Join(t.TempDir(), "baseline.toml")
+		if err := generateBaselineWithRunner(outPath, []string{"--update-baseline", outPath, "./..."}, runner, io.Discard); err != nil {
+			t.Fatalf("generateBaseline() error = %v", err)
+		}
+	})
+
+	t.Run("mismatched findings stream fails closed", func(t *testing.T) {
+		t.Parallel()
+		runner := func(cmd *exec.Cmd) error {
+			buf, ok := cmd.Stdout.(*bytes.Buffer)
+			if !ok {
+				t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
+			}
+			if _, err := buf.Write(makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
+				"example.com/pkg": {"goplint": {{
+					Category: "primitive",
+					Posn:     "pkg/a.go:10:2",
+					Message:  "struct field pkg.A.B uses primitive type string",
+				}}},
+			})); err != nil {
+				return err
+			}
+			return os.WriteFile(findingsPathFromCommand(t, cmd), []byte(
+				`{"category":"primitive","id":"gpl3_other","message":"different finding","posn":"pkg/a.go:20:2"}`+"\n",
+			), 0o644)
+		}
+
+		outPath := filepath.Join(t.TempDir(), "baseline.toml")
+		err := generateBaselineWithRunner(outPath, []string{"--update-baseline", outPath, "./..."}, runner, io.Discard)
+		if err == nil || !strings.Contains(err.Error(), "findings stream is missing") {
+			t.Fatalf("expected incomplete findings stream error, got %v", err)
 		}
 	})
 
@@ -629,19 +754,19 @@ func TestUpdateBaselineRoundTripSuppression(t *testing.T) {
 			goplint.CategoryPrimitive,
 			"baseline_roundtrip",
 			"struct-field",
-			"baseline_roundtrip.RoundTrip.Name",
+			"RoundTrip.Name",
 			"string",
 		)
 		ageID := goplint.StableFindingID(
 			goplint.CategoryPrimitive,
 			"baseline_roundtrip",
 			"struct-field",
-			"baseline_roundtrip.RoundTrip.Age",
+			"RoundTrip.Age",
 			"int",
 		)
 		findings := []byte(strings.Join([]string{
-			`{"category":"primitive","id":"` + nameID + `","message":"struct field baseline_roundtrip.RoundTrip.Name uses primitive type string","posn":"baseline_roundtrip.go:4:2"}`,
-			`{"category":"primitive","id":"` + ageID + `","message":"struct field baseline_roundtrip.RoundTrip.Age uses primitive type int","posn":"baseline_roundtrip.go:5:2"}`,
+			`{"category":"primitive","id":"` + nameID + `","message":"struct field baseline_roundtrip.RoundTrip.Name uses primitive type string","posn":"baseline_roundtrip.go:6:2"}`,
+			`{"category":"primitive","id":"` + ageID + `","message":"struct field baseline_roundtrip.RoundTrip.Age uses primitive type int","posn":"baseline_roundtrip.go:7:2"}`,
 			"",
 		}, "\n"))
 		return os.WriteFile(findingsPath, findings, 0o644)
@@ -677,4 +802,15 @@ func makeAnalysisJSON(t *testing.T, result goplint.AnalysisResult) []byte {
 func makeExitError(t *testing.T) error {
 	t.Helper()
 	return &exec.ExitError{}
+}
+
+func findingsPathFromCommand(t *testing.T, cmd *exec.Cmd) string {
+	t.Helper()
+	for _, arg := range cmd.Args {
+		if path, ok := strings.CutPrefix(arg, "-emit-findings-jsonl="); ok {
+			return path
+		}
+	}
+	t.Fatal("expected -emit-findings-jsonl arg")
+	return ""
 }

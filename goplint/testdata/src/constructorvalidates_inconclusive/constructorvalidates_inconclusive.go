@@ -8,6 +8,7 @@ func (s *Server) Validate() error {
 	return nil
 }
 
+//goplint:ignore -- proof uncertainty remains visible despite policy suppression.
 func NewServer() *Server { // want `constructor constructorvalidates_inconclusive\.NewServer returns constructorvalidates_inconclusive\.Server with inconclusive Validate\(\) path analysis`
 	srv := &Server{}
 	if true {

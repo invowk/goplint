@@ -15,11 +15,11 @@ func (c CommandName) Validate() error {
 
 func useCmd(_ CommandName) {}
 
-// DetachedClosureVariable should not be flagged because the closure is stored
-// but never executed.
+// DetachedClosureVariable is analyzed as an independent escaping procedure
+// even though the local variable is never invoked here.
 func DetachedClosureVariable(raw string) { // want `parameter "raw" of cfa_executable_closure_var\.DetachedClosureVariable uses primitive type string`
 	f := func() {
-		x := CommandName(raw)
+		x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 		useCmd(x)
 	}
 	_ = f

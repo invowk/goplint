@@ -94,7 +94,7 @@ func newAnalyzerWithState(state *flagState) *analysis.Analyzer {
 		Requires: []*analysis.Analyzer{inspect.Analyzer},
 		FactTypes: []analysis.Fact{
 			(*NonZeroFact)(nil),
-			(*ValidatesTypeFact)(nil),
+			(*ProtocolSummaryFact)(nil),
 			(*CueFedPathFact)(nil),
 			(*PathDomainFact)(nil),
 		},
@@ -188,6 +188,9 @@ func collectNamedTypes(pass *analysis.Pass, node *ast.GenDecl, out *[]namedTypeI
 		if !ok {
 			continue
 		}
+		if hasIgnoreDirective(node.Doc, ts.Doc) {
+			continue
+		}
 
 		// Skip type aliases — they inherit methods from the target type.
 		if ts.Assign.IsValid() {
@@ -231,6 +234,9 @@ func collectExportedStructs(pass *analysis.Pass, node *ast.GenDecl, out *[]expor
 	for _, spec := range node.Specs {
 		ts, ok := spec.(*ast.TypeSpec)
 		if !ok {
+			continue
+		}
+		if hasIgnoreDirective(node.Doc, ts.Doc) {
 			continue
 		}
 
@@ -347,7 +353,7 @@ func reportMissingValidate(pass *analysis.Pass, namedTypes []namedTypeInfo, meth
 					continue
 				}
 				msg := fmt.Sprintf("named type %s has Validate() but wrong signature (want func() error)", qualName)
-				findingID := StableFindingID(CategoryWrongValidateSig, qualName, "Validate")
+				findingID := PackageScopedFindingID(pass, CategoryWrongValidateSig, qualName, "Validate")
 				if bl.ContainsFinding(CategoryWrongValidateSig, findingID, msg) {
 					continue
 				}
@@ -361,7 +367,7 @@ func reportMissingValidate(pass *analysis.Pass, namedTypes []namedTypeInfo, meth
 		}
 
 		msg := fmt.Sprintf("named type %s has no Validate() method", qualName)
-		findingID := StableFindingID(CategoryMissingValidate, qualName, "Validate")
+		findingID := PackageScopedFindingID(pass, CategoryMissingValidate, qualName, "Validate")
 		if bl.ContainsFinding(CategoryMissingValidate, findingID, msg) {
 			continue
 		}
@@ -393,7 +399,7 @@ func reportMissingStringer(pass *analysis.Pass, namedTypes []namedTypeInfo, meth
 					continue
 				}
 				msg := fmt.Sprintf("named type %s has String() but wrong signature (want func() string)", qualName)
-				findingID := StableFindingID(CategoryWrongStringerSig, qualName, "String")
+				findingID := PackageScopedFindingID(pass, CategoryWrongStringerSig, qualName, "String")
 				if bl.ContainsFinding(CategoryWrongStringerSig, findingID, msg) {
 					continue
 				}
@@ -407,7 +413,7 @@ func reportMissingStringer(pass *analysis.Pass, namedTypes []namedTypeInfo, meth
 		}
 
 		msg := fmt.Sprintf("named type %s has no String() method", qualName)
-		findingID := StableFindingID(CategoryMissingStringer, qualName, "String")
+		findingID := PackageScopedFindingID(pass, CategoryMissingStringer, qualName, "String")
 		if bl.ContainsFinding(CategoryMissingStringer, findingID, msg) {
 			continue
 		}
@@ -443,7 +449,7 @@ func reportMissingConstructors(pass *analysis.Pass, structs []exportedStructInfo
 
 		ctorName := "New" + s.name
 		msg := fmt.Sprintf("exported struct %s has no %s() constructor", qualName, ctorName)
-		findingID := StableFindingID(CategoryMissingConstructor, qualName, ctorName)
+		findingID := PackageScopedFindingID(pass, CategoryMissingConstructor, qualName, ctorName)
 		if bl.ContainsFinding(CategoryMissingConstructor, findingID, msg) {
 			continue
 		}
@@ -529,7 +535,7 @@ func reportStaleExceptionsInline(pass *analysis.Pass, cfg *ExceptionConfig) {
 		msg := fmt.Sprintf(
 			"stale exception: pattern %q matched no diagnostics (reason: %s)",
 			exc.Pattern, exc.Reason)
-		findingID := StableFindingID(CategoryStaleException, exc.Pattern)
+		findingID := PackageScopedFindingID(pass, CategoryStaleException, exc.Pattern)
 		reportDiagnosticWithMeta(pass, pos, CategoryStaleException, findingID, msg, map[string]string{
 			"pattern": exc.Pattern,
 		})
@@ -575,7 +581,7 @@ func reportOverdueReviewDate(
 	reviewDate, err := time.Parse("2006-01-02", reviewAfter)
 	if err != nil {
 		msg := reviewDateInvalidMessage(subject, reviewAfter, err, settingsReview)
-		findingID := StableFindingID(CategoryOverdueReview, subject, "invalid-date")
+		findingID := PackageScopedFindingID(pass, CategoryOverdueReview, subject, "invalid-date")
 		if !shouldReportOverdueReviewFinding(state, findingID) {
 			return
 		}
@@ -589,7 +595,7 @@ func reportOverdueReviewDate(
 	if blockedBy != "" {
 		msg += fmt.Sprintf(" (blocked by: %s)", blockedBy)
 	}
-	findingID := StableFindingID(CategoryOverdueReview, subject)
+	findingID := PackageScopedFindingID(pass, CategoryOverdueReview, subject)
 	if !shouldReportOverdueReviewFinding(state, findingID) {
 		return
 	}

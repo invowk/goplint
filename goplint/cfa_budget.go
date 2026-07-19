@@ -9,7 +9,6 @@ import (
 const (
 	maxAdaptiveBudgetMultiplier = 4
 	minAdaptiveStatesPerBlock   = 16
-	minAdaptiveDepthPerBlock    = 2
 )
 
 func adaptiveBlockVisitBudget(cfg *gocfg.CFG, requested blockVisitBudget) blockVisitBudget {
@@ -23,23 +22,11 @@ func adaptiveBlockVisitBudget(cfg *gocfg.CFG, requested blockVisitBudget) blockV
 	return adaptiveBlockVisitBudgetByBlockCount(blockCount, requested)
 }
 
-func adaptiveBlockVisitBudgetForBlocks(starts []*gocfg.Block, requested blockVisitBudget) blockVisitBudget {
-	blockCount := len(collectReachableCFGBlocks(starts))
-	if blockCount == 0 {
-		return requested
-	}
-	return adaptiveBlockVisitBudgetByBlockCount(blockCount, requested)
-}
-
 func adaptiveBlockVisitBudgetByBlockCount(blockCount int, requested blockVisitBudget) blockVisitBudget {
 	effective := requested
 	effective.maxStates = adaptiveBudgetValue(
 		requested.maxStates,
 		blockCount*minAdaptiveStatesPerBlock,
-	)
-	effective.maxDepth = adaptiveBudgetValue(
-		requested.maxDepth,
-		blockCount*minAdaptiveDepthPerBlock,
 	)
 	return effective
 }

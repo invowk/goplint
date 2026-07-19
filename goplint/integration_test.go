@@ -30,7 +30,7 @@ func newAnalyzerHarness() analyzerHarness {
 // setFlag sets an analyzer flag by name using the framework-standard
 // h.Analyzer.Flags.Set() API. This is the same pattern used by x/tools
 // tests (testinggoroutine, findcall).
-func setFlag(t *testing.T, analyzer *analysis.Analyzer, name, value string) {
+func setFlag(t testing.TB, analyzer *analysis.Analyzer, name, value string) {
 	t.Helper()
 	if err := analyzer.Flags.Set(name, value); err != nil {
 		t.Fatalf("failed to set flag %q to %q: %v", name, value, err)
@@ -49,21 +49,13 @@ func resetFlags(t *testing.T, h analyzerHarness) {
 	}
 }
 
-func runAnalysisTest(t *testing.T, testdata string, analyzer *analysis.Analyzer, pkgs ...string) {
+func runAnalysisTest(t *testing.T, testdata string, analyzer *analysis.Analyzer, pkgs ...string) []*analysistest.Result {
 	t.Helper()
-
-	// Keep fixture expectations stable across default-engine rollouts.
-	// IFDS/compare behavior is covered by dedicated compatibility tests.
-	// Phase C/D behavior is covered by dedicated gate tests.
-	setFlag(t, analyzer, "cfg-interproc-engine", cfgInterprocEngineLegacy)
-	setFlag(t, analyzer, "cfg-feasibility-engine", cfgFeasibilityEngineOff)
-	setFlag(t, analyzer, "cfg-refinement-mode", cfgRefinementModeOff)
-	setFlag(t, analyzer, "cfg-alias-mode", cfgAliasModeOff)
 
 	analysistestParallelLimiter <- struct{}{}
 	defer func() { <-analysistestParallelLimiter }()
 
-	analysistest.Run(t, testdata, analyzer, pkgs...)
+	return analysistest.Run(t, testdata, analyzer, pkgs...)
 }
 
 // TestResetFlagsCompleteness ensures resetFlags restores every analyzer flag
@@ -217,7 +209,6 @@ func TestNewRunConfig(t *testing.T) {
 	t.Run("ubv flags auto-enable cast-validation", func(t *testing.T) {
 		resetFlags(t, h)
 		setFlag(t, h.Analyzer, "check-use-before-validate", "true")
-		setFlag(t, h.Analyzer, "ubv-mode", ubvModeOrder)
 
 		rc := newRunConfigForState(h.state)
 		if !rc.checkCastValidation {
@@ -225,36 +216,15 @@ func TestNewRunConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("cfg and ubv defaults are normalized", func(t *testing.T) {
+	t.Run("protocol resource defaults are normalized", func(t *testing.T) {
 		resetFlags(t, h)
 
 		rc := newRunConfigForState(h.state)
-		if rc.ubvMode != defaultUBVMode {
-			t.Fatalf("expected ubvMode default %q, got %q", defaultUBVMode, rc.ubvMode)
-		}
-		if rc.cfgBackend != defaultCFGBackend {
-			t.Fatalf("expected cfgBackend default %q, got %q", defaultCFGBackend, rc.cfgBackend)
-		}
-		if rc.cfgInterprocEngine != defaultCFGInterprocEngine {
-			t.Fatalf("expected cfgInterprocEngine default %q, got %q", defaultCFGInterprocEngine, rc.cfgInterprocEngine)
-		}
 		if rc.cfgMaxStates != defaultCFGMaxStates {
 			t.Fatalf("expected cfgMaxStates default %d, got %d", defaultCFGMaxStates, rc.cfgMaxStates)
 		}
-		if rc.cfgMaxDepth != defaultCFGMaxDepth {
-			t.Fatalf("expected cfgMaxDepth default %d, got %d", defaultCFGMaxDepth, rc.cfgMaxDepth)
-		}
-		if rc.cfgInconclusivePolicy != defaultCFGInconclusivePolicy {
-			t.Fatalf("expected cfgInconclusivePolicy default %q, got %q", defaultCFGInconclusivePolicy, rc.cfgInconclusivePolicy)
-		}
 		if rc.cfgWitnessMaxSteps != defaultCFGWitnessMaxSteps {
 			t.Fatalf("expected cfgWitnessMaxSteps default %d, got %d", defaultCFGWitnessMaxSteps, rc.cfgWitnessMaxSteps)
-		}
-		if rc.cfgFeasibilityEngine != defaultCFGFeasibilityEngine {
-			t.Fatalf("expected cfgFeasibilityEngine default %q, got %q", defaultCFGFeasibilityEngine, rc.cfgFeasibilityEngine)
-		}
-		if rc.cfgRefinementMode != defaultCFGRefinementMode {
-			t.Fatalf("expected cfgRefinementMode default %q, got %q", defaultCFGRefinementMode, rc.cfgRefinementMode)
 		}
 		if rc.cfgRefinementMaxIterations != defaultCFGRefinementMaxIterations {
 			t.Fatalf("expected cfgRefinementMaxIterations default %d, got %d", defaultCFGRefinementMaxIterations, rc.cfgRefinementMaxIterations)

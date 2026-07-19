@@ -7,7 +7,6 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -28,6 +27,9 @@ func inspectStructFields(pass *analysis.Pass, node *ast.GenDecl, cfg *ExceptionC
 		if !ok {
 			continue
 		}
+		if hasIgnoreDirective(node.Doc, ts.Doc) {
+			continue
+		}
 
 		st, ok := ts.Type.(*ast.StructType)
 		if !ok {
@@ -39,7 +41,6 @@ func inspectStructFields(pass *analysis.Pass, node *ast.GenDecl, cfg *ExceptionC
 		structName := pkgName + "." + ts.Name.Name
 
 		for _, field := range st.Fields.List {
-			reportUnknownDirectives(pass, field.Doc, field.Comment)
 			if hasIgnoreDirective(field.Doc, field.Comment) || hasRenderDirective(field.Doc, field.Comment) {
 				continue
 			}
@@ -102,7 +103,6 @@ func inspectFuncDecl(pass *analysis.Pass, fn *ast.FuncDecl, cfg *ExceptionConfig
 		return
 	}
 
-	reportUnknownDirectives(pass, fn.Doc, nil)
 	if hasIgnoreDirective(fn.Doc, nil) {
 		return
 	}
@@ -141,7 +141,6 @@ func inspectFuncDecl(pass *analysis.Pass, fn *ast.FuncDecl, cfg *ExceptionConfig
 // Findings present in the baseline are suppressed.
 func inspectFieldList(pass *analysis.Pass, fields *ast.FieldList, funcName, kind string, cfg *ExceptionConfig, bl *BaselineConfig) {
 	for fieldIndex, field := range fields.List {
-		reportUnknownDirectives(pass, field.Doc, field.Comment)
 		if hasIgnoreDirective(field.Doc, field.Comment) {
 			continue
 		}
@@ -197,7 +196,6 @@ func inspectFieldList(pass *analysis.Pass, fields *ast.FieldList, funcName, kind
 // Findings present in the baseline are suppressed.
 func inspectReturnTypes(pass *analysis.Pass, results *ast.FieldList, funcName string, cfg *ExceptionConfig, bl *BaselineConfig) {
 	for i, field := range results.List {
-		reportUnknownDirectives(pass, field.Doc, field.Comment)
 		if hasIgnoreDirective(field.Doc, field.Comment) {
 			continue
 		}
@@ -364,236 +362,11 @@ func receiverTypeName(expr ast.Expr) string {
 	return ""
 }
 
-func isKnownDirectiveKey(key string) bool {
-	switch key {
-	case "ignore",
-		"internal",
-		"render",
-		"nonzero",
-		"validate-all",
-		"constant-only",
-		"mutable",
-		"no-delegate",
-		"enum-cue",
-		"validates-type",
-		"trusted-boundary",
-		"cue-fed-path",
-		"path-domain":
-		return true
-	default:
-		return false
-	}
-}
-
-// hasIgnoreDirective checks whether a field/func has an ignore directive.
-// Recognized forms: `//goplint:ignore`, `//plint:ignore`,
-// `//nolint:goplint`, and combined forms like `//goplint:ignore,internal`.
-func hasIgnoreDirective(doc *ast.CommentGroup, lineComment *ast.CommentGroup) bool {
-	return hasDirectiveKey(doc, lineComment, "ignore")
-}
-
-// hasInternalDirective checks whether a struct field has an internal
-// directive, indicating the field is internal state that should not be
-// initialized via functional options (excluded from WithXxx() checks).
-// Recognized forms: //goplint:internal, //plint:internal, and combined
-// forms like //goplint:ignore,internal.
-func hasInternalDirective(doc *ast.CommentGroup, lineComment *ast.CommentGroup) bool {
-	return hasDirectiveKey(doc, lineComment, "internal")
-}
-
-// hasRenderDirective checks whether a func/field has a render directive,
-// indicating the return value is intentionally a bare string (rendered
-// display text). On functions, this suppresses return-type findings only
-// — parameters are still checked. On struct fields, it behaves like ignore.
-func hasRenderDirective(doc *ast.CommentGroup, lineComment *ast.CommentGroup) bool {
-	return hasDirectiveKey(doc, lineComment, "render")
-}
-
-// hasMutableDirective checks whether a struct type has a mutable directive,
-// indicating the struct is intentionally mutable despite having a constructor.
-// Suppresses all immutability findings for the struct's exported fields.
-// Checked at GenDecl and TypeSpec level (same pattern as validate-all).
-func hasMutableDirective(genDoc *ast.CommentGroup, specDoc *ast.CommentGroup) bool {
-	return hasDirectiveKey(genDoc, nil, "mutable") || hasDirectiveKey(specDoc, nil, "mutable")
-}
-
-// hasNoDelegateDirective checks whether a struct field has a no-delegate
-// directive, indicating the field should be excluded from validate-all
-// delegation checking even though its type has a Validate() method.
-func hasNoDelegateDirective(doc *ast.CommentGroup, lineComment *ast.CommentGroup) bool {
-	return hasDirectiveKey(doc, lineComment, "no-delegate")
-}
-
-// hasTrustedBoundaryDirective checks whether a function is an intentional
-// boundary exception because its caller has already validated the request.
-func hasTrustedBoundaryDirective(doc *ast.CommentGroup, lineComment *ast.CommentGroup) bool {
-	return hasDirectiveKey(doc, lineComment, "trusted-boundary")
-}
-
-// hasDirectiveKey checks whether the given directive key appears in any
-// goplint/plint directive in the doc or line comment groups.
-func hasDirectiveKey(doc *ast.CommentGroup, lineComment *ast.CommentGroup, key string) bool {
-	for _, cg := range []*ast.CommentGroup{doc, lineComment} {
-		if cg == nil {
-			continue
-		}
-		for _, c := range cg.List {
-			text := strings.TrimSpace(c.Text)
-			keys, _ := parseDirectiveKeys(text)
-			if slices.Contains(keys, key) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// directiveValue extracts the value from a parametric directive of the form
-// //goplint:key=value (e.g., //goplint:enum-cue=#RuntimeType).
-// Returns the value after "=" and true when the directive key is present
-// with a value; returns "", false otherwise.
-func directiveValue(cgs []*ast.CommentGroup, key string) (string, bool) {
-	for _, cg := range cgs {
-		if cg == nil {
-			continue
-		}
-		for _, c := range cg.List {
-			content := strings.TrimPrefix(strings.TrimSpace(c.Text), "//")
-			content = strings.TrimSpace(content)
-
-			var valueStr string
-			for _, prefix := range []string{"goplint:", "plint:"} {
-				if strings.HasPrefix(content, prefix) {
-					valueStr = content[len(prefix):]
-					break
-				}
-			}
-			if valueStr == "" {
-				continue
-			}
-
-			if sepIdx := strings.Index(valueStr, " --"); sepIdx >= 0 {
-				valueStr = valueStr[:sepIdx]
-			}
-
-			for part := range strings.SplitSeq(valueStr, ",") {
-				part = strings.TrimSpace(part)
-				keyPart, val, hasEq := strings.Cut(part, "=")
-				if !hasEq {
-					continue
-				}
-				if keyPart == key {
-					return val, true
-				}
-			}
-		}
-	}
-	return "", false
-}
-
-// reportUnknownDirectives emits an unknown-directive diagnostic for each
-// unrecognized key in a goplint/plint directive comment. Called at
-// every site where directives are checked, so typos like //goplint:ignorr
-// are caught immediately.
-//
-// Intentionally does not check baseline — typo warnings must always be visible.
-func reportUnknownDirectives(pass *analysis.Pass, doc *ast.CommentGroup, lineComment *ast.CommentGroup) {
-	for _, cg := range []*ast.CommentGroup{doc, lineComment} {
-		if cg == nil {
-			continue
-		}
-		for _, c := range cg.List {
-			text := strings.TrimSpace(c.Text)
-			_, unknown := parseDirectiveKeys(text)
-			for _, u := range unknown {
-				msg := fmt.Sprintf("unknown directive key %q in goplint directive", u)
-				findingID := StableFindingID(CategoryUnknownDirective, "directive", u)
-				reportDiagnostic(pass, c.Pos(), CategoryUnknownDirective, findingID, msg)
-			}
-		}
-	}
-}
-
-// parseDirectiveKeys extracts directive keys from a goplint/plint
-// comment. Returns known keys and unknown keys separately.
-//
-// The directive prefix must appear at the start of the comment content
-// (after // and optional whitespace). Mentions of directive names in
-// prose comments (e.g., "// see plint:ignore for docs") are not treated
-// as directives.
-//
-// Supported forms (single prefix, comma-separated keys):
-//
-//	//goplint:ignore            → (["ignore"], nil)
-//	//plint:ignore              → (["ignore"], nil)
-//	//goplint:ignore,internal   → (["ignore", "internal"], nil)
-//	//plint:ignore,foo          → (["ignore"], ["foo"])
-//	//nolint:goplint            → (["ignore"], nil)  — special case
-//	// regular comment          → (nil, nil)
-//	// see plint:ignore for docs → (nil, nil)  — prose, not directive
-func parseDirectiveKeys(text string) (keys []string, unknown []string) {
-	// Strip the comment marker and leading whitespace to get the
-	// meaningful content. This normalizes "//goplint:..." and
-	// "// goplint:..." to "goplint:..." for prefix matching.
-	content := strings.TrimPrefix(text, "//")
-	content = strings.TrimSpace(content)
-
-	// Handle nolint:goplint as a special "ignore" directive.
-	// Match the token exactly in the nolint linter list, so near-misses like
-	// "nolint:goplintfoo" are not treated as valid suppressions.
-	if rest, ok := strings.CutPrefix(content, "nolint:"); ok {
-		if sepIdx := strings.Index(rest, " --"); sepIdx >= 0 {
-			rest = rest[:sepIdx]
-		}
-		for linter := range strings.SplitSeq(rest, ",") {
-			if strings.TrimSpace(linter) == "goplint" {
-				return []string{"ignore"}, nil
-			}
-		}
-		return nil, nil
-	}
-
-	// Look for goplint: or plint: prefix at the start of content.
-	// Using HasPrefix ensures prose references like
-	// "see plint:ignore for docs" don't trigger the directive.
-	var valueStr string
-	for _, prefix := range []string{"goplint:", "plint:"} {
-		if strings.HasPrefix(content, prefix) {
-			valueStr = content[len(prefix):]
-			break
-		}
-	}
-	if valueStr == "" {
-		return nil, nil
-	}
-
-	// Trim the optional "-- reason" suffix. The convention is to use
-	// " -- " as the separator between directive keys and explanation text.
-	if sepIdx := strings.Index(valueStr, " --"); sepIdx >= 0 {
-		valueStr = valueStr[:sepIdx]
-	}
-
-	// Split by comma and classify each token. For parametric directives
-	// like enum-cue=#RuntimeType, strip the =value suffix before key lookup.
-	for part := range strings.SplitSeq(valueStr, ",") {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		keyPart, _, _ := strings.Cut(part, "=")
-		if isKnownDirectiveKey(keyPart) {
-			keys = append(keys, keyPart)
-		} else {
-			unknown = append(unknown, part)
-		}
-	}
-	return keys, unknown
-}
-
 // hasIgnoreAtPos checks if any comment in the file associated with pos
 // contains a //goplint:ignore or //plint:ignore directive on the same line
 // or the line immediately before the given position. This enables per-statement
-// suppression in CFA mode where struct-level doc comments are not available.
+// suppression for path-sensitive diagnostics where struct-level doc comments
+// are not available.
 func hasIgnoreAtPos(pass *analysis.Pass, pos token.Pos) bool {
 	posPos := pass.Fset.Position(pos)
 	posLine := posPos.Line
@@ -618,8 +391,8 @@ func hasIgnoreAtPos(pass *analysis.Pass, pos token.Pos) bool {
 				if commentLine == stmtStartLine-1 && isTrailingComment(pass, file, c) {
 					continue
 				}
-				keys, _ := parseDirectiveKeys(strings.TrimSpace(c.Text))
-				if slices.Contains(keys, "ignore") {
+				commentGroup := &ast.CommentGroup{List: []*ast.Comment{c}}
+				if hasDirectiveKey(commentGroup, nil, "ignore") {
 					return true
 				}
 			}

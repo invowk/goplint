@@ -15,11 +15,18 @@ func (c CommandName) Validate() error {
 
 func useCmd(_ CommandName) {}
 
-// DetachedClosureLiteral should not produce cast-validation diagnostics because
-// the closure literal is never invoked.
+// PackageCallback proves that package-initializer function literals are
+// independent protocol procedures even when no call is visible.
+var PackageCallback = func(raw string) {
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
+	useCmd(x)
+}
+
+// DetachedClosureLiteral is still an independently analyzable procedure even
+// though no invocation is visible in this package.
 func DetachedClosureLiteral(raw string) { // want `parameter "raw" of cfa_non_executable_closure\.DetachedClosureLiteral uses primitive type string`
 	_ = func() {
-		x := CommandName(raw)
+		x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 		useCmd(x)
 	}
 }

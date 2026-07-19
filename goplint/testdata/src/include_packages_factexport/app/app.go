@@ -9,7 +9,7 @@ func NewWithDirective(addr string) (*util.Server, error) { // want `parameter "a
 	return s, util.ValidateServer(s)
 }
 
-func NewNoDirective(addr string) (*util.Server, error) { // want `parameter "addr" of app\.NewNoDirective uses primitive type string` `constructor app\.NewNoDirective returns util\.Server which has Validate\(\) but never calls it`
+func NewNoDirective(addr string) (*util.Server, error) { // want `parameter "addr" of app\.NewNoDirective uses primitive type string`
 	s := &util.Server{Addr: addr}
 	return s, util.HelperNoDirective(s)
 }

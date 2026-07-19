@@ -6,21 +6,22 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"slices"
 
 	"golang.org/x/tools/go/analysis"
 	gocfg "golang.org/x/tools/go/cfg"
 )
 
 type (
-	closureVarCallSet          map[*ast.CallExpr]*ast.FuncLit
-	methodValueValidateCallSet map[*ast.CallExpr]ast.Expr
-	noReturnAliasSet           map[string][]noReturnFuncAliasEvent
+	closureVarCallSet         map[*ast.CallExpr]*ast.FuncLit
+	methodValueValidationCall struct {
+		receiver           ast.Expr
+		onSuccessfulReturn bool
+	}
+	methodValueValidateCallSet map[*ast.CallExpr]methodValueValidationCall
 )
 
-type noReturnFuncAliasEvent struct {
-	pos      token.Pos
-	noReturn bool
+type noReturnCallResolver struct {
+	ssa *ssaResult
 }
 
 func collectMethodValueValidateCallSet(calls []methodValueValidateCall) methodValueValidateCallSet {
@@ -32,7 +33,7 @@ func collectMethodValueValidateCallSet(calls []methodValueValidateCall) methodVa
 		if call.call == nil || call.receiver == nil {
 			continue
 		}
-		out[call.call] = call.receiver
+		out[call.call] = methodValueValidationCall{receiver: call.receiver}
 	}
 	return out
 }
@@ -47,11 +48,11 @@ func mergeMethodValueValidateCallSets(sets ...methodValueValidateCallSet) method
 	}
 	out := make(methodValueValidateCallSet, total)
 	for _, set := range sets {
-		for call, receiver := range set {
-			if call == nil || receiver == nil {
+		for call, validation := range set {
+			if call == nil || validation.receiver == nil {
 				continue
 			}
-			out[call] = receiver
+			out[call] = validation
 		}
 	}
 	if len(out) == 0 {
@@ -146,7 +147,7 @@ func callFuncLit(call *ast.CallExpr) (*ast.FuncLit, bool) {
 }
 
 // collectSynchronousClosureLits returns closure literals whose Validate calls
-// can satisfy outer-path validation checks in CFA:
+// can satisfy outer-path validation checks:
 //   - deferred closures (execute before function return)
 //   - immediate IIFEs (execute synchronously at call site)
 func collectSynchronousClosureLits(body *ast.BlockStmt) map[*ast.FuncLit]bool {
@@ -214,36 +215,19 @@ func collectUBVClosureVarCalls(calls []closureVarCall) closureVarCallSet {
 	return out
 }
 
-// buildFuncCFG constructs a control-flow graph for a function body using
-// conservative mayReturn (all calls may return). Returns nil if body is nil.
-//
-// The conservative mayReturn stub ensures no feasible paths are pruned —
-// correct for validation reachability analysis where we want to detect
-// ALL paths where Validate() might be missing.
-func buildFuncCFG(body *ast.BlockStmt) *gocfg.CFG {
-	if body == nil {
-		return nil
-	}
-	// Conservative: every call may return. Never prunes feasible paths.
-	return gocfg.New(body, func(*ast.CallExpr) bool { return true })
-}
-
 // buildFuncCFGForPass constructs a CFG using a no-return-aware mayReturn
-// predicate when type information is available.
-func buildFuncCFGForPass(pass *analysis.Pass, body *ast.BlockStmt) *gocfg.CFG {
-	if body == nil {
+// predicate. Protocol analysis has no untyped CFG fallback.
+func buildFuncCFGForPass(pass *analysis.Pass, body *ast.BlockStmt, ssaResult *ssaResult) *gocfg.CFG {
+	if pass == nil || pass.TypesInfo == nil || body == nil {
 		return nil
 	}
-	if pass == nil || pass.TypesInfo == nil {
-		return buildFuncCFG(body)
-	}
-	noReturnAliases := collectNoReturnFuncAliasEvents(pass, body)
+	noReturnCalls := newNoReturnCallResolver(pass, body, ssaResult)
 	return gocfg.New(body, func(call *ast.CallExpr) bool {
-		return callMayReturn(pass, call, noReturnAliases)
+		return callMayReturn(pass, call, noReturnCalls)
 	})
 }
 
-func callMayReturn(pass *analysis.Pass, call *ast.CallExpr, noReturnAliases noReturnAliasSet) bool {
+func callMayReturn(pass *analysis.Pass, call *ast.CallExpr, noReturnCalls noReturnCallResolver) bool {
 	if pass == nil || pass.TypesInfo == nil || call == nil {
 		return true
 	}
@@ -258,14 +242,11 @@ func callMayReturn(pass *analysis.Pass, call *ast.CallExpr, noReturnAliases noRe
 			return true
 		}
 		if fn, ok := obj.(*types.Func); ok {
-			return !isKnownNoReturnFunc(fn.Pkg(), fn.Name())
+			return !isKnownNoReturnFunc(fn.Pkg(), fn.Name()) && !importedFunctionIsTerminal(pass, fn)
 		}
 		if variable, ok := obj.(*types.Var); ok {
-			key := objectKey(variable)
-			if key == "" {
-				return true
-			}
-			return !latestNoReturnAliasBefore(noReturnAliases[key], call.Pos())
+			_ = variable
+			return !ssaCallIsDefinitelyNoReturn(pass, call, noReturnCalls.ssa)
 		}
 		return true
 	case *ast.SelectorExpr:
@@ -277,128 +258,38 @@ func callMayReturn(pass *analysis.Pass, call *ast.CallExpr, noReturnAliases noRe
 		if !ok {
 			return true
 		}
-		return !isKnownNoReturnFunc(fn.Pkg(), fn.Name())
+		return !isKnownNoReturnFunc(fn.Pkg(), fn.Name()) && !importedFunctionIsTerminal(pass, fn)
 	default:
 		return true
 	}
 }
 
-func collectNoReturnFuncAliasEvents(pass *analysis.Pass, body *ast.BlockStmt) noReturnAliasSet {
-	if pass == nil || pass.TypesInfo == nil || body == nil {
-		return nil
-	}
-	aliases := make(noReturnAliasSet)
-
-	resolve := func(lhs ast.Expr, rhs ast.Expr, atPos token.Pos) (string, noReturnFuncAliasEvent, bool) {
-		lhsIdent, ok := stripParens(lhs).(*ast.Ident)
-		if !ok || lhsIdent.Name == "_" {
-			return "", noReturnFuncAliasEvent{}, false
-		}
-		obj := objectForIdent(pass, lhsIdent)
-		if obj == nil {
-			return "", noReturnFuncAliasEvent{}, false
-		}
-		variable, ok := obj.(*types.Var)
-		if !ok {
-			return "", noReturnFuncAliasEvent{}, false
-		}
-		key := objectKey(variable)
-		if key == "" {
-			return "", noReturnFuncAliasEvent{}, false
-		}
-		return key, noReturnFuncAliasEvent{
-			pos:      atPos,
-			noReturn: exprIsNoReturnFunc(pass, rhs, aliases, atPos),
-		}, true
-	}
-
-	ast.Inspect(body, func(n ast.Node) bool {
-		switch node := n.(type) {
-		case *ast.AssignStmt:
-			type pendingBinding struct {
-				key   string
-				event noReturnFuncAliasEvent
-			}
-			pending := make([]pendingBinding, 0, len(node.Rhs))
-			for i, rhs := range node.Rhs {
-				if i >= len(node.Lhs) {
-					break
-				}
-				key, event, ok := resolve(node.Lhs[i], rhs, node.Lhs[i].Pos())
-				if !ok {
-					continue
-				}
-				pending = append(pending, pendingBinding{key: key, event: event})
-			}
-			for _, entry := range pending {
-				aliases[entry.key] = append(aliases[entry.key], entry.event)
-			}
-		case *ast.ValueSpec:
-			type pendingBinding struct {
-				key   string
-				event noReturnFuncAliasEvent
-			}
-			pending := make([]pendingBinding, 0, len(node.Values))
-			for i, rhs := range node.Values {
-				if i >= len(node.Names) {
-					break
-				}
-				key, event, ok := resolve(node.Names[i], rhs, node.Names[i].Pos())
-				if !ok {
-					continue
-				}
-				pending = append(pending, pendingBinding{key: key, event: event})
-			}
-			for _, entry := range pending {
-				aliases[entry.key] = append(aliases[entry.key], entry.event)
-			}
-		}
-		return true
-	})
-
-	return aliases
-}
-
-func exprIsNoReturnFunc(pass *analysis.Pass, expr ast.Expr, aliases noReturnAliasSet, atPos token.Pos) bool {
-	if pass == nil || pass.TypesInfo == nil || expr == nil {
+func importedFunctionIsTerminal(pass *analysis.Pass, function *types.Func) bool {
+	if pass == nil || pass.ImportObjectFact == nil || function == nil || function.Pkg() == nil ||
+		pass.Pkg == nil || function.Pkg() == pass.Pkg {
 		return false
 	}
-	switch e := stripParens(expr).(type) {
-	case *ast.Ident:
-		if e.Name == "panic" {
+	fact := &ProtocolSummaryFact{}
+	if !pass.ImportObjectFact(function, fact) || validateProtocolSummaryFact(fact, function) != 0 {
+		return false
+	}
+	for _, effect := range fact.Effects {
+		if effect.Kind == protocolSummaryEffectTerminal {
 			return true
-		}
-		obj := objectForIdent(pass, e)
-		if obj == nil {
-			return false
-		}
-		if fn, ok := obj.(*types.Func); ok {
-			return isKnownNoReturnFunc(fn.Pkg(), fn.Name())
-		}
-		if variable, ok := obj.(*types.Var); ok {
-			key := objectKey(variable)
-			if key == "" {
-				return false
-			}
-			return latestNoReturnAliasBefore(aliases[key], atPos)
-		}
-	case *ast.SelectorExpr:
-		obj := objectForIdent(pass, e.Sel)
-		if fn, ok := obj.(*types.Func); ok {
-			return isKnownNoReturnFunc(fn.Pkg(), fn.Name())
 		}
 	}
 	return false
 }
 
-func latestNoReturnAliasBefore(events []noReturnFuncAliasEvent, atPos token.Pos) bool {
-	for _, event := range slices.Backward(events) {
-		if event.pos > atPos {
-			continue
-		}
-		return event.noReturn
+func newNoReturnCallResolver(
+	pass *analysis.Pass,
+	body *ast.BlockStmt,
+	ssaResult *ssaResult,
+) noReturnCallResolver {
+	if pass == nil || pass.TypesInfo == nil || body == nil {
+		return noReturnCallResolver{}
 	}
-	return false
+	return noReturnCallResolver{ssa: ssaResult}
 }
 
 func isKnownNoReturnFunc(pkg *types.Package, name string) bool {
@@ -453,69 +344,12 @@ func findDefiningBlock(g *gocfg.CFG, target ast.Node) (*gocfg.Block, int) {
 // (type-identity matching).
 type validateReceiverMatcher func(pass *analysis.Pass, receiverExpr ast.Expr) bool
 
-// nodeSliceContainsValidateCall checks whether any node in the given
-// slice contains a varName.Validate() selector call expression.
-// Closures in syncLits are descended into (their Validate calls count as
-// outer-path validation); other closures are skipped.
-func nodeSliceContainsValidateCall(
-	pass *analysis.Pass,
-	nodes []ast.Node,
-	target castTarget,
-	syncLits map[*ast.FuncLit]bool,
-	syncCalls closureVarCallSet,
-	methodCalls methodValueValidateCallSet,
-) bool {
-	matcher := castTargetMatcher(pass, target)
-	for _, node := range nodes {
-		if containsValidateOnReceiver(pass, node, matcher, syncLits, syncCalls, methodCalls) {
-			return true
-		}
-	}
-	return false
-}
-
-// containsValidateCall checks whether a single AST node or any of its
-// descendants contains a varName.Validate() call.
-// This wrapper keeps tests and call sites that only need name matching.
-func containsValidateCall(node ast.Node, varName string, syncLits map[*ast.FuncLit]bool) bool {
-	target := newCastTargetFromName(varName)
-	matcher := castTargetMatcher(nil, target)
-	return containsValidateOnReceiver(nil, node, matcher, syncLits, nil, nil)
-}
-
-// containsValidateCallTarget checks whether a single AST node or any of its
-// descendants contains a varName.Validate() call. Delegates to
-// containsValidateOnReceiver with a castTarget matcher.
-func containsValidateCallTarget(
-	pass *analysis.Pass,
-	node ast.Node,
-	target castTarget,
-	syncLits map[*ast.FuncLit]bool,
-	syncCalls closureVarCallSet,
-	methodCalls methodValueValidateCallSet,
-) bool {
-	return containsValidateOnReceiver(pass, node, castTargetMatcher(pass, target), syncLits, syncCalls, methodCalls)
-}
-
 // castTargetMatcher returns a validateReceiverMatcher that matches
 // using castTarget.matchesExpr. This bridges the castTarget API into
 // the generic matcher interface.
 func castTargetMatcher(pass *analysis.Pass, target castTarget) validateReceiverMatcher {
 	return func(_ *analysis.Pass, expr ast.Expr) bool {
 		return target.matchesExpr(pass, expr)
-	}
-}
-
-// typeKeyMatcher returns a validateReceiverMatcher that matches using
-// type-identity key comparison. Used by constructor-validates CFA to
-// check whether a .Validate() call targets the constructor's return type.
-func typeKeyMatcher(returnTypeKey string) validateReceiverMatcher {
-	return func(pass *analysis.Pass, expr ast.Expr) bool {
-		receiverType := pass.TypesInfo.TypeOf(expr)
-		if receiverType == nil {
-			return false
-		}
-		return typeIdentityKey(receiverType) == returnTypeKey
 	}
 }
 
@@ -602,7 +436,7 @@ func containsValidateOnReceiverSeen(
 				delete(seen, lit)
 			}
 		}
-		if receiver := methodCalls[call]; receiver != nil && matches(pass, receiver) {
+		if receiver := methodCalls[call].receiver; receiver != nil && matches(pass, receiver) {
 			if isConditionallyEvaluated(call, parentMap) {
 				return true
 			}
@@ -614,7 +448,7 @@ func containsValidateOnReceiverSeen(
 		if !ok {
 			return true
 		}
-		if sel.Sel.Name != "Validate" {
+		if sel.Sel.Name != validateMethodName {
 			return true
 		}
 		if matches(pass, sel.X) {
@@ -689,306 +523,7 @@ func isConditionallyEvaluated(node ast.Node, parentMap map[ast.Node]ast.Node) bo
 	}
 }
 
-// blockContainsValidateCall checks all nodes in a CFG block for a
-// varName.Validate() call. Closures in syncLits are
-// descended into.
-func blockContainsValidateCall(
-	pass *analysis.Pass,
-	block *gocfg.Block,
-	target castTarget,
-	syncLits map[*ast.FuncLit]bool,
-	syncCalls closureVarCallSet,
-	methodCalls methodValueValidateCallSet,
-) bool {
-	return nodeSliceContainsValidateCall(pass, block.Nodes, target, syncLits, syncCalls, methodCalls)
-}
-
-// blockTerminatesWithoutReturn reports whether a leaf CFG block ends in a
-// known no-return call (for example, panic/os.Exit/log.Fatal). Such blocks do
-// not represent function return paths and must not trigger "missing Validate on
-// path-to-return" diagnostics.
-func blockTerminatesWithoutReturn(pass *analysis.Pass, block *gocfg.Block, noReturnAliases noReturnAliasSet) bool {
-	if block == nil || len(block.Succs) != 0 || len(block.Nodes) == 0 {
-		return false
-	}
-	// Explicit return statements are true return paths.
-	for _, node := range block.Nodes {
-		if _, ok := node.(*ast.ReturnStmt); ok {
-			return false
-		}
-	}
-	exprStmt, ok := block.Nodes[len(block.Nodes)-1].(*ast.ExprStmt)
-	if !ok {
-		return false
-	}
-	call, ok := exprStmt.X.(*ast.CallExpr)
-	if !ok {
-		return false
-	}
-	return !callMayReturn(pass, call, noReturnAliases)
-}
-
-// blockValidateChecker is a predicate that reports whether a CFG block
-// contains a .Validate() call matching the caller's target. This abstraction
-// enables dfsUnvalidatedBlocks to serve both cast-validation (castTarget)
-// and constructor-validates (type-identity) use cases.
-type blockValidateChecker func(block *gocfg.Block) bool
-
-// blockVisitBudget controls DFS exploration depth/state limits.
+// blockVisitBudget controls the finite-state exploration limit.
 type blockVisitBudget struct {
 	maxStates int
-	maxDepth  int
-}
-
-func hasPathToReturnWithoutValidateOutcome(
-	pass *analysis.Pass,
-	_ *gocfg.CFG,
-	defBlock *gocfg.Block,
-	defIdx int,
-	target castTarget,
-	syncLits map[*ast.FuncLit]bool,
-	syncCalls closureVarCallSet,
-	methodCalls methodValueValidateCallSet,
-	noReturnAliases noReturnAliasSet,
-	maxStates int,
-	maxDepth int,
-) (pathOutcome, pathOutcomeReason) {
-	outcome, reason, _ := hasPathToReturnWithoutValidateOutcomeWithWitness(
-		pass,
-		nil,
-		defBlock,
-		defIdx,
-		target,
-		syncLits,
-		syncCalls,
-		methodCalls,
-		noReturnAliases,
-		maxStates,
-		maxDepth,
-	)
-	return outcome, reason
-}
-
-func hasPathToReturnWithoutValidateOutcomeWithWitness(
-	pass *analysis.Pass,
-	cfg *gocfg.CFG,
-	defBlock *gocfg.Block,
-	defIdx int,
-	target castTarget,
-	syncLits map[*ast.FuncLit]bool,
-	syncCalls closureVarCallSet,
-	methodCalls methodValueValidateCallSet,
-	noReturnAliases noReturnAliasSet,
-	maxStates int,
-	maxDepth int,
-) (pathOutcome, pathOutcomeReason, []int32) {
-	if defBlock == nil {
-		return pathOutcomeInconclusive, pathOutcomeReasonUnresolvedTarget, nil
-	}
-
-	// Check the remainder of the defining block after the cast.
-	remainder := defBlock.Nodes[defIdx+1:]
-	if nodeSliceContainsValidateCall(pass, remainder, target, syncLits, syncCalls, methodCalls) {
-		return pathOutcomeSafe, pathOutcomeReasonNone, nil // validated in same block after cast
-	}
-
-	// If no successors, this is a return block — unvalidated path exists.
-	if len(defBlock.Succs) == 0 {
-		if blockTerminatesWithoutReturn(pass, defBlock, noReturnAliases) {
-			return pathOutcomeSafe, pathOutcomeReasonNone, nil
-		}
-		return pathOutcomeUnsafe, pathOutcomeReasonNone, []int32{defBlock.Index}
-	}
-
-	ctx := newCFGTraversalContext(
-		cfgTraversalModeCastPath,
-		target.key(),
-		cfgValidationStateNeedsValidate,
-		cfg,
-	)
-	ctx.markVisitState(defBlock.Index, cfgVisitAnyPredecessor)
-	seenStates := 1
-	budget := adaptiveBlockVisitBudget(cfg, blockVisitBudget{maxStates: maxStates, maxDepth: maxDepth})
-
-	return dfsUnvalidatedPathOutcomeWithWitness(
-		pass,
-		defBlock.Succs,
-		target,
-		defBlock.Index,
-		ctx,
-		syncLits,
-		syncCalls,
-		methodCalls,
-		noReturnAliases,
-		0,
-		[]int32{defBlock.Index},
-		&seenStates,
-		budget,
-	)
-}
-
-func dfsUnvalidatedPathOutcomeWithWitness(
-	pass *analysis.Pass,
-	succs []*gocfg.Block,
-	target castTarget,
-	predecessor int32,
-	ctx *cfgTraversalContext,
-	syncLits map[*ast.FuncLit]bool,
-	syncCalls closureVarCallSet,
-	methodCalls methodValueValidateCallSet,
-	noReturnAliases noReturnAliasSet,
-	depth int,
-	path []int32,
-	seenStates *int,
-	budget blockVisitBudget,
-) (pathOutcome, pathOutcomeReason, []int32) {
-	checker := func(block *gocfg.Block) bool {
-		if blockTerminatesWithoutReturn(pass, block, noReturnAliases) {
-			return true
-		}
-		return blockContainsValidateCall(pass, block, target, syncLits, syncCalls, methodCalls)
-	}
-	return dfsUnvalidatedBlocksOutcomeWithWitness(
-		succs,
-		predecessor,
-		ctx,
-		checker,
-		depth,
-		path,
-		seenStates,
-		budget,
-	)
-}
-
-// dfsUnvalidatedBlocks performs a depth-first search through CFG blocks,
-// returning true if any path from the given blocks reaches a return block
-// (zero successors) without passing through a block where blockHasValidate
-// returns true. The blockHasValidate predicate abstracts the validate-matching
-// strategy.
-func dfsUnvalidatedBlocks(blocks []*gocfg.Block, visited map[int32]bool, blockHasValidate blockValidateChecker) bool {
-	ctx := newCFGTraversalContext(
-		cfgTraversalModeLegacy,
-		"",
-		cfgValidationStateNeedsValidate,
-		nil,
-	)
-	ctx.visited = cfgVisitStateFromBlockVisited(
-		visited,
-		cfgTraversalModeLegacy,
-		"",
-		cfgValidationStateNeedsValidate,
-	)
-	outcome, _, _ := dfsUnvalidatedBlocksOutcomeWithWitness(
-		blocks,
-		cfgVisitAnyPredecessor,
-		ctx,
-		blockHasValidate,
-		0,
-		nil,
-		nil,
-		blockVisitBudget{
-			maxStates: defaultCFGMaxStates,
-			maxDepth:  defaultCFGMaxDepth,
-		},
-	)
-	return outcome != pathOutcomeSafe
-}
-
-func dfsUnvalidatedBlocksOutcomeWithWitness(
-	blocks []*gocfg.Block,
-	predecessor int32,
-	ctx *cfgTraversalContext,
-	blockHasValidate blockValidateChecker,
-	depth int,
-	path []int32,
-	seenStates *int,
-	budget blockVisitBudget,
-) (pathOutcome, pathOutcomeReason, []int32) {
-	if budget.maxDepth > 0 && depth > budget.maxDepth {
-		return pathOutcomeInconclusive, pathOutcomeReasonDepthBudget, cloneCFGPath(path)
-	}
-	for _, block := range blocks {
-		if block == nil {
-			continue
-		}
-		if entry, ok := ctx.memoLookup(block.Index, predecessor); ok {
-			if entry.outcome == pathOutcomeSafe {
-				continue
-			}
-			return entry.outcome, entry.reason, mergeCFGWitness(path, entry.witness)
-		}
-		if ctx.shouldSkip(block.Index, predecessor) {
-			continue
-		}
-		ctx.markVisitState(block.Index, predecessor)
-		activeKey := ctx.pushActive(block.Index, predecessor)
-		nextPath := appendCFGPath(path, block.Index)
-		if seenStates != nil {
-			*seenStates++
-			if budget.maxStates > 0 && *seenStates > budget.maxStates {
-				ctx.memoStore(block.Index, predecessor, pathOutcomeInconclusive, pathOutcomeReasonStateBudget, nextPath)
-				ctx.popActive(activeKey)
-				return pathOutcomeInconclusive, pathOutcomeReasonStateBudget, nextPath
-			}
-		}
-
-		// Skip dead blocks — unreachable code can't constitute a
-		// real execution path.
-		if !block.Live {
-			ctx.memoStore(block.Index, predecessor, pathOutcomeSafe, pathOutcomeReasonNone, nil)
-			ctx.popActive(activeKey)
-			continue
-		}
-
-		// If this block contains Validate(), this path is safe.
-		if blockHasValidate(block) {
-			ctx.memoStore(block.Index, predecessor, pathOutcomeSafe, pathOutcomeReasonNone, nil)
-			ctx.popActive(activeKey)
-			continue
-		}
-
-		// If this is a return block (no successors), we have an
-		// unvalidated path.
-		if len(block.Succs) == 0 {
-			ctx.memoStore(block.Index, predecessor, pathOutcomeUnsafe, pathOutcomeReasonNone, nextPath)
-			ctx.popActive(activeKey)
-			return pathOutcomeUnsafe, pathOutcomeReasonNone, nextPath
-		}
-
-		// Recurse into successors.
-		outcome, reason, witness := dfsUnvalidatedBlocksOutcomeWithWitness(
-			block.Succs,
-			block.Index,
-			ctx,
-			blockHasValidate,
-			depth+1,
-			nextPath,
-			seenStates,
-			budget,
-		)
-		if outcome != pathOutcomeSafe {
-			ctx.memoStore(block.Index, predecessor, outcome, reason, witness)
-			ctx.popActive(activeKey)
-			return outcome, reason, witness
-		}
-		ctx.memoStore(block.Index, predecessor, pathOutcomeSafe, pathOutcomeReasonNone, nil)
-		ctx.popActive(activeKey)
-	}
-	return pathOutcomeSafe, pathOutcomeReasonNone, nil
-}
-
-func appendCFGPath(path []int32, blockIndex int32) []int32 {
-	out := make([]int32, len(path)+1)
-	copy(out, path)
-	out[len(path)] = blockIndex
-	return out
-}
-
-func cloneCFGPath(path []int32) []int32 {
-	if len(path) == 0 {
-		return nil
-	}
-	out := make([]int32, len(path))
-	copy(out, path)
-	return out
 }

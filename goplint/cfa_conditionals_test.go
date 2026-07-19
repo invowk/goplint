@@ -227,7 +227,7 @@ func use(raw int) {
 	if useFn.Body == nil {
 		t.Fatal("expected use body")
 	}
-	aliases := collectNoReturnFuncAliasEvents(pass, useFn.Body)
+	aliases := newNoReturnCallResolver(pass, useFn.Body, buildSSAForPass(pass))
 	calls := findDirectIdentCallsInFunc(t, useFn, "exit")
 	if len(calls) != 2 {
 		t.Fatalf("expected 2 exit(...) calls, got %d", len(calls))
@@ -237,6 +237,59 @@ func use(raw int) {
 	}
 	if got := callMayReturn(pass, calls[1], aliases); !got {
 		t.Fatal("expected re-bound alias call to be may-return")
+	}
+}
+
+func TestCallMayReturnUsesReachingConditionalAlias(t *testing.T) {
+	t.Parallel()
+
+	src := `package testpkg
+import "os"
+
+func mayReturn(int) {}
+
+func use(cond bool) {
+	exit := mayReturn
+	if cond {
+		exit = os.Exit
+		exit(1)
+	}
+	exit(2)
+
+	exit = os.Exit
+	if cond {
+		exit = mayReturn
+	}
+	exit(3)
+
+	exit = os.Exit
+	if cond {
+		exit = os.Exit
+	}
+	exit(4)
+}`
+
+	pass, file := buildTypedPassFromSource(t, src)
+	useFn := findFuncDecl(t, file, "use")
+	aliases := newNoReturnCallResolver(pass, useFn.Body, buildSSAForPass(pass))
+	calls := findDirectIdentCallsInFunc(t, useFn, "exit")
+	if len(calls) != 4 {
+		t.Fatalf("exit call count = %d, want 4", len(calls))
+	}
+	if callMayReturn(pass, calls[0], aliases) {
+		t.Fatal("branch-local os.Exit reaching value should be no-return")
+	}
+	if !callMayReturn(pass, calls[1], aliases) {
+		t.Fatal("conditionally rebound alias must remain may-return after the join")
+	}
+	if !callMayReturn(pass, calls[2], aliases) {
+		t.Fatal("conditional may-return rebinding must prevent no-return pruning")
+	}
+	if callMayReturn(pass, calls[3], aliases) {
+		t.Fatal("all reaching no-return SSA values must prune the continuation")
+	}
+	if !callMayReturn(pass, calls[3], noReturnCallResolver{}) {
+		t.Fatal("missing SSA must retain the continuation")
 	}
 }
 

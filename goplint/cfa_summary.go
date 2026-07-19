@@ -4,8 +4,10 @@ package goplint
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 	"slices"
+	"sort"
 	"strconv"
 	"sync"
 
@@ -14,15 +16,129 @@ import (
 )
 
 type calleeTargetSummary struct {
-	AlwaysValidatesTarget       bool
-	EscapesTargetBeforeValidate bool
-	OutcomeReason               pathOutcomeReason
+	Effects       []ProtocolSummaryEffectFact
+	Complete      bool
+	OutcomeReason pathOutcomeReason
+}
+
+func (summary calleeTargetSummary) hasEffect(kind string) bool {
+	for _, effect := range summary.Effects {
+		if effect.Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
+func (summary calleeTargetSummary) protocolContinuationState() (protocolAbstractState, bool) {
+	return summary.protocolContinuationStateFrom(false)
+}
+
+func (summary calleeTargetSummary) protocolContinuationStateFrom(validated bool) (protocolAbstractState, bool) {
+	if !summary.Complete || len(summary.Effects) == 0 {
+		return protocolAbstractState{}, false
+	}
+	state := newProtocolRequiredState()
+	if validated {
+		state.Validation = protocolValidationProven
+	}
+	for _, effect := range summary.Effects {
+		switch effect.Kind {
+		case protocolSummaryEffectPure, protocolSummaryEffectPreserve:
+		case protocolSummaryEffectValidate:
+			switch effect.Condition {
+			case protocolSummaryConditionSuccessfulReturn:
+				// Reaching the caller continuation proves this condition: the
+				// callee cannot return normally on validation failure.
+				state = state.apply(
+					protocolConditionalEffect{Kind: protocolEffectValidate},
+					protocolErrorResultNil,
+					0,
+				)
+			case protocolSummaryConditionResultNil:
+				// Result-conditioned validation is applied only by the canonical
+				// SSA edge transfer once the exact result is proven nil. The call
+				// continuation alone cannot discharge the obligation.
+				state = state.apply(
+					protocolConditionalEffect{Kind: protocolEffectValidate},
+					protocolErrorResultUnknown,
+					0,
+				)
+			default:
+				return protocolAbstractState{}, false
+			}
+		case protocolSummaryEffectMutate:
+			state.Validation = protocolValidationRequired
+			state.PossibleEffects |= protocolPossibleEffectMutate
+		case protocolSummaryEffectReplace:
+			state.Validation = protocolValidationRequired
+			state.PossibleEffects |= protocolPossibleEffectReplace
+		case protocolSummaryEffectEscape:
+			state = state.apply(protocolConditionalEffect{Kind: protocolEffectEscape}, state.Result, 0)
+			state.PossibleEffects |= protocolPossibleEffectEscape
+		case protocolSummaryEffectConsume:
+			state = state.apply(protocolConditionalEffect{Kind: protocolEffectConsume}, state.Result, 0)
+			state.PossibleEffects |= protocolPossibleEffectConsume
+		case protocolSummaryEffectTerminal:
+			state.PossibleEffects |= protocolPossibleEffectTerminate
+		default:
+			return protocolAbstractState{}, false
+		}
+	}
+	return state, true
+}
+
+func (summary calleeTargetSummary) conditionallyValidatesWithoutHazard() bool {
+	if !summary.Complete || len(summary.Effects) == 0 {
+		return false
+	}
+	validated := false
+	hazard := false
+	for _, effect := range summary.Effects {
+		switch effect.Kind {
+		case protocolSummaryEffectPure, protocolSummaryEffectPreserve:
+		case protocolSummaryEffectValidate:
+			if effect.Condition != protocolSummaryConditionResultNil &&
+				effect.Condition != protocolSummaryConditionSuccessfulReturn {
+				return false
+			}
+			validated = true
+		case protocolSummaryEffectMutate, protocolSummaryEffectReplace:
+			validated = false
+		case protocolSummaryEffectEscape:
+			hazard = true
+		case protocolSummaryEffectConsume:
+			hazard = hazard || !validated
+		case protocolSummaryEffectTerminal:
+			return false
+		default:
+			return false
+		}
+	}
+	return validated && !hazard
+}
+
+func (summary calleeTargetSummary) hasSuccessfulReturnValidation() bool {
+	for _, effect := range summary.Effects {
+		if effect.Kind == protocolSummaryEffectValidate &&
+			effect.Condition == protocolSummaryConditionSuccessfulReturn {
+			return true
+		}
+	}
+	return false
 }
 
 type calleeSummaryEntry struct {
-	summary calleeTargetSummary
-	ok      bool
-	reason  pathOutcomeReason
+	summary    calleeTargetSummary
+	ok         bool
+	reason     pathOutcomeReason
+	inProgress bool
+	ssa        *ssaResult
+}
+
+type positionedSummaryEffect struct {
+	position token.Pos
+	effect   ProtocolSummaryEffectFact
 }
 
 type calleeTargetSlotKind string
@@ -57,30 +173,35 @@ func ensureCalleeSummaryCache(cache *sync.Map) *sync.Map {
 }
 
 func calledFunctionObject(pass *analysis.Pass, call *ast.CallExpr) *types.Func {
-	if pass == nil || pass.TypesInfo == nil || call == nil {
+	normalized, ok := normalizeProtocolCall(pass, call)
+	if !ok {
 		return nil
 	}
-	switch fun := stripParens(call.Fun).(type) {
-	case *ast.Ident:
-		fnObj, _ := objectForIdent(pass, fun).(*types.Func)
-		return fnObj
-	case *ast.SelectorExpr:
-		fnObj, _ := objectForIdent(pass, fun.Sel).(*types.Func)
-		return fnObj
-	default:
-		return nil
+	return normalized.Function
+}
+
+func callHasLocalResolvedBody(pass *analysis.Pass, call *ast.CallExpr) bool {
+	function := calledFunctionObject(pass, call)
+	if function == nil {
+		return false
 	}
+	declaration := findFuncDeclForObject(pass, function)
+	return declaration != nil && declaration.Body != nil
 }
 
 type summaryStackScope struct {
 	order []string
 	seen  map[string]bool
+	ssa   *ssaResult
 }
 
-func stackScopeFromMap(stack map[string]bool) summaryStackScope {
+func stackScopeFromMap(stack map[string]bool, ssaResults ...*ssaResult) summaryStackScope {
 	scope := summaryStackScope{
 		order: nil,
 		seen:  make(map[string]bool),
+	}
+	if len(ssaResults) > 0 {
+		scope.ssa = ssaResults[0]
 	}
 	for key, present := range stack {
 		if !present {
@@ -134,8 +255,24 @@ func callCalleeSummaryForTargetWithStack(
 	scope summaryStackScope,
 	cache *sync.Map,
 ) (calleeTargetSummary, bool, pathOutcomeReason) {
+	return callCalleeSummaryForMatcherWithStack(
+		pass,
+		call,
+		castTargetMatcher(pass, target),
+		scope,
+		cache,
+	)
+}
+
+func callCalleeSummaryForMatcherWithStack(
+	pass *analysis.Pass,
+	call *ast.CallExpr,
+	matcher validateReceiverMatcher,
+	scope summaryStackScope,
+	cache *sync.Map,
+) (calleeTargetSummary, bool, pathOutcomeReason) {
 	cache = ensureCalleeSummaryCache(cache)
-	slots := callTargetSlotsMatchingCastTarget(pass, call, target)
+	slots := callTargetSlotsMatchingReceiverMatcher(pass, call, matcher)
 	if len(slots) == 0 {
 		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
 	}
@@ -186,13 +323,32 @@ func calleeSummaryForFuncSlotWithStack(
 		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
 	}
 	cacheKey := key + "|" + slot.cacheKey()
+	if scope.contains(cacheKey) {
+		return recursiveCalleeSummary(pass, fnObj, slot, scope.ssa)
+	}
 	if cached, ok := cache.Load(cacheKey); ok {
 		if entry, ok := cached.(calleeSummaryEntry); ok {
+			if entry.inProgress {
+				return recursiveCalleeSummary(pass, fnObj, slot, entry.ssa)
+			}
 			return entry.summary, entry.ok, entry.reason
 		}
 	}
-	if scope.contains(cacheKey) {
-		return calleeTargetSummary{}, false, pathOutcomeReasonRecursionCycle
+	if scope.ssa == nil {
+		scope.ssa = buildSSAForPass(pass)
+	}
+	pending := calleeSummaryEntry{
+		reason:     pathOutcomeReasonRecursionCycle,
+		inProgress: true,
+		ssa:        scope.ssa,
+	}
+	if cached, loaded := cache.LoadOrStore(cacheKey, pending); loaded {
+		if entry, ok := cached.(calleeSummaryEntry); ok {
+			if entry.inProgress {
+				return recursiveCalleeSummary(pass, fnObj, slot, entry.ssa)
+			}
+			return entry.summary, entry.ok, entry.reason
+		}
 	}
 	scope.push(cacheKey)
 	summary, ok, reason := deriveCalleeSummaryForSlotWithStack(pass, fnObj, slot, scope, cache)
@@ -200,6 +356,24 @@ func calleeSummaryForFuncSlotWithStack(
 	summary.OutcomeReason = reason
 	cache.Store(cacheKey, calleeSummaryEntry{summary: summary, ok: ok, reason: reason})
 	return summary, ok, reason
+}
+
+func recursiveCalleeSummary(
+	pass *analysis.Pass,
+	fnObj *types.Func,
+	slot calleeTargetSlot,
+	ssaRes *ssaResult,
+) (calleeTargetSummary, bool, pathOutcomeReason) {
+	if ssaRes == nil {
+		ssaRes = buildSSAForPass(pass)
+	}
+	resolution := resolveSSAFunction(ssaRes, fnObj)
+	if resolution.Availability.ready() {
+		if summary, ok := buildProtocolRecursiveSummary(resolution.Function, slot); ok {
+			return summary, true, pathOutcomeReasonNone
+		}
+	}
+	return calleeTargetSummary{}, false, pathOutcomeReasonRecursionCycle
 }
 
 func deriveCalleeSummaryForSlotWithStack(
@@ -211,7 +385,7 @@ func deriveCalleeSummaryForSlotWithStack(
 ) (calleeTargetSummary, bool, pathOutcomeReason) {
 	fnDecl := findFuncDeclForObject(pass, fnObj)
 	if fnDecl == nil || fnDecl.Body == nil {
-		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
+		return importedProtocolSummaryForSlot(pass, fnObj, slot)
 	}
 	target, ok := functionTargetForSlot(pass, fnDecl, slot)
 	if !ok {
@@ -226,80 +400,254 @@ func deriveCalleeSummaryForSlotWithStack(
 	ubvSyncLits := collectUBVClosureLits(fnDecl.Body)
 	ubvSyncCalls := collectUBVClosureVarCalls(closureCalls)
 
+	ssaResult := scope.ssa
+	if ssaResult == nil {
+		ssaResult = buildSSAForPass(pass)
+		scope.ssa = ssaResult
+	}
 	methodCalls := collectMethodValueValidateCallSet(methodValueCalls)
-	methodCalls = mergeMethodValueValidateCallSets(methodCalls, collectCalleeValidatedCalls(pass, fnDecl.Body, scope, cache))
+	methodCalls = mergeMethodValueValidateCallSets(methodCalls, collectCalleeValidatedCalls(pass, fnDecl.Body, ssaResult, scope, cache))
+	ssaAvailability := protocolSSAAvailabilityForDecl(pass, ssaResult, fnDecl)
+	if !ssaAvailability.ready() {
+		return calleeTargetSummary{}, false, ssaAvailability.pathOutcomeReason()
+	}
+	ssaFunction := resolveSSAFunction(ssaResult, fnObj).Function
+	if recursiveSummary, recursiveOK := buildProtocolRecursiveSummary(ssaFunction, slot); recursiveOK {
+		return recursiveSummary, true, pathOutcomeReasonNone
+	}
+	validationProgram := buildProtocolValidationProgram(pass, ssaResult, methodCalls)
 
-	cfg := buildFuncCFGForPass(pass, fnDecl.Body)
+	cfg := buildFuncCFGForPass(pass, fnDecl.Body, ssaResult)
 	entry := cfgEntryBlock(cfg)
 	if entry == nil {
 		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
 	}
 	budget := adaptiveBlockVisitBudget(
 		cfg,
-		blockVisitBudget{maxStates: defaultCFGMaxStates, maxDepth: defaultCFGMaxDepth},
+		blockVisitBudget{maxStates: defaultCFGMaxStates},
 	)
 
-	noReturnAliases := collectNoReturnFuncAliasEvents(pass, fnDecl.Body)
-	validateOutcome, validateReason := hasPathToReturnWithoutValidateOutcome(
-		pass,
-		cfg,
-		entry,
-		-1,
-		target,
-		pathSyncLits,
-		pathSyncCalls,
-		methodCalls,
-		noReturnAliases,
-		budget.maxStates,
-		budget.maxDepth,
-	)
+	noReturnCalls := newNoReturnCallResolver(pass, fnDecl.Body, ssaResult)
+	solver := newInterprocSolverWithSSA(pass, ssaResult, cache)
+	originKey := "summary:" + objectKey(fnObj) + "|" + slot.cacheKey()
+	validateResult := solver.EvaluateCastPath(interprocCastPathInput{
+		Decl:            fnDecl,
+		CFG:             cfg,
+		DefBlock:        entry,
+		DefIdx:          0,
+		Target:          target,
+		TypeName:        qualifiedTypeName(functionTargetType(fnObj, slot), pass.Pkg),
+		OriginKey:       originKey,
+		SyncLits:        pathSyncLits,
+		SyncCalls:       pathSyncCalls,
+		MethodCalls:     methodCalls,
+		MaxStates:       budget.maxStates,
+		SummaryStack:    scope.seen,
+		SSAAvailability: ssaAvailability,
+	})
+	validateOutcome := validateResult.toPathOutcome()
+	validateReason := validateResult.Reason
 	if validateOutcome == pathOutcomeInconclusive {
 		return calleeTargetSummary{}, false, validateReason
 	}
 	alwaysValidates := validateOutcome == pathOutcomeSafe
 
-	inBlockOutcome, inBlockReason := hasUseBeforeValidateInBlockOutcomeModeWithSummaryStack(
-		pass,
-		entry.Nodes,
-		0,
-		target,
-		ubvSyncLits,
-		ubvSyncCalls,
-		methodCalls,
-		ubvModeEscape,
-		scope.seen,
-		cache,
-	)
-	if inBlockOutcome == pathOutcomeInconclusive {
-		return calleeTargetSummary{}, false, inBlockReason
+	escapeResult := solver.EvaluateUBVCrossBlock(interprocUBVCrossBlockInput{
+		Target:          target,
+		DefBlock:        entry,
+		DefIdx:          -1,
+		OriginKey:       originKey,
+		TypeName:        qualifiedTypeName(functionTargetType(fnObj, slot), pass.Pkg),
+		SyncLits:        ubvSyncLits,
+		SyncCalls:       ubvSyncCalls,
+		MethodCalls:     methodCalls,
+		MaxStates:       budget.maxStates,
+		SummaryStack:    scope.seen,
+		SSAAvailability: ssaAvailability,
+	})
+	if escapeResult.toPathOutcome() == pathOutcomeInconclusive {
+		return calleeTargetSummary{}, false, escapeResult.Reason
 	}
-	escapesBeforeValidate := inBlockOutcome == pathOutcomeUnsafe
-	if !escapesBeforeValidate {
-		outcome, reason := hasUseBeforeValidateCrossBlockModeWithSummaryStack(
-			pass,
-			entry,
-			-1,
-			target,
-			ubvSyncLits,
-			ubvSyncCalls,
-			methodCalls,
-			ubvModeEscape,
-			budget.maxStates,
-			budget.maxDepth,
-			scope.seen,
-			cache,
-		)
-		if outcome == pathOutcomeInconclusive {
-			return calleeTargetSummary{}, false, reason
+	escapesBeforeValidate := escapeResult.toPathOutcome() == pathOutcomeUnsafe
+
+	targetKind, targetSlot := protocolSummaryTargetForCalleeSlot(slot)
+	positionedEffects := make([]positionedSummaryEffect, 0, 4)
+	validationPosition := validationProgram.firstTargetValidationPosition(pass, target)
+	hasExactValidationEffect := false
+	for _, effect := range buildProtocolSummaryFact(pass.Pkg.Path(), fnObj.Name(), ssaFunction).Effects {
+		if effect.Kind != protocolSummaryEffectValidate ||
+			effect.TargetKind != targetKind || effect.TargetSlot != targetSlot ||
+			!validationPosition.IsValid() {
+			continue
 		}
-		escapesBeforeValidate = outcome == pathOutcomeUnsafe
+		positionedEffects = append(positionedEffects, positionedSummaryEffect{
+			position: validationPosition,
+			effect:   effect,
+		})
+		hasExactValidationEffect = true
+	}
+	if alwaysValidates && !hasExactValidationEffect && validationPosition.IsValid() {
+		positionedEffects = append(positionedEffects, positionedSummaryEffect{
+			position: validationPosition,
+			effect:   newProtocolSuccessfulReturnSummaryEffect(targetKind, targetSlot),
+		})
+	}
+	if mutation, position, found := targetMutationSummaryEffect(pass, fnDecl, slot, target); found {
+		positionedEffects = append(positionedEffects, positionedSummaryEffect{position: position, effect: mutation})
+	}
+	directEscapePosition, directlyEscapes := firstDirectTargetEscapePosition(pass, cfg, target)
+	switch {
+	case targetOnlyDiscardedInBody(pass, fnDecl.Body, target):
+		positionedEffects = append(positionedEffects, positionedSummaryEffect{
+			position: fnDecl.Body.Pos(),
+			effect:   newProtocolTargetSummaryEffect(protocolSummaryEffectPreserve, targetKind, targetSlot),
+		})
+	case directlyEscapes:
+		// A direct escape is stronger than an ordinary consumption. This
+		// preserves a recursive base-case store even when forwarding calls
+		// also consume the target on recursive routes.
+		positionedEffects = append(positionedEffects, positionedSummaryEffect{
+			position: directEscapePosition,
+			effect:   newProtocolTargetSummaryEffect(protocolSummaryEffectEscape, targetKind, targetSlot),
+		})
+	case targetConsumedInBody(pass, fnDecl.Body, target, validationProgram):
+		positionedEffects = append(positionedEffects, positionedSummaryEffect{
+			position: firstTargetConsumptionPosition(pass, fnDecl.Body, target, validationProgram),
+			effect:   newProtocolTargetSummaryEffect(protocolSummaryEffectConsume, targetKind, targetSlot),
+		})
+	case escapesBeforeValidate:
+		positionedEffects = append(positionedEffects, positionedSummaryEffect{
+			position: firstTargetReferencePosition(pass, fnDecl.Body, target),
+			effect:   newProtocolTargetSummaryEffect(protocolSummaryEffectEscape, targetKind, targetSlot),
+		})
+	}
+	if !protocolCFGHasReturningPath(pass, cfg, noReturnCalls) {
+		positionedEffects = append(positionedEffects, positionedSummaryEffect{
+			position: fnDecl.End(),
+			effect:   newProtocolCallSummaryEffect(protocolSummaryEffectTerminal),
+		})
+	}
+	if len(positionedEffects) == 0 {
+		if !targetReferencedInBody(pass, fnDecl.Body, target) && functionBodyIsObviouslyPure(fnDecl.Body) {
+			positionedEffects = append(positionedEffects, positionedSummaryEffect{
+				position: fnDecl.Body.Pos(),
+				effect:   newProtocolCallSummaryEffect(protocolSummaryEffectPure),
+			})
+		} else {
+			positionedEffects = append(positionedEffects, positionedSummaryEffect{
+				position: fnDecl.Body.Pos(),
+				effect:   newProtocolTargetSummaryEffect(protocolSummaryEffectPreserve, targetKind, targetSlot),
+			})
+		}
+	}
+	sort.SliceStable(positionedEffects, func(left, right int) bool {
+		return positionedEffects[left].position < positionedEffects[right].position
+	})
+	effects := make([]ProtocolSummaryEffectFact, 0, len(positionedEffects))
+	for _, positioned := range positionedEffects {
+		effects = append(effects, positioned.effect)
 	}
 
 	return calleeTargetSummary{
-		AlwaysValidatesTarget:       alwaysValidates,
-		EscapesTargetBeforeValidate: escapesBeforeValidate,
-		OutcomeReason:               pathOutcomeReasonNone,
+		Effects:       effects,
+		Complete:      true,
+		OutcomeReason: pathOutcomeReasonNone,
 	}, true, pathOutcomeReasonNone
+}
+
+func firstDirectTargetEscapePosition(
+	pass *analysis.Pass,
+	cfg *gocfg.CFG,
+	target castTarget,
+) (token.Pos, bool) {
+	position := token.NoPos
+	if cfg == nil {
+		return position, false
+	}
+	for _, block := range cfg.Blocks {
+		if block == nil {
+			continue
+		}
+		for _, node := range block.Nodes {
+			_, reason := postValidationNonCallTargetEffect(pass, node, target)
+			if reason != pathOutcomeReasonEscapedHeapMutation {
+				continue
+			}
+			if !position.IsValid() || node.Pos() < position {
+				position = node.Pos()
+			}
+		}
+	}
+	return position, position.IsValid()
+}
+
+func functionTargetType(function *types.Func, slot calleeTargetSlot) types.Type {
+	if function == nil {
+		return types.Typ[types.Invalid]
+	}
+	signature, ok := types.Unalias(function.Type()).(*types.Signature)
+	if !ok {
+		return types.Typ[types.Invalid]
+	}
+	if slot.kind == calleeTargetSlotReceiver {
+		if signature.Recv() != nil {
+			return signature.Recv().Type()
+		}
+		return types.Typ[types.Invalid]
+	}
+	if slot.kind == calleeTargetSlotArg && slot.argIndex >= 0 && slot.argIndex < signature.Params().Len() {
+		return signature.Params().At(slot.argIndex).Type()
+	}
+	return types.Typ[types.Invalid]
+}
+
+func protocolCFGHasReturningPath(pass *analysis.Pass, cfg *gocfg.CFG, noReturnCalls noReturnCallResolver) bool {
+	if cfg == nil {
+		return false
+	}
+	for _, block := range cfg.Blocks {
+		if block == nil || len(block.Nodes) == 0 || len(block.Succs) != 0 {
+			continue
+		}
+		returns := true
+		for _, call := range protocolOrderedCallsInNode(block.Nodes[len(block.Nodes)-1]) {
+			if !callMayReturn(pass, call, noReturnCalls) {
+				returns = false
+				break
+			}
+		}
+		if returns {
+			return true
+		}
+	}
+	return false
+}
+
+func importedProtocolSummaryForSlot(
+	pass *analysis.Pass,
+	fnObj *types.Func,
+	slot calleeTargetSlot,
+) (calleeTargetSummary, bool, pathOutcomeReason) {
+	if pass == nil || pass.ImportObjectFact == nil || fnObj == nil || fnObj.Pkg() == nil {
+		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
+	}
+	fact := &ProtocolSummaryFact{}
+	if !pass.ImportObjectFact(fnObj, fact) || validateProtocolSummaryFact(fact, fnObj) != 0 {
+		return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
+	}
+	summary := calleeTargetSummary{Complete: true, OutcomeReason: pathOutcomeReasonNone}
+	for _, effect := range fact.Effects {
+		matches := (slot.kind == calleeTargetSlotReceiver && effect.TargetKind == protocolSummaryTargetReceiver) ||
+			(slot.kind == calleeTargetSlotArg && effect.TargetKind == protocolSummaryTargetParameter &&
+				effect.TargetSlot == slot.argIndex)
+		if matches || effect.Kind == protocolSummaryEffectPure || effect.Kind == protocolSummaryEffectTerminal {
+			summary.Effects = append(summary.Effects, effect)
+		}
+	}
+	if len(summary.Effects) > 0 {
+		return summary, true, pathOutcomeReasonNone
+	}
+	return calleeTargetSummary{}, false, pathOutcomeReasonUnresolvedTarget
 }
 
 func cfgEntryBlock(cfg *gocfg.CFG) *gocfg.Block {
@@ -309,15 +657,30 @@ func cfgEntryBlock(cfg *gocfg.CFG) *gocfg.Block {
 	return cfg.Blocks[0]
 }
 
-func collectCalleeValidatedCalls(pass *analysis.Pass, body *ast.BlockStmt, scope summaryStackScope, cache *sync.Map) methodValueValidateCallSet {
+func collectCalleeValidatedCalls(
+	pass *analysis.Pass,
+	body *ast.BlockStmt,
+	ssaResult *ssaResult,
+	scope summaryStackScope,
+	cache *sync.Map,
+) methodValueValidateCallSet {
 	if pass == nil || body == nil {
 		return nil
 	}
 	cache = ensureCalleeSummaryCache(cache)
-	var out methodValueValidateCallSet
+	if scope.ssa == nil {
+		scope.ssa = ssaResult
+	}
+	var candidates methodValueValidateCallSet
 	ast.Inspect(body, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
+			return true
+		}
+		if selector, ok := stripParens(call.Fun).(*ast.SelectorExpr); ok && selector.Sel.Name == validateMethodName {
+			// Direct Validate calls are modeled by the invocation relation and
+			// flow-sensitive receiver identity. Treating the method body as a
+			// helper summary would bypass receiver rebinding at the call site.
 			return true
 		}
 		for _, candidate := range allCallTargetSlots(call) {
@@ -325,127 +688,154 @@ func collectCalleeValidatedCalls(pass *analysis.Pass, body *ast.BlockStmt, scope
 			if !ok {
 				continue
 			}
-			if !summary.AlwaysValidatesTarget || summary.EscapesTargetBeforeValidate {
+			if !summary.conditionallyValidatesWithoutHazard() {
 				continue
 			}
-			if out == nil {
-				out = make(methodValueValidateCallSet)
+			if candidates == nil {
+				candidates = make(methodValueValidateCallSet)
 			}
-			out[call] = candidate.expr
+			candidates[call] = methodValueValidationCall{
+				receiver:           candidate.expr,
+				onSuccessfulReturn: summary.hasSuccessfulReturnValidation(),
+			}
 			break
 		}
 		return true
 	})
-	return out
-}
-
-func callTargetSlotsMatchingCastTarget(pass *analysis.Pass, call *ast.CallExpr, target castTarget) []calleeCallTarget {
-	if call == nil {
+	if len(candidates) == 0 {
 		return nil
 	}
-	candidates := allCallTargetSlots(call)
-	out := make([]calleeCallTarget, 0, len(candidates))
-	for _, candidate := range candidates {
-		if target.matchesExpr(pass, candidate.expr) {
-			out = append(out, candidate)
-		}
-	}
-	return out
-}
-
-func allCallTargetSlots(call *ast.CallExpr) []calleeCallTarget {
-	if call == nil {
-		return nil
-	}
-	out := make([]calleeCallTarget, 0, len(call.Args)+1)
-	if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
-		out = append(out, calleeCallTarget{
-			slot: calleeTargetSlot{
-				kind: calleeTargetSlotReceiver,
-			},
-			expr: sel.X,
-		})
-	}
-	for idx, arg := range call.Args {
-		out = append(out, calleeCallTarget{
-			slot: calleeTargetSlot{
-				kind:     calleeTargetSlotArg,
-				argIndex: idx,
-			},
-			expr: arg,
-		})
-	}
-	return out
-}
-
-func findFuncDeclForObject(pass *analysis.Pass, fnObj *types.Func) *ast.FuncDecl {
-	if pass == nil || pass.TypesInfo == nil || fnObj == nil {
-		return nil
-	}
-	wantKey := objectKey(fnObj)
-	for _, file := range pass.Files {
-		for _, decl := range file.Decls {
-			fnDecl, ok := decl.(*ast.FuncDecl)
-			if !ok || fnDecl.Name == nil {
-				continue
-			}
-			obj := pass.TypesInfo.Defs[fnDecl.Name]
-			if obj == nil {
-				continue
-			}
-			if obj == fnObj {
-				return fnDecl
-			}
-			if wantKey != "" && objectKey(obj) == wantKey {
-				return fnDecl
-			}
-		}
-	}
-	return nil
-}
-
-func functionTargetForSlot(pass *analysis.Pass, fnDecl *ast.FuncDecl, slot calleeTargetSlot) (castTarget, bool) {
-	if fnDecl == nil {
-		return castTarget{}, false
-	}
-	if slot.kind == calleeTargetSlotReceiver {
-		if fnDecl.Recv == nil || len(fnDecl.Recv.List) == 0 {
-			return castTarget{}, false
-		}
-		recv := fnDecl.Recv.List[0]
-		if len(recv.Names) == 0 {
-			return castTarget{}, false
-		}
-		if pass != nil {
-			if target, ok := castTargetFromExpr(pass, recv.Names[0]); ok {
-				return target, true
-			}
-		}
-		return newCastTargetFromName(recv.Names[0].Name), true
-	}
-	if slot.kind != calleeTargetSlotArg || slot.argIndex < 0 {
-		return castTarget{}, false
-	}
-	if fnDecl.Type == nil || fnDecl.Type.Params == nil || len(fnDecl.Type.Params.List) == 0 {
-		return castTarget{}, false
-	}
-	currentIdx := 0
-	for _, field := range fnDecl.Type.Params.List {
-		if field == nil {
+	validationProgram := buildProtocolValidationProgram(pass, ssaResult, candidates)
+	for call, validation := range candidates {
+		if validation.onSuccessfulReturn {
 			continue
 		}
-		for _, name := range field.Names {
-			if currentIdx != slot.argIndex {
-				currentIdx++
-				continue
-			}
-			if pass != nil {
-				if target, ok := castTargetFromExpr(pass, name); ok {
-					return target, true
-				}
-			}
-			return newCastTargetFromName(name.Name), true
+		if !validationProgram.callHasCheckedSuccess(call) {
+			delete(candidates, call)
 		}
 	}
-	return castTarget{}, false
+	return candidates
+}
+
+func protocolSummaryTargetForCalleeSlot(slot calleeTargetSlot) (string, int) {
+	if slot.kind == calleeTargetSlotReceiver {
+		return protocolSummaryTargetReceiver, 0
+	}
+	return protocolSummaryTargetParameter, slot.argIndex
+}
+
+func targetReferencedInBody(pass *analysis.Pass, body *ast.BlockStmt, target castTarget) bool {
+	if pass == nil || body == nil {
+		return true
+	}
+	found := false
+	ast.Inspect(body, func(node ast.Node) bool {
+		if found {
+			return false
+		}
+		expression, ok := node.(ast.Expr)
+		if ok && target.matchesExpr(pass, expression) {
+			found = true
+			return false
+		}
+		return true
+	})
+	return found
+}
+
+func targetConsumedInBody(
+	pass *analysis.Pass,
+	body *ast.BlockStmt,
+	target castTarget,
+	validationPrograms ...protocolValidationProgram,
+) bool {
+	return firstTargetConsumptionPosition(pass, body, target, validationPrograms...).IsValid()
+}
+
+func firstTargetConsumptionPosition(
+	pass *analysis.Pass,
+	body *ast.BlockStmt,
+	target castTarget,
+	validationPrograms ...protocolValidationProgram,
+) token.Pos {
+	if pass == nil || body == nil {
+		return token.NoPos
+	}
+	position := token.NoPos
+	ast.Inspect(body, func(node ast.Node) bool {
+		if position.IsValid() {
+			return false
+		}
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		for _, program := range validationPrograms {
+			if program.nodeTargetInvocationResolution(pass, call, target) == protocolAliasMust {
+				return false
+			}
+		}
+		if selector, selectorOK := stripParens(call.Fun).(*ast.SelectorExpr); selectorOK &&
+			target.matchesExpr(pass, selector.X) {
+			if selector.Sel.Name != validateMethodName {
+				position = call.Pos()
+			}
+			return false
+		}
+		for _, argument := range call.Args {
+			if target.matchesExpr(pass, argument) {
+				position = call.Pos()
+				return false
+			}
+		}
+		return true
+	})
+	return position
+}
+
+func firstTargetValidationPosition(
+	pass *analysis.Pass,
+	body *ast.BlockStmt,
+	target castTarget,
+	methodCalls methodValueValidateCallSet,
+) token.Pos {
+	if pass == nil || body == nil {
+		return token.NoPos
+	}
+	position := token.NoPos
+	ast.Inspect(body, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		receiver := methodCalls[call].receiver
+		if receiver == nil {
+			if selector, selectorOK := stripParens(call.Fun).(*ast.SelectorExpr); selectorOK &&
+				selector.Sel.Name == validateMethodName {
+				receiver = selector.X
+			}
+		}
+		if receiver != nil && target.matchesExpr(pass, receiver) {
+			position = call.Pos()
+			return false
+		}
+		return true
+	})
+	return position
+}
+
+func firstTargetReferencePosition(pass *analysis.Pass, body *ast.BlockStmt, target castTarget) token.Pos {
+	if pass == nil || body == nil {
+		return token.NoPos
+	}
+	position := token.NoPos
+	ast.Inspect(body, func(node ast.Node) bool {
+		expression, ok := node.(ast.Expr)
+		if ok && target.matchesExpr(pass, expression) {
+			position = expression.Pos()
+			return false
+		}
+		return true
+	})
+	return position
 }

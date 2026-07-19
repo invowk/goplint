@@ -44,7 +44,7 @@ func inspectValidateDelegation(pass *analysis.Pass, cfg *ExceptionConfig, bl *Ba
 				if !ok {
 					continue
 				}
-				if !hasValidateAllDirective(gd.Doc, ts.Doc) {
+				if !hasValidateAllDirectiveForType(pass, ts.Name.Name, gd.Doc, ts.Doc) {
 					continue
 				}
 
@@ -87,7 +87,7 @@ func findDelegatedFields(pass *analysis.Pass, typeName string) map[string]bool {
 				continue
 			}
 			recvName := receiverTypeName(fn.Recv.List[0].Type)
-			if recvName != typeName || fn.Name.Name != "Validate" {
+			if recvName != typeName || fn.Name.Name != validateMethodName {
 				continue
 			}
 
@@ -281,7 +281,7 @@ func collectDelegationAliasBindings(
 		if _, isVar := obj.(*types.Var); !isVar {
 			return "", delegationAliasBindingEvent{}, false
 		}
-		lhsKey := objectKey(obj)
+		lhsKey := objectKeyAt(pass, obj)
 		if lhsKey == "" {
 			return "", delegationAliasBindingEvent{}, false
 		}
@@ -363,7 +363,7 @@ func collectDelegationAliasBindings(
 			if _, isVar := obj.(*types.Var); !isVar {
 				break
 			}
-			key := objectKey(obj)
+			key := objectKeyAt(pass, obj)
 			if key == "" {
 				break
 			}
@@ -510,8 +510,7 @@ func isWithinIfInit(node ast.Node, parentMap map[ast.Node]ast.Node) bool {
 }
 
 // maxHelperMethodDepth bounds recursion in multi-level helper method
-// delegation tracking to prevent pathological cases. Aligned with
-// maxTransitiveDepth in constructor-validates for consistency.
+// delegation tracking to prevent pathological cases.
 const maxHelperMethodDepth = 5
 
 // findHelperMethodDelegations finds receiver.helperMethod() calls in the

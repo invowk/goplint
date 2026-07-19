@@ -5,6 +5,7 @@ package goplint
 import (
 	"encoding/json"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -17,8 +18,8 @@ func TestCollectGlobalStaleExceptionPatterns(t *testing.T) {
 			makeGlobalStaleAnalysisJSON(t, AnalysisResult{
 				"example.com/a": {
 					"goplint": {
-						{Category: CategoryStaleException, Message: `stale exception: pattern "dup.pattern" matched no diagnostics (reason: x)`},
-						{Category: CategoryStaleException, Message: `stale exception: pattern "dup.pattern" matched no diagnostics (reason: x)`},
+						staleExceptionDiagnostic("dup.pattern", "x"),
+						staleExceptionDiagnostic("dup.pattern", "x"),
 					},
 				},
 			}),
@@ -50,14 +51,14 @@ func TestCollectGlobalStaleExceptionPatterns(t *testing.T) {
 			makeGlobalStaleAnalysisJSON(t, AnalysisResult{
 				"example.com/a": {
 					"goplint": {
-						{Category: CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: x)`},
+						staleExceptionDiagnostic("shared.pattern", "x"),
 					},
 				},
 			}),
 			makeGlobalStaleAnalysisJSON(t, AnalysisResult{
 				"example.com/b": {
 					"goplint": {
-						{Category: CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: y)`},
+						staleExceptionDiagnostic("shared.pattern", "y"),
 					},
 				},
 			})...,
@@ -113,6 +114,58 @@ func TestCollectGlobalStaleExceptionPatterns(t *testing.T) {
 			t.Fatal("expected decode error")
 		}
 	})
+
+	t.Run("missing pattern metadata fails closed", func(t *testing.T) {
+		t.Parallel()
+		stream := makeGlobalStaleAnalysisJSON(t, AnalysisResult{
+			"example.com/a": {
+				"goplint": {{Category: CategoryStaleException, Message: `stale exception: pattern "legacy" matched no diagnostics`}},
+			},
+		})
+		_, _, _, err := CollectGlobalStaleExceptionPatterns(stream)
+		if err == nil {
+			t.Fatal("expected missing metadata error")
+		}
+	})
+}
+
+func TestCollectGlobalStaleExceptionPatternsFromStreams(t *testing.T) {
+	t.Parallel()
+
+	analysis := append(
+		makeGlobalStaleAnalysisJSON(t, AnalysisResult{
+			"example.com/a": {"goplint": {{
+				Category: CategoryStaleException,
+				Posn:     "a.go:1:1",
+				Message:  `stale exception: pattern "shared" matched no diagnostics`,
+			}}},
+		}),
+		makeGlobalStaleAnalysisJSON(t, AnalysisResult{
+			"example.com/b": {"goplint": {{
+				Category: CategoryStaleException,
+				Posn:     "b.go:1:1",
+				Message:  `stale exception: pattern "shared" matched no diagnostics`,
+			}}},
+		})...,
+	)
+	findings := []byte(strings.Join([]string{
+		`{"package":"example.com/a","category":"stale-exception","id":"id-a","message":"stale exception: pattern \"shared\" matched no diagnostics","posn":"a.go:1:1","meta":{"pattern":"shared"}}`,
+		`{"package":"example.com/b","category":"stale-exception","id":"id-b","message":"stale exception: pattern \"shared\" matched no diagnostics","posn":"b.go:1:1","meta":{"pattern":"shared"}}`,
+		"",
+	}, "\n"))
+
+	patterns, totalPatterns, totalPackages, err := CollectGlobalStaleExceptionPatternsFromStreams(analysis, findings)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !slices.Equal(patterns, []string{"shared"}) || totalPatterns != 1 || totalPackages != 2 {
+		t.Fatalf("unexpected aggregation: patterns=%v totalPatterns=%d totalPackages=%d", patterns, totalPatterns, totalPackages)
+	}
+
+	_, _, _, err = CollectGlobalStaleExceptionPatternsFromStreams(analysis, nil)
+	if err == nil {
+		t.Fatal("expected missing findings stream coverage error")
+	}
 }
 
 func TestStaleExceptionPatternFromDiagnostic(t *testing.T) {
@@ -134,15 +187,15 @@ func TestStaleExceptionPatternFromDiagnostic(t *testing.T) {
 		}
 	})
 
-	t.Run("falls back to message parsing", func(t *testing.T) {
+	t.Run("does not parse compatibility message", func(t *testing.T) {
 		t.Parallel()
 		diag := AnalysisDiagnostic{
 			Category: CategoryStaleException,
 			Message:  `stale exception: pattern "pkg.Type.Legacy" matched no diagnostics (reason: legacy)`,
 		}
 		got := StaleExceptionPatternFromDiagnostic(diag)
-		if got != "pkg.Type.Legacy" {
-			t.Fatalf("StaleExceptionPatternFromDiagnostic() = %q, want %q", got, "pkg.Type.Legacy")
+		if got != "" {
+			t.Fatalf("StaleExceptionPatternFromDiagnostic() = %q, want empty", got)
 		}
 	})
 
@@ -153,6 +206,17 @@ func TestStaleExceptionPatternFromDiagnostic(t *testing.T) {
 			t.Fatalf("StaleExceptionPatternFromDiagnostic() = %q, want empty", got)
 		}
 	})
+}
+
+func staleExceptionDiagnostic(pattern, reason string) AnalysisDiagnostic {
+	return AnalysisDiagnostic{
+		Category: CategoryStaleException,
+		Message:  `stale exception: pattern "` + pattern + `" matched no diagnostics (reason: ` + reason + `)`,
+		URL: DiagnosticURLForFindingWithMeta(
+			StableFindingID(CategoryStaleException, pattern),
+			map[string]string{"pattern": pattern},
+		),
+	}
 }
 
 func makeGlobalStaleAnalysisJSON(t *testing.T, result AnalysisResult) []byte {

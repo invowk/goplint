@@ -308,31 +308,31 @@ func directChildren(n ast.Node) []ast.Node {
 
 func reportCommandWaitDelay(pass *analysis.Pass, node ast.Node, funcQualName string, bl *BaselineConfig) {
 	msg := fmt.Sprintf("exec.CommandContext command in %s is used without setting Cmd.WaitDelay before execution; set WaitDelay to bound pipe waits after Windows process cancellation", funcQualName)
-	findingID := PackageScopedFindingID(pass, CategoryMissingCommandWaitDelay, funcQualName, stablePosKey(pass, node.Pos()))
+	findingID := PackageScopedFindingID(pass, CategoryMissingCommandWaitDelay, funcQualName, semanticNodeKey(pass, node.Pos()))
 	reportFindingIfNotBaselined(pass, bl, node.Pos(), CategoryMissingCommandWaitDelay, findingID, msg)
 }
 
 func reportCueFedPathNativeClean(pass *analysis.Pass, node ast.Node, funcQualName, filepathFunc string, bl *BaselineConfig) {
 	msg := fmt.Sprintf("CUE-fed or repo-relative path in %s flows into filepath.%s before slash-normalized validation; normalize backslashes and use path.Clean for repo-relative checks", funcQualName, filepathFunc)
-	findingID := PackageScopedFindingID(pass, CategoryCueFedPathNativeClean, funcQualName, stablePosKey(pass, node.Pos()))
+	findingID := PackageScopedFindingID(pass, CategoryCueFedPathNativeClean, funcQualName, semanticNodeKey(pass, node.Pos()))
 	reportFindingIfNotBaselined(pass, bl, node.Pos(), CategoryCueFedPathNativeClean, findingID, msg)
 }
 
 func reportPathBoundaryPrefix(pass *analysis.Pass, node ast.Node, funcQualName, reason string, bl *BaselineConfig) {
 	msg := fmt.Sprintf("unsafe path boundary check in %s: %s", funcQualName, reason)
-	findingID := PackageScopedFindingID(pass, CategoryPathBoundaryPrefix, funcQualName, stablePosKey(pass, node.Pos()))
+	findingID := PackageScopedFindingID(pass, CategoryPathBoundaryPrefix, funcQualName, semanticNodeKey(pass, node.Pos()))
 	reportFindingIfNotBaselined(pass, bl, node.Pos(), CategoryPathBoundaryPrefix, findingID, msg)
 }
 
 func reportVolumeMountHostToSlash(pass *analysis.Pass, node ast.Node, funcQualName string, bl *BaselineConfig) {
 	msg := fmt.Sprintf("container volume mount host path in %s is formatted before filepath.ToSlash; convert the host path before appending ':' to avoid invalid Windows specs", funcQualName)
-	findingID := PackageScopedFindingID(pass, CategoryVolumeMountHostToSlash, funcQualName, stablePosKey(pass, node.Pos()))
+	findingID := PackageScopedFindingID(pass, CategoryVolumeMountHostToSlash, funcQualName, semanticNodeKey(pass, node.Pos()))
 	reportFindingIfNotBaselined(pass, bl, node.Pos(), CategoryVolumeMountHostToSlash, findingID, msg)
 }
 
 func reportCobraCommandContext(pass *analysis.Pass, node ast.Node, funcQualName string, bl *BaselineConfig) {
 	msg := fmt.Sprintf("Cobra command handler %s calls context.Background(); use cmd.Context() so signal cancellation and caller deadlines reach execution", funcQualName)
-	findingID := PackageScopedFindingID(pass, CategoryCobraCommandContext, funcQualName, stablePosKey(pass, node.Pos()))
+	findingID := PackageScopedFindingID(pass, CategoryCobraCommandContext, funcQualName, semanticNodeKey(pass, node.Pos()))
 	reportFindingIfNotBaselined(pass, bl, node.Pos(), CategoryCobraCommandContext, findingID, msg)
 }
 

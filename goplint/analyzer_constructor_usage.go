@@ -240,7 +240,7 @@ func reportConstructorErrorUsageFinding(
 	}
 
 	msg := fmt.Sprintf("constructor %s error return assigned to blank identifier", ctorName)
-	findingID := StableFindingID(CategoryUnusedConstructorError, qualFuncName, ctorName)
+	findingID := PackageScopedFindingID(pass, CategoryUnusedConstructorError, qualFuncName, ctorName, semanticNodeKey(pass, pos))
 	if bl.ContainsFinding(CategoryUnusedConstructorError, findingID, msg) {
 		return
 	}

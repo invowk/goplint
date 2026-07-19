@@ -1,0 +1,21 @@
+{
+  "format_version": 1,
+  "commands": [
+    {"name": "goplint-tests", "directory": "tools/goplint", "args": ["go", "test", "-count=1", "./..."], "timeout_minutes": 15},
+    {"name": "goplint-race", "directory": "tools/goplint", "args": ["go", "test", "-race", "-count=1", "-timeout=20m", "./..."], "timeout_minutes": 25},
+    {"name": "goplint-repeat", "directory": "tools/goplint", "args": ["go", "test", "-count=3", "-timeout=20m", "./..."], "timeout_minutes": 25},
+    {"name": "tidy", "args": ["make", "tidy"], "timeout_minutes": 10},
+    {"name": "lint", "args": ["make", "lint"], "timeout_minutes": 20},
+    {"name": "full-tests", "args": ["make", "test"], "timeout_minutes": 30},
+    {"name": "windows-build", "args": ["make", "check-windows-build"], "timeout_minutes": 15},
+    {"name": "license", "args": ["make", "license-check"], "timeout_minutes": 10},
+    {"name": "file-length", "args": ["make", "check-file-length"], "timeout_minutes": 10},
+    {"name": "baseline", "args": ["make", "check-baseline"], "timeout_minutes": 15},
+    {"name": "exceptions", "args": ["make", "check-goplint-exceptions"], "timeout_minutes": 15},
+    {"name": "agent-docs", "args": ["make", "check-agent-docs"], "timeout_minutes": 10},
+    {"name": "soundness", "args": ["make", "check-goplint-soundness"], "timeout_minutes": 60},
+    {"name": "openspec-active", "args": ["openspec", "validate", "complete-goplint-soundness-hardening", "--strict"], "timeout_minutes": 5},
+    {"name": "openspec-all", "args": ["openspec", "validate", "--all", "--strict"], "timeout_minutes": 5},
+    {"name": "diff-check", "args": ["git", "diff", "--check", "HEAD^", "HEAD"], "timeout_minutes": 5}
+  ]
+}

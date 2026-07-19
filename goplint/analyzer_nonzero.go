@@ -149,7 +149,7 @@ func checkStructFieldsNonZero(
 			typeName := typeObj.Name()
 			msg := fmt.Sprintf("struct field %s uses nonzero type %s as value; use *%s for optional fields",
 				qualName, typeName, typeName)
-			findingID := StableFindingID(CategoryNonZeroValueField, qualName, typeName)
+			findingID := PackageScopedFindingID(pass, CategoryNonZeroValueField, qualName, typeName)
 			if bl.ContainsFinding(CategoryNonZeroValueField, findingID, msg) {
 				continue
 			}
@@ -168,7 +168,7 @@ func checkStructFieldsNonZero(
 			typeName := typeObj.Name()
 			msg := fmt.Sprintf("struct field %s uses nonzero type %s as value; use *%s for optional fields",
 				qualName, typeName, typeName)
-			findingID := StableFindingID(CategoryNonZeroValueField, qualName, typeName)
+			findingID := PackageScopedFindingID(pass, CategoryNonZeroValueField, qualName, typeName)
 			if bl.ContainsFinding(CategoryNonZeroValueField, findingID, msg) {
 				continue
 			}
@@ -193,11 +193,11 @@ func resolveTypeObject(t types.Type) types.Object {
 // //goplint:nonzero (or //plint:nonzero) directive. Checks both the
 // GenDecl-level doc (for single-spec type blocks) and the TypeSpec-level doc.
 func hasNonZeroDirective(genDoc *ast.CommentGroup, specDoc *ast.CommentGroup) bool {
-	return hasDirectiveKey(genDoc, nil, "nonzero") || hasDirectiveKey(specDoc, nil, "nonzero")
+	return hasDirectiveKey(genDoc, specDoc, "nonzero")
 }
 
 func exportNonZeroFactForValidateMethod(pass *analysis.Pass, fd *ast.FuncDecl) {
-	if fd.Recv == nil || fd.Name == nil || fd.Name.Name != "Validate" || !hasDirectiveKey(fd.Doc, nil, "nonzero") {
+	if fd.Recv == nil || fd.Name == nil || fd.Name.Name != validateMethodName || !hasMethodDirective(pass, fd, "nonzero") {
 		return
 	}
 	if len(fd.Recv.List) == 0 {

@@ -51,59 +51,95 @@ func isPrimitiveTypeParam(tp *types.TypeParam) bool {
 	return primitiveConstraintType(tp.Constraint())
 }
 
+type primitiveConstraintClass uint8
+
+const (
+	primitiveConstraintIrrelevant primitiveConstraintClass = iota
+	primitiveConstraintDefinite
+	primitiveConstraintUncertain
+)
+
 func primitiveConstraintType(t types.Type) bool {
+	return classifyPrimitiveConstraint(t) == primitiveConstraintDefinite
+}
+
+func classifyPrimitiveConstraint(t types.Type) primitiveConstraintClass {
 	if t == nil {
-		return false
+		return primitiveConstraintIrrelevant
 	}
 	t = types.Unalias(t)
 	switch ct := t.(type) {
 	case *types.Basic:
-		return isPrimitiveBasic(ct)
+		if isPrimitiveBasic(ct) {
+			return primitiveConstraintDefinite
+		}
+		return primitiveConstraintIrrelevant
 	case *types.Named:
 		if iface, ok := ct.Underlying().(*types.Interface); ok {
-			return primitiveConstraintType(iface)
+			return classifyPrimitiveConstraint(iface)
 		}
-		return false
+		return primitiveConstraintIrrelevant
 	case *types.Union:
 		if ct.Len() == 0 {
-			return false
+			return primitiveConstraintIrrelevant
 		}
+		seenPrimitive := false
+		seenOther := false
 		for term := range ct.Terms() {
-			if !primitiveConstraintTerm(term) {
-				return false
+			switch classifyPrimitiveConstraintTerm(term) {
+			case primitiveConstraintDefinite:
+				seenPrimitive = true
+			case primitiveConstraintUncertain:
+				return primitiveConstraintUncertain
+			default:
+				seenOther = true
 			}
 		}
-		return true
+		if seenPrimitive && seenOther {
+			return primitiveConstraintUncertain
+		}
+		if seenPrimitive {
+			return primitiveConstraintDefinite
+		}
+		return primitiveConstraintIrrelevant
 	case *types.Interface:
-		if ct.NumMethods() > 0 || ct.NumEmbeddeds() == 0 {
-			return false
+		if ct.NumEmbeddeds() == 0 {
+			return primitiveConstraintIrrelevant
 		}
+		result := primitiveConstraintIrrelevant
 		for embedded := range ct.EmbeddedTypes() {
-			if !primitiveConstraintType(embedded) {
-				return false
+			switch classifyPrimitiveConstraint(embedded) {
+			case primitiveConstraintDefinite:
+				result = primitiveConstraintDefinite
+			case primitiveConstraintUncertain:
+				return primitiveConstraintUncertain
+			case primitiveConstraintIrrelevant:
 			}
 		}
-		return true
+		return result
 	default:
-		return false
+		return primitiveConstraintIrrelevant
 	}
 }
 
-func primitiveConstraintTerm(term *types.Term) bool {
+func classifyPrimitiveConstraintTerm(term *types.Term) primitiveConstraintClass {
 	if term == nil {
-		return false
+		return primitiveConstraintIrrelevant
 	}
 	tt := types.Unalias(term.Type())
 	switch t := tt.(type) {
 	case *types.Basic:
-		return isPrimitiveBasic(t)
+		if isPrimitiveBasic(t) {
+			return primitiveConstraintDefinite
+		}
+		return primitiveConstraintIrrelevant
 	case *types.Named:
 		if !term.Tilde() {
-			return false
+			return primitiveConstraintIrrelevant
 		}
-		return primitiveConstraintType(t.Underlying())
+		return classifyPrimitiveConstraint(t.Underlying())
 	default:
-		return false
+		return primitiveConstraintIrrelevant
 	}
 }
 
@@ -339,38 +375,8 @@ func primitiveMapDetailWithSkip(t types.Type, cfg *ExceptionConfig) (string, boo
 // that should be validated after construction from raw primitives.
 // Checks both value and pointer receiver method sets.
 func hasValidateMethod(t types.Type) bool {
-	t = types.Unalias(t)
-	if ptr, ok := t.(*types.Pointer); ok {
-		t = types.Unalias(ptr.Elem())
-	}
-	named, ok := t.(*types.Named)
-	if !ok {
-		return false
-	}
-
-	// Check both value and pointer receiver method sets.
-	for _, mset := range []*types.MethodSet{
-		types.NewMethodSet(named),
-		types.NewMethodSet(types.NewPointer(named)),
-	} {
-		for method := range mset.Methods() {
-			if method.Obj().Name() != validateMethodName {
-				continue
-			}
-			sig, ok := method.Obj().Type().(*types.Signature)
-			if !ok {
-				continue
-			}
-			// Must have 0 params and 1 result: error.
-			if sig.Params().Len() != 0 || sig.Results().Len() != 1 {
-				continue
-			}
-			if isErrorType(sig.Results().At(0).Type()) {
-				return true
-			}
-		}
-	}
-	return false
+	_, ok := resolveProtocolValidateMethod(t)
+	return ok
 }
 
 // hasValidatableElements reports whether t is a slice, array, or map type

@@ -6,5 +6,6 @@ MODULE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 cd "${MODULE_DIR}"
 
-echo "Running goplint Phase C refinement gate..."
-GOCACHE="${GOCACHE:-/tmp/go-build}" go test ./goplint -run '^(TestCFGSMTFeasibilityBackend|TestCFGWitnessHashDeterministic|TestWriteRefinementTraceToSinkWritesTraceRecord|TestWriteRefinementTraceToSinkSkipsWhenPhaseCDisabled|TestParseFindingsJSONLIgnoresNonFindingKinds|TestPhaseCRefinementGate)$'
+echo "Running canonical goplint SSA refinement gate..."
+GOCACHE="${GOCACHE:-/tmp/go-build}" go run ./cmd/subgate-census \
+  -manifest testdata/subgates/cfg-refinement.v1.json

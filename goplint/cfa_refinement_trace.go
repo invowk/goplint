@@ -16,7 +16,7 @@ func writeRefinementTraceToSink(
 	pos token.Pos,
 	result interprocPathResult,
 ) {
-	if pass == nil || !result.PhaseC.Enabled {
+	if pass == nil || !result.Refinement.Enabled {
 		return
 	}
 	reporter := reporterForPass(pass)
@@ -27,8 +27,8 @@ func writeRefinementTraceToSink(
 		Kind:     findingStreamKindRefinementTrace,
 		Category: result.WitnessRecord.Category,
 		ID:       result.WitnessRecord.FindingID,
-		Message:  result.PhaseC.RefinementStatus,
-		Meta: compactFindingMeta(appendPhaseCMeta(map[string]string{
+		Message:  result.Refinement.RefinementStatus,
+		Meta: compactFindingMeta(appendProtocolRefinementMeta(map[string]string{
 			"cfg_witness_kind": "cfg-path",
 		}, result)),
 	}

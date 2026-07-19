@@ -210,17 +210,12 @@ func generateBaselineWithRunner(
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrParsingAnalysisOutput, err)
 	}
-	analysisFindings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(stdout)
-	if err != nil {
-		return fmt.Errorf("parsing analyzer json output: %w", err)
-	}
-	streamCount := goplint.CountBaselineFindings(findings)
-	analysisCount := goplint.CountBaselineFindings(analysisFindings)
+	streamCount, analysisCount, err := goplint.ValidateBaselineFindingsCoverage(findingsData, stdout)
 	if analysisCount > 0 && streamCount == 0 {
 		return fmt.Errorf("%w but analyzer output contains %d suppressible findings", ErrFindingsStreamEmpty, analysisCount)
 	}
-	if streamCount < analysisCount {
-		return fmt.Errorf("findings stream is incomplete (%d findings) versus analyzer output (%d findings)", streamCount, analysisCount)
+	if err != nil {
+		return fmt.Errorf("validating findings stream coverage: %w", err)
 	}
 
 	if err := goplint.WriteBaseline(outputPath, findings); err != nil {
@@ -293,15 +288,37 @@ func auditExceptionsGlobalWithRunner(originalArgs []string, runCommand commandRu
 		stderr = os.Stderr
 	}
 
-	// Build subprocess args: remove --global, ensure -json and -audit-exceptions.
+	findingsFile, err := os.CreateTemp("", "goplint-stale-findings-*.jsonl")
+	if err != nil {
+		return fmt.Errorf("creating stale findings stream temp file: %w", err)
+	}
+	findingsPath := findingsFile.Name()
+	if err := findingsFile.Close(); err != nil {
+		return fmt.Errorf("closing stale findings stream temp file: %w", err)
+	}
+	defer func() {
+		if removeErr := os.Remove(findingsPath); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			if writeErr := writeStderrf(stderr, "goplint: warning: removing stale findings stream temp file: %v\n", removeErr); writeErr != nil {
+				return
+			}
+		}
+	}()
+
+	// Build subprocess args: remove --global, ensure -json and -audit-exceptions,
+	// and preserve canonical pattern metadata in the internal findings stream.
 	subArgs := buildGlobalAuditArgs(originalArgs)
+	subArgs = slices.Insert(subArgs, 0, "-emit-findings-jsonl="+findingsPath)
 
 	stdout, err := runAnalyzerSubprocess(runCommand, stderr, subArgs)
 	if err != nil {
 		return fmt.Errorf("running global audit subprocess: %w", err)
 	}
+	findingsData, err := os.ReadFile(findingsPath)
+	if err != nil {
+		return fmt.Errorf("reading stale findings stream: %w", err)
+	}
 
-	stalePatterns, totalPatterns, totalPackages, err := goplint.CollectGlobalStaleExceptionPatterns(stdout)
+	stalePatterns, totalPatterns, totalPackages, err := goplint.CollectGlobalStaleExceptionPatternsFromStreams(stdout, findingsData)
 	if err != nil {
 		return fmt.Errorf("aggregating global stale exceptions: %w", err)
 	}
@@ -421,7 +438,7 @@ func tolerateAnalyzerExit(runErr error, stdout []byte) error {
 	if len(bytes.TrimSpace(stdout)) == 0 {
 		return runErr
 	}
-	if _, err := goplint.CollectBaselineFindingsFromAnalysisJSON(stdout); err != nil {
+	if _, err := goplint.CountBaselineDiagnosticsFromAnalysisJSON(stdout); err != nil {
 		return fmt.Errorf("invalid analyzer JSON output: %w", err)
 	}
 	return nil

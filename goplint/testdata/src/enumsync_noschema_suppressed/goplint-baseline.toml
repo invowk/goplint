@@ -1,4 +1,4 @@
 [enum-cue-missing-go]
 entries = [
-    { id = "gpl3_1a79662bf0aecae5c861c6a5b921b11b2c171aae7c1343b2794752d8f2dbd4e1", message = "type enumsync_noschema_suppressed.NoSchemaMode has //goplint:enum-cue directive but no *_schema.cue file found in package directory" },
+    { id = "gpl4_586b0cfe4fe56fbcde54f0b34780017ee5f89e4c0f12b273d5903992ab1d4d43", message = "type enumsync_noschema_suppressed.NoSchemaMode has //goplint:enum-cue directive but no *_schema.cue file found in package directory" },
 ]

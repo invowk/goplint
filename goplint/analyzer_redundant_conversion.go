@@ -98,7 +98,7 @@ func inspectRedundantConversions(
 			return true
 		}
 
-		posKey := stablePosKey(pass, outerCall.Pos())
+		posKey := semanticNodeKey(pass, outerCall.Pos())
 		msg := fmt.Sprintf(
 			"redundant intermediate conversion to %s in %s(%s(...)); use %s(...) directly",
 			basicName, outerName, basicName, outerName,

@@ -6,10 +6,42 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"sync"
 	"testing"
 
 	"golang.org/x/tools/go/analysis"
 )
+
+func TestBoundaryRequestWithoutProtocolParamsSkipsSummaryWork(t *testing.T) {
+	t.Parallel()
+
+	const source = `package testpkg
+type Value string
+func (value Value) Validate() error { return nil }
+func helper(value Value) error { return value.Validate() }
+func Exported(value Value) error { return helper(value) }
+`
+	pass, file := buildTypedPassFromSource(t, source)
+	function := findFuncDecl(t, file, "Exported")
+	ssaResult := buildSSAForPass(pass)
+	cache := &sync.Map{}
+
+	inspectBoundaryRequestValidation(
+		pass,
+		function,
+		nil,
+		nil,
+		defaultCFGMaxStates,
+		cfgProtocolRefinementOptions{},
+		ssaResult,
+		cache,
+	)
+
+	cache.Range(func(key, value any) bool {
+		t.Fatalf("non-boundary declaration populated callee summary cache: key=%v value=%T", key, value)
+		return false
+	})
+}
 
 func TestCollectBoundaryRequestParamsFiltersBoundaryValidateParams(t *testing.T) {
 	t.Parallel()
@@ -46,6 +78,16 @@ func Accept(req Request, opts *RunOptions, _ Request, not NotBoundary, missing M
 	if params[0].name != "req" || params[1].name != "opts" {
 		t.Fatalf("param names = %q, %q; want req, opts", params[0].name, params[1].name)
 	}
+	if params[0].target.typeKey != "testpkg.Request" || params[1].target.typeKey != "testpkg.RunOptions" {
+		t.Fatalf(
+			"param type keys = %q, %q; want testpkg.Request, testpkg.RunOptions",
+			params[0].target.typeKey,
+			params[1].target.typeKey,
+		)
+	}
+	if params[0].target.staticType == nil || params[1].target.staticType == nil {
+		t.Fatal("boundary targets must retain their static Go types")
+	}
 }
 
 func TestBoundaryRequestFuncReturnsErrorShapes(t *testing.T) {
@@ -75,70 +117,6 @@ func Named() (err error) { return nil }`
 	}
 }
 
-func TestBoundaryRequestAssignedErrNameShapes(t *testing.T) {
-	t.Parallel()
-
-	src := `package testpkg
-type Request struct{}
-func (Request) Validate() error { return nil }
-
-func Guard(req Request) error {
-	if err := req.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func Multi(req Request) error {
-	err, other := req.Validate(), 0
-	_ = other
-	return err
-}
-
-func Blank(req Request) error {
-	_, other := req.Validate(), 0
-	_ = other
-	return nil
-}`
-
-	_, file := buildTypedPassFromSource(t, src)
-	guard := findFuncDecl(t, file, "Guard").Body.List[0].(*ast.IfStmt)
-	name, ok := boundaryRequestAssignedErrName(guard.Init)
-	if !ok || name != "err" {
-		t.Fatalf("guard init assigned err name (%q, %v), want (err, true)", name, ok)
-	}
-	multi := findFuncDecl(t, file, "Multi").Body.List[0]
-	name, ok = boundaryRequestAssignedErrName(multi)
-	if !ok || name != "err" {
-		t.Fatalf("multi assignment assigned err name (%q, %v), want (err, true)", name, ok)
-	}
-	blank := findFuncDecl(t, file, "Blank").Body.List[0]
-	if name, ok := boundaryRequestAssignedErrName(blank); ok {
-		t.Fatalf("blank assignment assigned err name %q, want none", name)
-	}
-	if name, ok := boundaryRequestAssignedErrName(findFuncDecl(t, file, "Guard").Body.List[1]); ok {
-		t.Fatalf("non-assignment assigned err name %q, want none", name)
-	}
-}
-
-func TestBoundaryRequestErrConditionShapes(t *testing.T) {
-	t.Parallel()
-
-	trueCases := []string{"err != nil", "nil != err"}
-	for _, expr := range trueCases {
-		if !boundaryRequestErrCondition(parseExpr(t, expr), "err") {
-			t.Fatalf("%q should be a checked error condition", expr)
-		}
-	}
-
-	falseCases := []string{"err == nil", "other != nil", "err != other", "nil == err"}
-	for _, expr := range falseCases {
-		if boundaryRequestErrCondition(parseExpr(t, expr), "err") {
-			t.Fatalf("%q should not be a checked error condition", expr)
-		}
-	}
-}
-
 func TestBoundaryRequestBlockTerminatesShapes(t *testing.T) {
 	t.Parallel()
 
@@ -159,35 +137,7 @@ func TestBoundaryRequestBlockTerminatesShapes(t *testing.T) {
 	}
 }
 
-func TestBoundaryRequestUseIgnoresValidateReceiverAndAssignmentLHS(t *testing.T) {
-	t.Parallel()
-
-	src := `package testpkg
-type Request struct{ Name string }
-func (Request) Validate() error { return nil }
-
-func Probe(req Request) error {
-	req.Name = "default"
-	_ = req.Validate()
-	_ = req.Name
-	return nil
-}`
-
-	pass, file := buildTypedPassFromSource(t, src)
-	fn := findFuncDecl(t, file, "Probe")
-	target := collectBoundaryRequestParams(pass, fn)[0].target
-	if boundaryRequestUse(pass, fn.Body.List[0], target, nil, nil, nil) {
-		t.Fatal("assignment LHS should not count as pre-validation use")
-	}
-	if boundaryRequestUse(pass, fn.Body.List[1], target, nil, nil, nil) {
-		t.Fatal("Validate receiver should not count as pre-validation use")
-	}
-	if !boundaryRequestUse(pass, fn.Body.List[2], target, nil, nil, nil) {
-		t.Fatal("field read should count as pre-validation use")
-	}
-}
-
-func TestBoundaryRequestDefaultingAndSafeDelegation(t *testing.T) {
+func TestBoundaryRequestDefaulting(t *testing.T) {
 	t.Parallel()
 
 	src := `package testpkg
@@ -196,9 +146,6 @@ type Request struct {
 	Image string
 }
 func (Request) Validate() error { return nil }
-
-func Run(req Request) error { return nil }
-func RunName(name string) error { return nil }
 
 func Default(req Request) error {
 	if req.Image == "" {
@@ -212,14 +159,6 @@ func UnsafeDefault(req Request) error {
 		req.Image = req.Name
 	}
 	return nil
-}
-
-func Delegate(req Request) error {
-	return Run(req)
-}
-
-func UnsafeDelegate(req Request) error {
-	return RunName(req.Name)
 }`
 
 	pass, file := buildTypedPassFromSource(t, src)
@@ -233,15 +172,38 @@ func UnsafeDelegate(req Request) error {
 	if boundaryRequestDefaultingStmt(pass, unsafeDefaultFn.Body.List[0], unsafeDefaultTarget) {
 		t.Fatal("default assignment from request field should not be accepted")
 	}
-	delegateFn := findFuncDecl(t, file, "Delegate")
-	delegateTarget := collectBoundaryRequestParams(pass, delegateFn)[0].target
-	if !boundaryRequestSafeDelegationStmt(pass, delegateFn.Body.List[0], delegateTarget) {
-		t.Fatal("exported delegation with request arg should be accepted")
+}
+
+func TestBoundaryRequestLocalAliasStmt(t *testing.T) {
+	t.Parallel()
+
+	src := `package testpkg
+type Request struct{}
+func (Request) Validate() error { return nil }
+var escaped any
+
+func Alias(req Request) error {
+	alias := &req
+	_ = alias
+	return nil
+}
+
+func Escape(req Request) error {
+	escaped = &req
+	return nil
+}`
+
+	pass, file := buildTypedPassFromSource(t, src)
+	aliasFn := findFuncDecl(t, file, "Alias")
+	aliasTarget := collectBoundaryRequestParams(pass, aliasFn)[0].target
+	if !boundaryRequestLocalAliasStmt(pass, aliasFn.Body.List[0], aliasTarget) {
+		t.Fatal("local address alias should not consume the boundary request")
 	}
-	unsafeDelegateFn := findFuncDecl(t, file, "UnsafeDelegate")
-	unsafeDelegateTarget := collectBoundaryRequestParams(pass, unsafeDelegateFn)[0].target
-	if boundaryRequestSafeDelegationStmt(pass, unsafeDelegateFn.Body.List[0], unsafeDelegateTarget) {
-		t.Fatal("delegation using request field should not be accepted")
+
+	escapeFn := findFuncDecl(t, file, "Escape")
+	escapeTarget := collectBoundaryRequestParams(pass, escapeFn)[0].target
+	if boundaryRequestLocalAliasStmt(pass, escapeFn.Body.List[0], escapeTarget) {
+		t.Fatal("package-level assignment must remain an escape")
 	}
 }
 

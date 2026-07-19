@@ -1,0 +1,390 @@
+{
+  "format_version": 3,
+  "inputs": [
+    {
+      "name": "benchmark-thresholds",
+      "path": "tools/goplint/bench/thresholds.toml"
+    },
+    {
+      "name": "change-dependencies",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/change-dependencies.v1.json"
+    },
+    {
+      "name": "evidence-index",
+      "path": "docs/goplint/evidence-index.md"
+    },
+    {
+      "name": "finding-id-inventory",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/finding-id-producer-inventory.v1.json"
+    },
+    {
+      "name": "mutation-manifest",
+      "path": "tools/goplint/testdata/mutation/soundness-mutants-v2.json"
+    },
+    {
+      "name": "mutation-profile",
+      "path": "tools/goplint/testdata/mutation/profiles/blocking-v2.json"
+    },
+    {
+      "name": "protocol-oracle-bounds",
+      "path": "tools/goplint/spec/protocol-oracle-bounds.v1.json"
+    },
+    {
+      "name": "red-baseline-patch",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/red-baseline-probes.v1.patch"
+    },
+    {
+      "name": "red-baseline-reconstruction",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/red-baseline-reconstruction.v1.json"
+    },
+    {
+      "name": "residual-finding-inventory",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/residual-finding-inventory.v1.json"
+    },
+    {
+      "name": "review-gap-reconciliation",
+      "path": "openspec/changes/close-goplint-soundness-review-gaps/evidence/cross-change-reconciliation.v2.json"
+    },
+    {
+      "name": "review-gap-red-observations",
+      "path": "openspec/changes/close-goplint-soundness-review-gaps/evidence/review-gap-red-observations.v1.json"
+    },
+    {
+      "name": "semantic-reference",
+      "path": "docs/goplint/current-techniques-and-semantics.md"
+    },
+    {
+      "name": "stable-id-migration",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/stable-id-migration.v2.json"
+    },
+    {
+      "name": "stable-id-population-review",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/stable-id-population-review.v1.json"
+    },
+    {
+      "name": "stable-id-pre-v4",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/stable-id-pre-v4.jsonl"
+    },
+    {
+      "name": "stable-id-v4-scan-1",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/stable-id-v4-scan-1.jsonl"
+    },
+    {
+      "name": "stable-id-v4-scan-2",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/stable-id-v4-scan-2.jsonl"
+    },
+    {
+      "name": "targeted-mutation-run",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/evidence/targeted-mutation-run.v1.json"
+    }
+  ],
+  "toolchain": [
+    {
+      "name": "git",
+      "command": ["git", "--version"],
+      "required_version_re": "^git version 2\\.55\\.0$"
+    },
+    {
+      "name": "go",
+      "command": ["go", "version"],
+      "required_version_re": "^go version go1\\.26\\.[0-9]+ linux/amd64$"
+    },
+    {
+      "name": "golangci-lint",
+      "command": ["./scripts/golangci-lint.sh", "version"],
+      "required_version_re": "^golangci-lint has version 2\\.12\\.2 .*$"
+    },
+    {
+      "name": "make",
+      "command": ["make", "--version"],
+      "required_version_re": "^GNU Make 4\\.[0-9]+(\\.[0-9]+)?"
+    }
+  ],
+  "task_ledgers": [
+    {
+      "name": "complete-goplint-soundness-hardening",
+      "path": "openspec/changes/complete-goplint-soundness-hardening/tasks.md",
+      "expected_pending": ["12.10"]
+    },
+    {
+      "name": "close-goplint-soundness-review-gaps",
+      "path": "openspec/changes/close-goplint-soundness-review-gaps/tasks.md",
+      "expected_pending": ["10.8"]
+    },
+    {
+      "name": "close-residual-goplint-soundness-gaps",
+      "path": "openspec/changes/close-residual-goplint-soundness-gaps/tasks.md",
+      "expected_pending": []
+    }
+  ],
+  "diff_review": {
+    "reviewed_exclusions": [
+      {
+        "path": ".remember/logs/autonomous/save-161050.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161051.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161052.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161100.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161101.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161114.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161115.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161122.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161123.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161128.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161129.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161131.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161132.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161143.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": ".remember/logs/autonomous/save-161145.log",
+        "reason": "Unrelated autonomous-session log cleanup outside the three goplint soundness changes."
+      },
+      {
+        "path": "openspec/changes/close-goplint-shipping-gaps/.openspec.yaml",
+        "reason": "Separate active shipping-readiness change outside the three-change soundness proof scope."
+      },
+      {
+        "path": "openspec/changes/close-goplint-shipping-gaps/design.md",
+        "reason": "Separate active shipping-readiness change outside the three-change soundness proof scope."
+      },
+      {
+        "path": "openspec/changes/close-goplint-shipping-gaps/proposal.md",
+        "reason": "Separate active shipping-readiness change outside the three-change soundness proof scope."
+      },
+      {
+        "path": "openspec/changes/close-goplint-shipping-gaps/specs/goplint-analysis-soundness/spec.md",
+        "reason": "Separate active shipping-readiness change outside the three-change soundness proof scope."
+      },
+      {
+        "path": "openspec/changes/close-goplint-shipping-gaps/specs/lint-tooling-quality-gates/spec.md",
+        "reason": "Separate active shipping-readiness change outside the three-change soundness proof scope."
+      },
+      {
+        "path": "openspec/changes/close-goplint-shipping-gaps/tasks.md",
+        "reason": "Separate active shipping-readiness change outside the three-change soundness proof scope."
+      }
+    ]
+  },
+  "counterexamples": {
+    "path": "tools/goplint/testdata/gates/clean-tree-counterexamples-v3.json",
+    "required": [
+      {
+        "id": "conditional-summary-result",
+        "observation": "validation is restored only on the continuation proving the exact aliased helper result nil; discarded, overwritten, or mismatched results remain invalid or inconclusive"
+      },
+      {
+        "id": "constructor-success-edge",
+        "observation": "the else-edge return retains the object obligation and is a violation or blocking inconclusive"
+      },
+      {
+        "id": "directive-validation",
+        "observation": "one deterministic actionable unknown-directive diagnostic is emitted before any directive consumer runs"
+      },
+      {
+        "id": "false-credit-category-evidence",
+        "observation": "credit is accepted only when producer-emitted executed observations contain the claimed category, boundary, stages, dimensions, properties, and populations"
+      },
+      {
+        "id": "hard-coded-subgate-populations",
+        "observation": "the subgate fails before success unless every manifest member exists and is uniquely observed in the current run"
+      },
+      {
+        "id": "imported-fact-shape",
+        "observation": "the entire relevant fact is rejected and dependent analysis becomes blocking inconclusive"
+      },
+      {
+        "id": "incomplete-diff-proof",
+        "observation": "materialization and freshness verification fail until one v3 record binds the complete intended diff, all ledgers, artifacts, observations, and archive order"
+      },
+      {
+        "id": "noncausal-mutation-attribution",
+        "observation": "the mutant is invalid unless a structured observation proves the declared semantic mismatch after clean controls and exact restoration"
+      },
+      {
+        "id": "package-stored-literal",
+        "observation": "the package initializer literal is analyzed exactly once even without a visible call, or emits blocking inconclusive if its procedure identity is unresolved"
+      },
+      {
+        "id": "post-validation-escape",
+        "observation": "mutable escape invalidates proof or is blocking inconclusive; an alias-free immutable copy preserves validation"
+      },
+      {
+        "id": "preclassification-suppression",
+        "observation": "classification occurs first and the inconclusive diagnostic remains always visible"
+      },
+      {
+        "id": "stable-id-global-identity",
+        "observation": "IDs remain layout-stable, differ across full import paths, and collisions or duplicate emissions fail before baseline write"
+      }
+    ]
+  },
+  "commands": [
+    {
+      "name": "lint",
+      "args": ["make", "lint"],
+      "timeout_minutes": 40
+    },
+    {
+      "name": "build",
+      "args": ["make", "build", "build-goplint"],
+      "timeout_minutes": 20
+    },
+    {
+      "name": "root-tests",
+      "args": ["make", "test"],
+      "timeout_minutes": 90
+    },
+    {
+      "name": "goplint-tests",
+      "directory": "tools/goplint",
+      "args": ["go", "test", "-count=1", "-timeout=20m", "./..."],
+      "timeout_minutes": 30
+    },
+    {
+      "name": "root-tidy-diff",
+      "args": ["go", "mod", "tidy", "-diff"],
+      "timeout_minutes": 10
+    },
+    {
+      "name": "goplint-tidy-diff",
+      "directory": "tools/goplint",
+      "args": ["go", "mod", "tidy", "-diff"],
+      "timeout_minutes": 10
+    },
+    {
+      "name": "scheduled-fuzz",
+      "args": ["make", "check-goplint-fuzz-scheduled"],
+      "timeout_minutes": 30
+    },
+    {
+      "name": "exceptions",
+      "args": ["make", "check-goplint-exceptions"],
+      "timeout_minutes": 20
+    },
+    {
+      "name": "windows-build",
+      "args": ["make", "check-windows-build"],
+      "timeout_minutes": 20
+    },
+    {
+      "name": "license",
+      "args": ["make", "license-check"],
+      "timeout_minutes": 10
+    },
+    {
+      "name": "file-length",
+      "args": ["make", "check-file-length"],
+      "timeout_minutes": 10
+    },
+    {
+      "name": "agent-docs",
+      "args": ["make", "check-agent-docs"],
+      "timeout_minutes": 10
+    },
+    {
+      "name": "openspec-all",
+      "args": ["openspec", "validate", "--all", "--strict", "--no-interactive"],
+      "timeout_minutes": 10
+    },
+    {
+      "name": "diff-check",
+      "args": [
+        "git",
+        "diff",
+        "--check",
+        "HEAD^",
+        "HEAD",
+        "--",
+        ".",
+        ":(exclude)openspec/changes/close-residual-goplint-soundness-gaps/evidence/red-baseline-probes.v1.patch"
+      ],
+      "timeout_minutes": 10
+    },
+    {
+      "name": "soundness-core",
+      "args": ["make", "check-goplint-soundness-core"],
+      "timeout_minutes": 180
+    }
+  ],
+  "aggregate_report": {
+    "command_name": "soundness-core",
+    "output_file": "soundness-core.json",
+    "manifest_path": "tools/goplint/spec/soundness-gate.v1.json",
+    "registry_path": "tools/goplint/spec/semantic-evidence.v2.json",
+    "profile": "core"
+  },
+  "mutation_proofs": [
+    {
+      "name": "missing-constructor-validate",
+      "observation": "missing-constructor-validate.mutation"
+    },
+    {
+      "name": "missing-constructor-validate-inconclusive",
+      "observation": "missing-constructor-validate-inconclusive.mutation"
+    },
+    {
+      "name": "unvalidated-boundary-request",
+      "observation": "unvalidated-boundary-request.mutation"
+    },
+    {
+      "name": "unvalidated-cast",
+      "observation": "unvalidated-cast.mutation"
+    },
+    {
+      "name": "unvalidated-cast-inconclusive",
+      "observation": "unvalidated-cast-inconclusive.mutation"
+    },
+    {
+      "name": "use-before-validate-cross-block",
+      "observation": "use-before-validate-cross-block.mutation"
+    },
+    {
+      "name": "use-before-validate-inconclusive",
+      "observation": "use-before-validate-inconclusive.mutation"
+    },
+    {
+      "name": "use-before-validate-same-block",
+      "observation": "use-before-validate-same-block.mutation"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 // Package cfa_ifds_repo_patterns captures repo-shaped IFDS precision cases that
-// should stay clean without Phase C refinement.
+// should stay clean before witness refinement is needed.
 package cfa_ifds_repo_patterns
 
 import "path/filepath"

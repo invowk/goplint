@@ -3,6 +3,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/invowk/invowk/tools/goplint/goplint"
@@ -35,7 +36,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 		}
 	})
 
-	t.Run("deduplicates across packages", func(t *testing.T) {
+	t.Run("duplicate IDs across package variants fail closed", func(t *testing.T) {
 		t.Parallel()
 		// Simulate the same diagnostic appearing in both the package and its test variant.
 		diag := suppressibleDiagnostic("primitive", "struct field pkg.Foo.Bar uses primitive type string")
@@ -48,13 +49,8 @@ func TestParseAnalysisJSON(t *testing.T) {
 		combined := append([]byte{}, pkg1...)
 		combined = append(combined, pkg2...)
 
-		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(combined)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(findings["primitive"]) != 1 {
-			t.Errorf("expected 1 deduplicated finding, got %d", len(findings["primitive"]))
+		if _, err := goplint.CollectBaselineFindingsFromAnalysisJSON(combined); err == nil || !strings.Contains(err.Error(), "collided finding ID") {
+			t.Fatalf("goplint.CollectBaselineFindingsFromAnalysisJSON() error = %v, want collided ID rejection", err)
 		}
 	})
 
@@ -116,7 +112,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 		}
 	})
 
-	t.Run("missing suppressible finding URL falls back to deterministic ID", func(t *testing.T) {
+	t.Run("missing suppressible finding URL fails closed", func(t *testing.T) {
 		t.Parallel()
 		const (
 			category = "primitive"
@@ -130,17 +126,9 @@ func TestParseAnalysisJSON(t *testing.T) {
 			},
 		})
 
-		findings, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
-		if err != nil {
-			t.Fatalf("unexpected error for missing finding URL: %v", err)
-		}
-		got := findings[category]
-		if len(got) != 1 {
-			t.Fatalf("expected 1 finding, got %d", len(got))
-		}
-		wantID := goplint.StableFindingID(category, "", message)
-		if got[0].ID != wantID {
-			t.Fatalf("expected fallback id %q, got %q", wantID, got[0].ID)
+		_, err := goplint.CollectBaselineFindingsFromAnalysisJSON(input)
+		if err == nil {
+			t.Fatal("expected missing canonical finding ID error")
 		}
 	})
 
@@ -184,7 +172,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 			"example.com/pkg": {
 				"goplint": {
 					suppressibleDiagnostic("primitive", "real finding"),
-					{Category: goplint.CategoryStaleException, Message: "stale exception: pattern ..."},
+					suppressibleDiagnostic(goplint.CategoryStaleException, "stale exception: pattern ..."),
 				},
 			},
 		})
@@ -229,7 +217,7 @@ func TestParseAnalysisJSON(t *testing.T) {
 		input := makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
 			"example.com/pkg": {
 				"goplint": {
-					{Category: goplint.CategoryUnknownDirective, Message: "unknown directive key"},
+					suppressibleDiagnostic(goplint.CategoryUnknownDirective, "unknown directive key"),
 					suppressibleDiagnostic("primitive", "valid finding"),
 				},
 			},

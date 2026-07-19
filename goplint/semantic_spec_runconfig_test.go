@@ -37,7 +37,7 @@ func TestSemanticSpecRunControlsAreKnownFlags(t *testing.T) {
 	}
 }
 
-func TestSemanticSpecInconclusiveRulesRequirePolicyControls(t *testing.T) {
+func TestSemanticSpecInconclusiveRulesRequireWitnessControl(t *testing.T) {
 	t.Parallel()
 
 	catalog := mustLoadSemanticRuleCatalog(t)
@@ -45,25 +45,20 @@ func TestSemanticSpecInconclusiveRulesRequirePolicyControls(t *testing.T) {
 		if !slices.Contains(rule.OutcomeDomain, "inconclusive") {
 			continue
 		}
-		if !slices.Contains(rule.RunControls, "cfg-inconclusive-policy") {
-			t.Fatalf("inconclusive rule %q must include cfg-inconclusive-policy run control", rule.Category)
-		}
 		if !slices.Contains(rule.RunControls, "cfg-witness-max-steps") {
 			t.Fatalf("inconclusive rule %q must include cfg-witness-max-steps run control", rule.Category)
 		}
 	}
 }
 
-func TestSemanticSpecCFARulesRequirePhaseCControls(t *testing.T) {
+func TestSemanticSpecCFARulesRequireResourceControls(t *testing.T) {
 	t.Parallel()
 
 	catalog := mustLoadSemanticRuleCatalog(t)
 	requiredControls := []string{
-		"cfg-feasibility-engine",
-		"cfg-refinement-mode",
-		"cfg-refinement-max-iterations",
-		"cfg-feasibility-max-queries",
-		"cfg-feasibility-timeout-ms",
+		"protocol-refinement-max-iterations",
+		"protocol-feasibility-max-queries",
+		"protocol-feasibility-timeout-ms",
 	}
 
 	for _, rule := range catalog.Rules {
@@ -72,30 +67,8 @@ func TestSemanticSpecCFARulesRequirePhaseCControls(t *testing.T) {
 		}
 		for _, control := range requiredControls {
 			if !slices.Contains(rule.RunControls, control) {
-				t.Fatalf("CFA rule %q must include Phase C run control %q", rule.Category, control)
+				t.Fatalf("protocol rule %q must include resource control %q", rule.Category, control)
 			}
-		}
-	}
-}
-
-func TestSemanticSpecAliasSensitiveRulesRequireAliasControl(t *testing.T) {
-	t.Parallel()
-
-	catalog := mustLoadSemanticRuleCatalog(t)
-	requiredCategories := map[string]bool{
-		CategoryUnvalidatedCast:               true,
-		CategoryUnvalidatedCastInconclusive:   true,
-		CategoryUseBeforeValidateSameBlock:    true,
-		CategoryUseBeforeValidateCrossBlock:   true,
-		CategoryUseBeforeValidateInconclusive: true,
-	}
-
-	for _, rule := range catalog.Rules {
-		if !requiredCategories[rule.Category] {
-			continue
-		}
-		if !slices.Contains(rule.RunControls, "cfg-alias-mode") {
-			t.Fatalf("alias-sensitive rule %q must include cfg-alias-mode run control", rule.Category)
 		}
 	}
 }

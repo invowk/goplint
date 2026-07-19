@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "runs": [
+    {
+      "id": "counterexample-tests",
+      "packages": ["./goplint"],
+      "tests": [
+        "TestProtocolRedBaselineBlackBox",
+        "TestProtocolRedBaselineMetaContracts",
+        "TestProtocolCounterexamplesBlackBox",
+        "TestProtocolValidationCounterexamplesUseConditionalSuccessEdges",
+        "TestConstructorSSAIdentityUsesReachingReturnObject",
+        "TestProtocolJoinRefinementCounterexamples",
+        "TestTypedSSAAvailabilityDistinguishesFailureClasses",
+        "TestRecursiveSummaryCFA",
+        "TestGenericConstraintCastCFA",
+        "TestProtocolUnknownEffectsAfterValidation",
+        "TestSSAConstraintExtractionStopsCooperatively",
+        "TestIFDSTabulationStopsCooperativelyBeforeAcceptingSafe"
+      ],
+      "count": 1,
+      "timeout_seconds": 300
+    }
+  ],
+  "populations": [
+    {
+      "id": "counterexamples",
+      "selectors": [
+        {
+          "run": "counterexample-tests",
+          "scope": "roots"
+        }
+      ]
+    }
+  ]
+}

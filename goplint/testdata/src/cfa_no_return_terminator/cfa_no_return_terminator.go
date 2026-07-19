@@ -48,3 +48,16 @@ func ExitAliasTerminator(raw string) { // want `parameter "raw" of cfa_no_return
 	}
 	exit(2)
 }
+
+// ConditionalExitAlias must retain the continuation because os.Exit reaches
+// the call only on one branch; the original may-return value reaches it on the
+// other branch.
+func ConditionalExitAlias(raw string, terminate bool) { // want `parameter "raw" of cfa_no_return_terminator\.ConditionalExitAlias uses primitive type string`
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
+	exit := func(int) {}
+	if terminate {
+		exit = os.Exit
+	}
+	exit(1)
+	_ = x
+}

@@ -4,6 +4,7 @@ package goplint
 
 import (
 	"go/ast"
+	"sync"
 	"testing"
 
 	"golang.org/x/tools/go/analysis"
@@ -61,7 +62,7 @@ func TestComputeMustAliasKeys_CopyAlias(t *testing.T) {
 
 	runAliasProbeAnalysis(t, "copyaliasprobe", func(pass *analysis.Pass, res *ssaResult) {
 		ssaFn, cast := probeAssignedCast(t, pass, res, "CopyAlias")
-		aliases := computeMustAliasKeys(ssaFn, cast.pos)
+		aliases := computeMustAliasKeys(pass, ssaFn, cast.pos)
 		assertAliasContains(t, aliases, "x", "y")
 	})
 }
@@ -73,7 +74,7 @@ func TestComputeMustAliasKeys_Reassignment(t *testing.T) {
 
 	runAliasProbeAnalysis(t, "reassignprobe", func(pass *analysis.Pass, res *ssaResult) {
 		ssaFn, cast := probeAssignedCast(t, pass, res, "ReassignedAlias")
-		aliases := computeMustAliasKeys(ssaFn, cast.pos)
+		aliases := computeMustAliasKeys(pass, ssaFn, cast.pos)
 		assertAliasContains(t, aliases, "x")
 		assertAliasNotContains(t, aliases, "y")
 	})
@@ -86,7 +87,7 @@ func TestComputeMustAliasKeys_NestedCallPrefersCast(t *testing.T) {
 
 	runAliasProbeAnalysis(t, "nestedcallprobe", func(pass *analysis.Pass, res *ssaResult) {
 		ssaFn, cast := probeAssignedCast(t, pass, res, "NestedCallAlias")
-		aliases := computeMustAliasKeys(ssaFn, cast.pos)
+		aliases := computeMustAliasKeys(pass, ssaFn, cast.pos)
 		assertAliasContains(t, aliases, "x", "y")
 	})
 }
@@ -98,7 +99,7 @@ func TestComputeMustAliasKeys_OverflowReturnsNil(t *testing.T) {
 
 	runAliasProbeAnalysis(t, "overflowprobe", func(pass *analysis.Pass, res *ssaResult) {
 		ssaFn, cast := probeAssignedCast(t, pass, res, "OverflowAlias")
-		if aliases := computeMustAliasKeys(ssaFn, cast.pos); aliases != nil {
+		if aliases := computeMustAliasKeys(pass, ssaFn, cast.pos); aliases != nil {
 			t.Fatalf("expected nil alias set once fanout exceeds %d, got %d entries", maxAliasSetSize, len(aliases))
 		}
 	})
@@ -111,7 +112,7 @@ func TestMatchesExprWithAliasSet(t *testing.T) {
 
 	runAliasProbeAnalysis(t, "matchesexprprobe", func(pass *analysis.Pass, res *ssaResult) {
 		copySSAFn, copyCast := probeAssignedCast(t, pass, res, "CopyAlias")
-		copyTarget := enrichTargetWithSSAAlias(copySSAFn, copyCast)
+		copyTarget := enrichTargetWithSSAAlias(pass, copySSAFn, copyCast)
 		if len(copyTarget.aliasKeys) == 0 {
 			t.Fatal("expected alias-enriched target for CopyAlias")
 		}
@@ -121,12 +122,193 @@ func TestMatchesExprWithAliasSet(t *testing.T) {
 		}
 
 		reassignSSAFn, reassignCast := probeAssignedCast(t, pass, res, "ReassignedAlias")
-		reassignTarget := enrichTargetWithSSAAlias(reassignSSAFn, reassignCast)
+		reassignTarget := enrichTargetWithSSAAlias(pass, reassignSSAFn, reassignCast)
 		reassignReceiver := findValidateReceiverInFunc(t, findProbeFuncDecl(t, pass, "ReassignedAlias"))
 		if reassignTarget.matchesExpr(pass, reassignReceiver) {
 			t.Fatal("expected reassigned alias receiver to stay excluded")
 		}
 	})
+}
+
+func TestSSAFlowAliasResolution(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		funcName       string
+		wantResolution protocolAliasResolution
+	}{
+		{name: "same phi is must alias", funcName: "SamePhiAlias", wantResolution: protocolAliasMust},
+		{name: "mixed phi is relevant ambiguity", funcName: "AmbiguousPhiAlias", wantResolution: protocolAliasAmbiguous},
+		{name: "unrelated phi is excluded", funcName: "IrrelevantPhiAlias", wantResolution: protocolAliasUnknown},
+		{name: "interface round trip is must alias", funcName: "InterfaceAlias", wantResolution: protocolAliasMust},
+		{name: "direct pointer load is must alias", funcName: "PointerAlias", wantResolution: protocolAliasMust},
+		{name: "joined pointer load is relevant ambiguity", funcName: "AmbiguousPointerAlias", wantResolution: protocolAliasAmbiguous},
+		{name: "address receiver is must alias", funcName: "AddressValidateAlias", wantResolution: protocolAliasMust},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := protocolAliasUnknown
+			runAliasProbeAnalysis(t, "flowresolutionprobe", func(pass *analysis.Pass, res *ssaResult) {
+				ssaFn, cast := probeAssignedCastNamed(t, pass, res, tt.funcName, "x")
+				matcher := newSSAFlowAliasMatcher(pass, ssaFn, cast.pos)
+				receiver := findValidateReceiverInFunc(t, findProbeFuncDecl(t, pass, tt.funcName))
+				got = matcher.resolution(pass, receiver)
+			})
+			if got != tt.wantResolution {
+				t.Fatalf("alias resolution = %d, want %d", got, tt.wantResolution)
+			}
+		})
+	}
+}
+
+func TestSSAFlowAliasValidateBeforeUseTransfer(t *testing.T) {
+	t.Parallel()
+
+	runAliasProbeAnalysis(t, "validatebeforeuseprobe", func(pass *analysis.Pass, res *ssaResult) {
+		ssaFn, cast := probeAssignedCastNamed(t, pass, res, "ValidateBeforeUse", "x")
+		target := cast.target
+		target.flowAliases = newSSAFlowAliasMatcher(pass, ssaFn, cast.pos)
+		fn := findProbeFuncDecl(t, pass, "ValidateBeforeUse")
+		ifStatement, ok := fn.Body.List[1].(*ast.IfStmt)
+		if !ok {
+			t.Fatalf("validation statement = %T, want *ast.IfStmt", fn.Body.List[1])
+		}
+		receiver := findValidateReceiverInFunc(t, fn)
+		if !target.matchesExpr(pass, receiver) {
+			t.Fatal("exact validation receiver did not match cast target")
+		}
+		if got := target.aliasResolution(pass, receiver); got != protocolAliasMust {
+			t.Fatalf("validation receiver resolution = %d, want must", got)
+		}
+		program := buildProtocolValidationProgram(pass, res, nil)
+		graph := buildInterprocSupergraphForFunc(pass, fn, res)
+		transfer := program.targetEdgeTransfer(pass, target)
+		foundValidationEdge := false
+		for _, edge := range graph.Edges {
+			tag, reason := transfer(edge, ideStateNeedsValidate)
+			if reason == pathOutcomeReasonNone && tag == ideEdgeFuncValidate {
+				foundValidationEdge = true
+			}
+		}
+		if !foundValidationEdge {
+			t.Fatal("canonical SSA transfer did not project validation onto the success edge")
+		}
+		outcome, reason := isVarEscapeTargetOutcomeWithSummaryStack(
+			pass, ifStatement.Init, target, nil, nil, nil, nil, nil,
+		)
+		if outcome != pathOutcomeSafe || reason != pathOutcomeReasonNone {
+			t.Fatalf("validation init escape outcome = (%v, %s), want safe", outcome, reason)
+		}
+		tag, tagReason := ubvNodeEdgeTag(
+			pass, fn.Body.List[2], target, nil, nil, nil,
+			ideStateValidated, nil, nil,
+		)
+		if tag != ideEdgeFuncIdentity || tagReason != pathOutcomeReasonNone {
+			t.Fatalf("post-validation use edge = (%s, %s), want identity", tag, tagReason)
+		}
+	})
+}
+
+func TestSSAFlowAliasAddressResolution(t *testing.T) {
+	t.Parallel()
+
+	got := protocolAliasUnknown
+	debugRefFound := false
+	debugRefIsAddr := false
+	debugRefValue := ""
+	directResolution := protocolAliasUnknown
+	pointeeResolution := protocolAliasUnknown
+	runAliasProbeAnalysis(t, "addressresolutionprobe", func(pass *analysis.Pass, res *ssaResult) {
+		ssaFn, cast := probeAssignedCastNamed(t, pass, res, "AddressValidateAlias", "x")
+		matcher := newSSAFlowAliasMatcher(pass, ssaFn, cast.pos)
+		fn := findProbeFuncDecl(t, pass, "AddressValidateAlias")
+		address := findValidateReceiverInFunc(t, fn)
+		debugRef := matcher.debugRefForExpr(pass, address)
+		if debugRef != nil {
+			debugRefFound = true
+			debugRefIsAddr = debugRef.IsAddr
+			debugRefValue = debugRef.X.String()
+			_, directResolution = matcher.analysis.resolveBefore(debugRef, debugRef.X)
+			_, pointeeResolution = matcher.analysis.resolvePointeeBefore(debugRef, debugRef.X)
+		}
+		got = matcher.resolution(pass, address)
+	})
+	if got != protocolAliasMust {
+		t.Fatalf(
+			"address alias resolution = %d, want must (debug-ref=%t is-addr=%t value=%q direct=%d pointee=%d)",
+			got,
+			debugRefFound,
+			debugRefIsAddr,
+			debugRefValue,
+			directResolution,
+			pointeeResolution,
+		)
+	}
+}
+
+func TestSSAFlowAliasStructuralRebinding(t *testing.T) {
+	t.Parallel()
+
+	for _, funcName := range []string{"RebasedSelectorAlias", "RebasedIndexAlias"} {
+		t.Run(funcName, func(t *testing.T) {
+			t.Parallel()
+			got := protocolAliasMust
+			runAliasProbeAnalysis(t, "structuralrebindprobe", func(pass *analysis.Pass, res *ssaResult) {
+				ssaFn, cast := probeAssignedCast(t, pass, res, funcName)
+				matcher := newSSAFlowAliasMatcher(pass, ssaFn, cast.pos)
+				receiver := findValidateReceiverInFunc(t, findProbeFuncDecl(t, pass, funcName))
+				got = matcher.resolution(pass, receiver)
+			})
+			if got != protocolAliasUnknown {
+				t.Fatalf("rebased structural alias resolution = %d, want unknown/disjoint", got)
+			}
+		})
+	}
+}
+
+func TestAmbiguousAliasPreservingSummaryIsIrrelevant(t *testing.T) {
+	t.Parallel()
+
+	relevant := true
+	var summary calleeTargetSummary
+	var summaryOK bool
+	var summaryReason pathOutcomeReason
+	runAliasProbeAnalysis(t, "ambiguouspreserveprobe", func(pass *analysis.Pass, res *ssaResult) {
+		ssaFn, cast := probeAssignedCastNamed(t, pass, res, "AmbiguousPreserveAlias", "x")
+		target := cast.target
+		target.flowAliases = newSSAFlowAliasMatcher(pass, ssaFn, cast.pos)
+		fn := findProbeFuncDecl(t, pass, "AmbiguousPreserveAlias")
+		var call *ast.CallExpr
+		ast.Inspect(fn.Body, func(node ast.Node) bool {
+			candidate, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			ident, ok := candidate.Fun.(*ast.Ident)
+			if ok && ident.Name == "preservePointer" {
+				call = candidate
+				return false
+			}
+			return true
+		})
+		cache := &sync.Map{}
+		summary, summaryOK, summaryReason = callCalleeSummaryForSlotWithStack(
+			pass,
+			call,
+			calleeTargetSlot{kind: calleeTargetSlotArg, argIndex: 0},
+			summaryStackScope{seen: make(map[string]bool)},
+			cache,
+		)
+		relevant = nodeHasAmbiguousTargetRelevantCall(pass, call, target, cache)
+	})
+	if !summaryOK || summaryReason != pathOutcomeReasonNone {
+		t.Fatalf("preserving summary = (%+v, %t, %q), want complete", summary, summaryOK, summaryReason)
+	}
+	if relevant {
+		t.Fatalf("preserving summary effects = %+v, want irrelevant ambiguous alias", summary.Effects)
+	}
 }
 
 func runAliasProbeAnalysis(
@@ -139,7 +321,7 @@ func runAliasProbeAnalysis(
 	testdata := analysistest.TestData()
 	probeAnalyzer := &analysis.Analyzer{
 		Name: name,
-		Doc:  "probe phase d alias behavior",
+		Doc:  "probe canonical SSA alias behavior",
 		Run: func(pass *analysis.Pass) (any, error) {
 			res := buildSSAForPass(pass)
 			if res == nil || res.Pkg == nil {
@@ -192,6 +374,33 @@ func probeAssignedCast(
 	return fn, assignedCasts[0]
 }
 
+func probeAssignedCastNamed(
+	t *testing.T,
+	pass *analysis.Pass,
+	res *ssaResult,
+	funcName string,
+	targetName string,
+) (*ssa.Function, cfaAssignedCast) {
+	t.Helper()
+
+	ssaFn, _ := probeAssignedCast(t, pass, res, funcName)
+	fnDecl := findProbeFuncDecl(t, pass, funcName)
+	parentMap := buildParentMap(fnDecl.Body)
+	assignedCasts, _, _, _ := collectCFACasts(
+		pass,
+		fnDecl.Body,
+		parentMap,
+		func(_ *ast.FuncLit, _ int) {},
+	)
+	for _, cast := range assignedCasts {
+		if cast.target.displayName == targetName {
+			return ssaFn, cast
+		}
+	}
+	t.Fatalf("missing assigned cast target %q in %s", targetName, funcName)
+	return nil, cfaAssignedCast{}
+}
+
 func findProbeFuncDecl(t *testing.T, pass *analysis.Pass, name string) *ast.FuncDecl {
 	t.Helper()
 
@@ -212,6 +421,9 @@ func findValidateReceiverInFunc(t *testing.T, fn *ast.FuncDecl) ast.Expr {
 
 	var receiver ast.Expr
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		if receiver != nil {
+			return false
+		}
 		call, ok := n.(*ast.CallExpr)
 		if !ok {
 			return true
@@ -238,7 +450,7 @@ func assertAliasContains(t *testing.T, aliases ssaAliasSet, names ...string) {
 	for _, name := range names {
 		found := false
 		for key := range aliases {
-			if aliasTestContains(key, ":"+name+":") {
+			if aliasTestContains(key, "|"+name+"|") {
 				found = true
 				break
 			}
@@ -253,7 +465,7 @@ func assertAliasNotContains(t *testing.T, aliases ssaAliasSet, name string) {
 	t.Helper()
 
 	for key := range aliases {
-		if aliasTestContains(key, ":"+name+":") {
+		if aliasTestContains(key, "|"+name+"|") {
 			t.Fatalf("alias set unexpectedly contained %q: %#v", name, aliases)
 		}
 	}

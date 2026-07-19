@@ -56,7 +56,7 @@ func inspectEnumSync(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConf
 			msg := fmt.Sprintf(
 				"type %s has //goplint:enum-cue directive but no *_schema.cue file found in package directory",
 				qualName)
-			findingID := StableFindingID(CategoryEnumCueMissingGo, qualName, "no-schema")
+			findingID := PackageScopedFindingID(pass, CategoryEnumCueMissingGo, qualName, "no-schema")
 			if bl.ContainsFinding(CategoryEnumCueMissingGo, findingID, msg) {
 				continue
 			}
@@ -90,7 +90,7 @@ func inspectEnumSync(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConf
 			msg := fmt.Sprintf(
 				"type %s: failed to extract CUE disjunction from %s at path %q: %v",
 				qualName, filepath.Base(schemaFilename), ann.cuePath, cueErr)
-			findingID := StableFindingID(CategoryEnumCueMissingGo, qualName, ann.cuePath, "cue-error")
+			findingID := PackageScopedFindingID(pass, CategoryEnumCueMissingGo, qualName, ann.cuePath, "cue-error")
 			if bl.ContainsFinding(CategoryEnumCueMissingGo, findingID, msg) {
 				continue
 			}
@@ -114,7 +114,7 @@ func inspectEnumSync(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConf
 			msg := fmt.Sprintf(
 				"type %s: CUE member %q (at %s) is missing from Validate() switch cases",
 				qualName, cueMember, ann.cuePath)
-			findingID := StableFindingID(CategoryEnumCueMissingGo, qualName, ann.cuePath, cueMember)
+			findingID := PackageScopedFindingID(pass, CategoryEnumCueMissingGo, qualName, ann.cuePath, cueMember)
 			if bl.ContainsFinding(CategoryEnumCueMissingGo, findingID, msg) {
 				continue
 			}
@@ -133,7 +133,7 @@ func inspectEnumSync(pass *analysis.Pass, cfg *ExceptionConfig, bl *BaselineConf
 			msg := fmt.Sprintf(
 				"type %s: Validate() switch case %q is not present in CUE disjunction at %s",
 				qualName, goCase, ann.cuePath)
-			findingID := StableFindingID(CategoryEnumCueExtraGo, qualName, ann.cuePath, goCase)
+			findingID := PackageScopedFindingID(pass, CategoryEnumCueExtraGo, qualName, ann.cuePath, goCase)
 			if bl.ContainsFinding(CategoryEnumCueExtraGo, findingID, msg) {
 				continue
 			}

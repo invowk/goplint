@@ -18,23 +18,29 @@ const (
 type pathOutcomeReason string
 
 const (
-	pathOutcomeReasonNone             pathOutcomeReason = ""
-	pathOutcomeReasonStateBudget      pathOutcomeReason = "state-budget"
-	pathOutcomeReasonDepthBudget      pathOutcomeReason = "depth-budget"
-	pathOutcomeReasonRecursionCycle   pathOutcomeReason = "recursion-cycle"
-	pathOutcomeReasonUnresolvedTarget pathOutcomeReason = "unresolved-target"
+	pathOutcomeReasonNone                pathOutcomeReason = ""
+	pathOutcomeReasonStateBudget         pathOutcomeReason = "state-budget"
+	pathOutcomeReasonWitnessBudget       pathOutcomeReason = "witness-budget"
+	pathOutcomeReasonTimeout             pathOutcomeReason = "timeout"
+	pathOutcomeReasonRecursionCycle      pathOutcomeReason = "recursion-cycle"
+	pathOutcomeReasonUnresolvedTarget    pathOutcomeReason = "unresolved-target"
+	pathOutcomeReasonCallMapping         pathOutcomeReason = "call-mapping"
+	pathOutcomeReasonFeasibilityUnknown  pathOutcomeReason = "feasibility-unknown"
+	pathOutcomeReasonMissingSSA          pathOutcomeReason = "missing-ssa"
+	pathOutcomeReasonUnsupportedInstr    pathOutcomeReason = "unsupported-instruction"
+	pathOutcomeReasonAmbiguousIdentity   pathOutcomeReason = "ambiguous-identity"
+	pathOutcomeReasonConcurrentMutation  pathOutcomeReason = "concurrent-mutation"
+	pathOutcomeReasonEscapedHeapMutation pathOutcomeReason = "escaped-heap-mutation"
+	pathOutcomeReasonReflection          pathOutcomeReason = "reflection"
+	pathOutcomeReasonUnsafe              pathOutcomeReason = "unsafe"
 )
 
 func cfgOutcomeMeta(
-	backend string,
 	maxStates int,
-	maxDepth int,
 	reason pathOutcomeReason,
 ) map[string]string {
 	meta := map[string]string{
-		"cfg_backend":       backend,
 		"cfg_budget_states": strconv.Itoa(maxStates),
-		"cfg_budget_depth":  strconv.Itoa(maxDepth),
 	}
 	if reason != pathOutcomeReasonNone {
 		meta["cfg_inconclusive_reason"] = string(reason)
@@ -43,14 +49,12 @@ func cfgOutcomeMeta(
 }
 
 func cfgOutcomeMetaWithWitness(
-	backend string,
 	maxStates int,
-	maxDepth int,
 	reason pathOutcomeReason,
 	witness []int32,
 	maxWitnessSteps int,
 ) map[string]string {
-	meta := cfgOutcomeMeta(backend, maxStates, maxDepth, reason)
+	meta := cfgOutcomeMeta(maxStates, reason)
 	addCFGWitnessMeta(meta, witness, maxWitnessSteps)
 	return meta
 }
@@ -76,10 +80,7 @@ func addCFGWitnessMeta(meta map[string]string, witness []int32, maxWitnessSteps 
 	if len(edges) > 0 {
 		meta["cfg_witness_edges"] = strings.Join(edges, ",")
 	}
-	meta["witness_cfg_path"] = strings.Join(steps, "->")
-	meta["witness_cfg_steps"] = strconv.Itoa(limit)
 	if len(witness) > limit {
-		meta["witness_cfg_truncated"] = "true"
 		meta["cfg_witness_truncation_cause"] = "max-steps"
 	}
 }

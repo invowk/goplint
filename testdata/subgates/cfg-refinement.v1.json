@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "runs": [
+    {
+      "id": "refinement-tests",
+      "packages": ["./goplint"],
+      "tests": [
+        "TestProtocolJoinRefinementCounterexamples",
+        "TestCFGSSAConstraintsFeasibilityBackend",
+        "TestCFGSSAConstraintEvidenceChecker",
+        "TestCFGSSAConstraintsMissingSSAReturnsUnknown",
+        "TestCFGRefinementUnknownResultStaysInconclusive",
+        "TestCFGRefinementResourceLimitsStayInconclusive",
+        "TestCFGRefinementIteratesCheckedUNSATWitnesses",
+        "TestCFGWitnessHashDeterministic",
+        "TestWriteRefinementTraceToSinkWritesTraceRecord",
+        "TestWriteRefinementTraceToSinkSkipsWhenRefinementDisabled"
+      ],
+      "count": 1,
+      "timeout_seconds": 300
+    },
+    {
+      "id": "refinement-stream-tests",
+      "packages": ["."],
+      "tests": ["TestParseFindingsJSONLIgnoresNonFindingKinds"],
+      "count": 1,
+      "timeout_seconds": 120
+    }
+  ],
+  "populations": [
+    {
+      "id": "refinement-tests",
+      "selectors": [
+        {
+          "run": "refinement-tests",
+          "scope": "roots"
+        },
+        {
+          "run": "refinement-stream-tests",
+          "scope": "roots"
+        }
+      ]
+    }
+  ]
+}

@@ -40,7 +40,6 @@ func f() {
 func TestIsVarUseTargetSeen_ExpressionKinds(t *testing.T) {
 	t.Parallel()
 
-	target := newCastTargetFromName("x")
 	tests := []struct {
 		name string
 		src  string
@@ -81,6 +80,16 @@ func f() {
 	x := 1
 	ch := make(chan int, 1)
 	ch <- x
+}`,
+			want: true,
+		},
+		{
+			name: "field read",
+			src: `package p
+type T struct{ Value string }
+func f() {
+	var x T
+	_ = x.Value
 }`,
 			want: true,
 		},
@@ -134,7 +143,8 @@ func f() {
 			t.Parallel()
 
 			body := parseNamedFuncBody(t, tt.src, "f")
-			got := isVarUseTargetSeen(nil, body, target, nil, nil, nil, map[*ast.FuncLit]bool{})
+			pass, target := bindTestTargetForNodes("x", body)
+			got := isVarUseTargetSeen(pass, body, target, nil, nil, nil, map[*ast.FuncLit]bool{})
 			if got != tt.want {
 				t.Fatalf("isVarUseTargetSeen() = %v, want %v", got, tt.want)
 			}
@@ -145,7 +155,6 @@ func f() {
 func TestIsVarUseTargetSeen_SyncClosureControls(t *testing.T) {
 	t.Parallel()
 
-	target := newCastTargetFromName("x")
 	src := `package p
 func use(v int) {}
 func f() {
@@ -154,21 +163,20 @@ func f() {
 }`
 	body := parseNamedFuncBody(t, src, "f")
 	lit := firstFuncLitInNode(t, body)
+	pass, target := bindTestTargetForNodes("x", body)
 
-	if got := isVarUseTargetSeen(nil, body, target, nil, nil, nil, map[*ast.FuncLit]bool{}); got {
+	if got := isVarUseTargetSeen(pass, body, target, nil, nil, nil, map[*ast.FuncLit]bool{}); got {
 		t.Fatal("closure use should be ignored when syncLits is nil")
 	}
 
 	syncLits := map[*ast.FuncLit]bool{lit: true}
-	if got := isVarUseTargetSeen(nil, body, target, syncLits, nil, nil, map[*ast.FuncLit]bool{}); !got {
+	if got := isVarUseTargetSeen(pass, body, target, syncLits, nil, nil, map[*ast.FuncLit]bool{}); !got {
 		t.Fatal("closure use should be detected when syncLits marks the literal executable")
 	}
 }
 
 func TestIsVarUseTargetSeen_SyncCalls(t *testing.T) {
 	t.Parallel()
-
-	target := newCastTargetFromName("x")
 
 	t.Run("use before validate", func(t *testing.T) {
 		t.Parallel()
@@ -185,13 +193,14 @@ func f() {
 		body := parseNamedFuncBody(t, src, "f")
 		call, lit := closureVarAndCall(t, body, "g")
 		syncCalls := closureVarCallSet{call: lit}
+		pass, target := bindTestTargetForNodes("x", body)
 
-		if got := isVarUseTargetSeen(nil, body, target, nil, syncCalls, nil, map[*ast.FuncLit]bool{}); !got {
+		if got := isVarUseTargetSeen(pass, body, target, nil, syncCalls, nil, map[*ast.FuncLit]bool{}); !got {
 			t.Fatal("expected use-before-validate in sync closure call to be detected")
 		}
 	})
 
-	t.Run("validate before use", func(t *testing.T) {
+	t.Run("ignored validate does not discharge use", func(t *testing.T) {
 		t.Parallel()
 
 		src := `package p
@@ -209,9 +218,10 @@ func f() {
 		body := parseNamedFuncBody(t, src, "f")
 		call, lit := closureVarAndCall(t, body, "g")
 		syncCalls := closureVarCallSet{call: lit}
+		pass, target := bindTestTargetForNodes("x", body)
 
-		if got := isVarUseTargetSeen(nil, body, target, nil, syncCalls, nil, map[*ast.FuncLit]bool{}); got {
-			t.Fatal("validate-before-use in sync closure should not report use-before-validate")
+		if got := isVarUseTargetSeen(pass, body, target, nil, syncCalls, nil, map[*ast.FuncLit]bool{}); !got {
+			t.Fatal("ignored validation result must not discharge use-before-validation")
 		}
 	})
 }
@@ -291,58 +301,4 @@ func parseNamedFuncBody(t *testing.T, src, funcName string) *ast.BlockStmt {
 	}
 	t.Fatalf("function %q not found", funcName)
 	return nil
-}
-
-func TestFirstUseValidateOrderInNode_MethodValueDeferredIgnored(t *testing.T) {
-	t.Parallel()
-
-	src := `package p
-type T struct{}
-func (T) Validate() error { return nil }
-func use(T) {}
-func f() {
-	var x T
-	validateFn := x.Validate
-	defer validateFn()
-	use(x)
-}`
-	body := parseNamedFuncBody(t, src, "f")
-
-	assign := body.List[1].(*ast.AssignStmt)
-	deferStmt := body.List[2].(*ast.DeferStmt)
-	useStmt := body.List[3]
-
-	call := deferStmt.Call
-
-	methodCalls := methodValueValidateCallSet{
-		call: assign.Rhs[0].(*ast.SelectorExpr).X,
-	}
-	target := newCastTargetFromName("x")
-
-	if got := firstUseValidateOrderInNode(nil, deferStmt, target, nil, nil, methodCalls); got != ubvOrderNone {
-		t.Fatalf("deferred method-value validate should not count, got %v", got)
-	}
-	if got := firstUseValidateOrderInNode(nil, useStmt, target, nil, nil, methodCalls); got != ubvOrderUseBeforeValidate {
-		t.Fatalf("use statement should be use-before-validate, got %v", got)
-	}
-}
-
-func TestFirstUseValidateOrderInNode_AssignmentAliasIsUse(t *testing.T) {
-	t.Parallel()
-
-	src := `package p
-type T struct{}
-func (T) Validate() error { return nil }
-func f() {
-	var x T
-	y := x
-	_ = y
-}`
-	body := parseNamedFuncBody(t, src, "f")
-	assign := body.List[1]
-	target := newCastTargetFromName("x")
-
-	if got := firstUseValidateOrderInNode(nil, assign, target, nil, nil, nil); got != ubvOrderUseBeforeValidate {
-		t.Fatalf("alias assignment should count as use-before-validate, got %v", got)
-	}
 }

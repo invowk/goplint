@@ -1,4 +1,0 @@
-[unvalidated-cast]
-entries = [
-    { id = "gpl3_1eafd5390f755150aa96932579778247df2cdedf3667ed10e5644b75495df6fe", message = "type conversion to CommandName from non-constant without Validate() check" },
-]

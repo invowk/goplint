@@ -8,8 +8,10 @@ import (
 	"go/token"
 	"go/types"
 	"strings"
+	"sync"
 
 	"golang.org/x/tools/go/analysis"
+	gocfg "golang.org/x/tools/go/cfg"
 )
 
 type boundaryRequestParam struct {
@@ -24,6 +26,10 @@ func inspectBoundaryRequestValidation(
 	fn *ast.FuncDecl,
 	cfg *ExceptionConfig,
 	bl *BaselineConfig,
+	cfgMaxStates int,
+	refinement cfgProtocolRefinementOptions,
+	ssaRes *ssaResult,
+	calleeSummaryCache *sync.Map,
 ) {
 	if fn == nil || fn.Body == nil || fn.Type == nil || !fn.Name.IsExported() || !boundaryRequestFuncReturnsError(fn) {
 		return
@@ -31,13 +37,243 @@ func inspectBoundaryRequestValidation(
 	if shouldSkipFunc(fn) || hasTrustedBoundaryDirective(fn.Doc, nil) {
 		return
 	}
-
 	params := collectBoundaryRequestParams(pass, fn)
+	if len(params) == 0 {
+		// Callee summaries are relevant only when this declaration actually
+		// owns a boundary-request obligation. Building them for every exported
+		// error-returning function in every dependency recursively summarizes
+		// unrelated standard-library call graphs.
+		return
+	}
+
+	funcCFG := buildProtocolCFG(pass, fn.Body, ssaRes)
+	if funcCFG == nil || len(funcCFG.Blocks) == 0 {
+		return
+	}
+	functionAvailability := protocolSSAAvailabilityForDecl(pass, ssaRes, fn)
+	effectiveBudget := adaptiveBlockVisitBudget(funcCFG, blockVisitBudget{maxStates: cfgMaxStates})
+	solver := newInterprocSolverWithSSA(pass, ssaRes, calleeSummaryCache)
+	refiner := newCFGRefinementController(refinement)
+	syncLits := collectSynchronousClosureLits(fn.Body)
+	methodCalls := mergeMethodValueValidateCallSets(
+		collectMethodValueValidateCalls(pass, fn.Body),
+		collectCalleeValidatedCalls(
+			pass,
+			fn.Body,
+			ssaRes,
+			stackScopeFromMap(nil, ssaRes),
+			calleeSummaryCache,
+		),
+	)
+	callChain := []string{qualFuncName(pass, fn)}
 	for _, param := range params {
-		if boundaryRequestParamHasUseBeforeValidation(pass, fn.Body, param.target) {
-			reportBoundaryRequestFinding(pass, fn, param, cfg, bl)
+		availability := functionAvailability
+		paramAvailability := enrichBoundaryRequestParamWithSSA(pass, ssaRes, fn, &param)
+		if availability.ready() && !paramAvailability.ready() {
+			availability = paramAvailability
+		}
+		originKey := semanticNodeKey(pass, param.pos)
+		input := interprocUBVCrossBlockInput{
+			Target:                         param.target,
+			DefBlock:                       funcCFG.Blocks[0],
+			DefIdx:                         -1,
+			OriginKey:                      originKey,
+			TypeName:                       param.typeName,
+			SyncLits:                       syncLits,
+			MethodCalls:                    methodCalls,
+			MaxStates:                      effectiveBudget.maxStates,
+			CallChain:                      callChain,
+			SSAAvailability:                availability,
+			OriginAtEntry:                  true,
+			IgnoredNodes:                   boundaryRequestIgnoredProtocolNodes(pass, fn.Body, param.target),
+			TerminalUncertaintyIsBlocking:  true,
+			ValidationDischargesObligation: true,
+		}
+		controlledSolver := solver.withControl(refiner.newDeadline())
+		result := controlledSolver.EvaluateUBVCrossBlock(input)
+		result = refineBoundaryRequestResult(pass, fn, param, funcCFG, refiner, controlledSolver, input, result)
+		switch result.toPathOutcome() {
+		case pathOutcomeUnsafe:
+			reportBoundaryRequestFinding(pass, fn, param, cfg, bl, result)
+		case pathOutcomeInconclusive:
+			reportBoundaryRequestInconclusive(pass, fn, param, bl, result)
+		case pathOutcomeSafe:
 		}
 	}
+}
+
+func reportBoundaryRequestInconclusive(
+	pass *analysis.Pass,
+	fn *ast.FuncDecl,
+	param boundaryRequestParam,
+	bl *BaselineConfig,
+	result interprocPathResult,
+) {
+	qualName := qualFuncName(pass, fn)
+	findingID := PackageScopedFindingID(
+		pass,
+		CategoryUnvalidatedBoundaryRequest,
+		qualName,
+		param.name,
+		param.typeName,
+		"inconclusive",
+		string(result.Reason),
+		semanticNodeKey(pass, param.pos),
+	)
+	msg := fmt.Sprintf(
+		"parameter %q of %s has inconclusive checked Validate() analysis at exported boundary",
+		param.name,
+		param.typeName,
+	)
+	meta := map[string]string{
+		"cfg_outcome_status":      cfgRefinementStatusInconclusive,
+		"cfg_inconclusive_reason": string(result.Reason),
+	}
+	meta = appendProtocolRefinementMeta(meta, result)
+	reportInconclusiveFindingWithMetaIfNotBaselined(
+		pass,
+		bl,
+		param.pos,
+		CategoryUnvalidatedBoundaryRequest,
+		findingID,
+		msg,
+		meta,
+	)
+}
+
+func enrichBoundaryRequestParamWithSSA(
+	pass *analysis.Pass,
+	ssaRes *ssaResult,
+	fn *ast.FuncDecl,
+	param *boundaryRequestParam,
+) ssaAvailability {
+	if pass == nil || pass.TypesInfo == nil || fn == nil || fn.Name == nil || param == nil {
+		return ssaAvailability{Status: ssaAvailabilityMissingFunction}
+	}
+	typesFunc, ok := pass.TypesInfo.Defs[fn.Name].(*types.Func)
+	if !ok || typesFunc == nil {
+		return ssaAvailability{Status: ssaAvailabilityMissingFunction}
+	}
+	resolution := resolveSSAFunction(ssaRes, typesFunc)
+	if !resolution.Availability.ready() {
+		return resolution.Availability
+	}
+	signature, ok := typesFunc.Type().(*types.Signature)
+	if !ok {
+		return ssaAvailability{Status: ssaAvailabilityMissingFunction}
+	}
+	parameterIdent, ok := param.target.originExpr.(*ast.Ident)
+	if !ok {
+		return ssaAvailability{Status: ssaAvailabilityMissingFunction}
+	}
+	parameterObject := objectForIdent(pass, parameterIdent)
+	ssaIndex := 0
+	if signature.Recv() != nil {
+		ssaIndex++
+	}
+	parameterIndex := -1
+	for index := range signature.Params().Len() {
+		if signature.Params().At(index) == parameterObject {
+			parameterIndex = index
+			break
+		}
+	}
+	if parameterIndex < 0 || ssaIndex+parameterIndex >= len(resolution.Function.Params) {
+		return ssaAvailability{Status: ssaAvailabilityMissingFunction}
+	}
+	ssaParameter := resolution.Function.Params[ssaIndex+parameterIndex]
+	interner := newProtocolIdentityInterner()
+	origin := interner.internValue(ssaParameter)
+	analysis := analyzeProtocolAliases(resolution.Function, interner)
+	param.target.flowAliases = newSSAFlowAliasMatcherForIdentity(
+		pass,
+		resolution.Function,
+		analysis,
+		origin,
+		ssaValueHasPointerType(ssaParameter),
+		ssaParameter,
+	)
+	return resolution.Availability
+}
+
+func boundaryRequestIgnoredProtocolNodes(pass *analysis.Pass, body *ast.BlockStmt, target castTarget) map[ast.Node]bool {
+	ignored := make(map[ast.Node]bool)
+	if body == nil {
+		return ignored
+	}
+	for _, stmt := range body.List {
+		if !boundaryRequestDefaultingStmt(pass, stmt, target) &&
+			!boundaryRequestNilGuardStmt(pass, stmt, target) &&
+			!boundaryRequestLocalAliasStmt(pass, stmt, target) {
+			continue
+		}
+		ast.Inspect(stmt, func(node ast.Node) bool {
+			if node != nil {
+				ignored[node] = true
+			}
+			return true
+		})
+	}
+	return ignored
+}
+
+func boundaryRequestLocalAliasStmt(pass *analysis.Pass, stmt ast.Stmt, target castTarget) bool {
+	if pass == nil || pass.Pkg == nil {
+		return false
+	}
+	assign, ok := stmt.(*ast.AssignStmt)
+	if !ok || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
+		return false
+	}
+	identifier, ok := stripParens(assign.Lhs[0]).(*ast.Ident)
+	if !ok {
+		return false
+	}
+	variable, ok := objectForIdent(pass, identifier).(*types.Var)
+	if !ok || variable.IsField() || variable.Parent() == nil || variable.Parent() == pass.Pkg.Scope() {
+		return false
+	}
+	source := stripParens(assign.Rhs[0])
+	if address, addressOK := source.(*ast.UnaryExpr); addressOK && address.Op == token.AND {
+		source = stripParens(address.X)
+	}
+	return target.matchesExpr(pass, source)
+}
+
+func refineBoundaryRequestResult(
+	pass *analysis.Pass,
+	fn *ast.FuncDecl,
+	param boundaryRequestParam,
+	funcCFG *gocfg.CFG,
+	refiner cfgRefinementController,
+	solver interprocSolver,
+	input interprocUBVCrossBlockInput,
+	result interprocPathResult,
+) interprocPathResult {
+	findingID := boundaryRequestFindingID(pass, fn, param)
+	return refiner.Refine(cfgRefinementRequest{
+		Pass:          pass,
+		Position:      param.pos,
+		CFG:           funcCFG,
+		Result:        result,
+		Category:      CategoryUnvalidatedBoundaryRequest,
+		FindingID:     findingID,
+		CallChain:     input.CallChain,
+		OriginAnchors: map[string]string{"boundary_parameter_pos": input.OriginKey},
+		SyntheticPath: []int32{input.DefBlock.Index},
+		Control:       solver.control,
+		Rerun: func(override cfgRefinementOverride) interprocPathResult {
+			next := input
+			if override.MaxStates > 0 {
+				next.MaxStates = override.MaxStates
+			}
+			next.DischargedWitnesses = override.DischargedWitnesses
+			if override.ResolveTargets {
+				next.ResolveCFGCalls = true
+			}
+			return solver.EvaluateUBVCrossBlock(next)
+		},
+	})
 }
 
 func collectBoundaryRequestParams(pass *analysis.Pass, fn *ast.FuncDecl) []boundaryRequestParam {
@@ -65,6 +301,7 @@ func collectBoundaryRequestParams(pass *analysis.Pass, fn *ast.FuncDecl) []bound
 			if !ok {
 				continue
 			}
+			target.typeKey = typeIdentityKey(paramType)
 			params = append(params, boundaryRequestParam{
 				name:     name.Name,
 				typeName: typeName,
@@ -95,29 +332,6 @@ func boundaryRequestTypeName(t types.Type) (string, bool) {
 	return typeIdentityKey(named), true
 }
 
-func boundaryRequestParamHasUseBeforeValidation(pass *analysis.Pass, body *ast.BlockStmt, target castTarget) bool {
-	if body == nil {
-		return false
-	}
-	syncLits := collectSynchronousClosureLits(body)
-	var syncCalls closureVarCallSet
-	methodCalls := collectMethodValueValidateCalls(pass, body)
-	for _, stmt := range body.List {
-		if boundaryRequestDefaultingStmt(pass, stmt, target) ||
-			boundaryRequestNilGuardStmt(pass, stmt, target) ||
-			boundaryRequestSafeDelegationStmt(pass, stmt, target) {
-			continue
-		}
-		if boundaryRequestValidateGuard(pass, stmt, target, syncLits, syncCalls, methodCalls) {
-			return false
-		}
-		if boundaryRequestUse(pass, stmt, target, syncLits, syncCalls, methodCalls) {
-			return true
-		}
-	}
-	return false
-}
-
 func boundaryRequestFuncReturnsError(fn *ast.FuncDecl) bool {
 	if fn == nil || fn.Type == nil || fn.Type.Results == nil {
 		return false
@@ -132,72 +346,6 @@ func boundaryRequestFuncReturnsError(fn *ast.FuncDecl) bool {
 		}
 	}
 	return false
-}
-
-func boundaryRequestValidateGuard(
-	pass *analysis.Pass,
-	stmt ast.Stmt,
-	target castTarget,
-	syncLits map[*ast.FuncLit]bool,
-	syncCalls closureVarCallSet,
-	methodCalls methodValueValidateCallSet,
-) bool {
-	ifstmt, ok := stmt.(*ast.IfStmt)
-	if !ok || ifstmt.Init == nil || ifstmt.Body == nil {
-		return false
-	}
-	if !nodeSliceContainsValidateCall(
-		pass,
-		[]ast.Node{ifstmt.Init},
-		target,
-		syncLits,
-		syncCalls,
-		methodCalls,
-	) {
-		return false
-	}
-	errName, ok := boundaryRequestAssignedErrName(ifstmt.Init)
-	if !ok || !boundaryRequestErrCondition(ifstmt.Cond, errName) {
-		return false
-	}
-	return boundaryRequestBlockTerminates(ifstmt.Body)
-}
-
-func boundaryRequestAssignedErrName(stmt ast.Stmt) (string, bool) {
-	assign, ok := stmt.(*ast.AssignStmt)
-	if !ok || len(assign.Lhs) != len(assign.Rhs) {
-		return "", false
-	}
-	for i, rhs := range assign.Rhs {
-		call, ok := stripParens(rhs).(*ast.CallExpr)
-		if !ok {
-			continue
-		}
-		sel, ok := stripParens(call.Fun).(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != validateMethodName {
-			continue
-		}
-		ident, ok := stripParens(assign.Lhs[i]).(*ast.Ident)
-		if !ok || ident.Name == "_" {
-			return "", false
-		}
-		return ident.Name, true
-	}
-	return "", false
-}
-
-func boundaryRequestErrCondition(expr ast.Expr, errName string) bool {
-	bin, ok := stripParens(expr).(*ast.BinaryExpr)
-	if !ok || bin.Op != token.NEQ {
-		return false
-	}
-	return boundaryRequestIdentName(bin.X, errName) && boundaryRequestIsNil(bin.Y) ||
-		boundaryRequestIsNil(bin.X) && boundaryRequestIdentName(bin.Y, errName)
-}
-
-func boundaryRequestIdentName(expr ast.Expr, name string) bool {
-	ident, ok := stripParens(expr).(*ast.Ident)
-	return ok && ident.Name == name
 }
 
 func boundaryRequestIsNil(expr ast.Expr) bool {
@@ -242,124 +390,6 @@ func boundaryRequestSelectorNilSide(pass *analysis.Pass, selectorExpr, nilExpr a
 	return ok && target.matchesExpr(pass, sel.X) && boundaryRequestIsNil(nilExpr)
 }
 
-func boundaryRequestUse(
-	pass *analysis.Pass,
-	stmt ast.Stmt,
-	target castTarget,
-	syncLits map[*ast.FuncLit]bool,
-	syncCalls closureVarCallSet,
-	methodCalls methodValueValidateCallSet,
-) bool {
-	if isVarUseTarget(pass, stmt, target, syncLits, syncCalls, methodCalls) {
-		return true
-	}
-	found := false
-	parentMap := buildParentMap(stmt)
-	ast.Inspect(stmt, func(n ast.Node) bool {
-		if found {
-			return false
-		}
-		if lit, ok := n.(*ast.FuncLit); ok {
-			return syncLits[lit]
-		}
-		sel, ok := n.(*ast.SelectorExpr)
-		if !ok || !target.matchesExpr(pass, sel.X) {
-			return true
-		}
-		if boundaryRequestSelectorIsValidateReceiver(sel, parentMap) ||
-			boundaryRequestSelectorIsAssignmentLHS(sel, parentMap) {
-			return true
-		}
-		found = true
-		return false
-	})
-	return found
-}
-
-func boundaryRequestSafeDelegationStmt(pass *analysis.Pass, stmt ast.Stmt, target castTarget) bool {
-	switch node := stmt.(type) {
-	case *ast.ReturnStmt:
-		return boundaryRequestSafeDelegationExprs(pass, node.Results, target)
-	case *ast.AssignStmt:
-		return boundaryRequestSafeDelegationExprs(pass, node.Rhs, target)
-	case *ast.ExprStmt:
-		return boundaryRequestSafeDelegationExpr(pass, node.X, target)
-	default:
-		return false
-	}
-}
-
-func boundaryRequestSafeDelegationExprs(pass *analysis.Pass, exprs []ast.Expr, target castTarget) bool {
-	if len(exprs) == 0 {
-		return false
-	}
-	foundDelegation := false
-	for _, expr := range exprs {
-		if boundaryRequestSafeDelegationExpr(pass, expr, target) {
-			foundDelegation = true
-			continue
-		}
-		if boundaryRequestUse(pass, &ast.ExprStmt{X: expr}, target, nil, nil, nil) {
-			return false
-		}
-	}
-	return foundDelegation
-}
-
-func boundaryRequestSafeDelegationExpr(pass *analysis.Pass, expr ast.Expr, target castTarget) bool {
-	call, ok := stripParens(expr).(*ast.CallExpr)
-	if !ok || !boundaryRequestExportedCallee(call) {
-		return false
-	}
-	foundTargetArg := false
-	for _, arg := range call.Args {
-		if target.matchesExpr(pass, arg) {
-			foundTargetArg = true
-			continue
-		}
-		if boundaryRequestUse(pass, &ast.ExprStmt{X: arg}, target, nil, nil, nil) {
-			return false
-		}
-	}
-	return foundTargetArg
-}
-
-func boundaryRequestExportedCallee(call *ast.CallExpr) bool {
-	switch fun := stripParens(call.Fun).(type) {
-	case *ast.Ident:
-		return fun.IsExported()
-	case *ast.SelectorExpr:
-		return fun.Sel != nil && fun.Sel.IsExported()
-	default:
-		return false
-	}
-}
-
-func boundaryRequestSelectorIsValidateReceiver(sel *ast.SelectorExpr, parentMap map[ast.Node]ast.Node) bool {
-	if sel == nil || sel.Sel.Name != validateMethodName {
-		return false
-	}
-	_, ok := parentMap[sel].(*ast.CallExpr)
-	return ok
-}
-
-func boundaryRequestSelectorIsAssignmentLHS(sel *ast.SelectorExpr, parentMap map[ast.Node]ast.Node) bool {
-	parent, ok := parentMap[sel]
-	if !ok {
-		return false
-	}
-	assign, ok := parent.(*ast.AssignStmt)
-	if !ok {
-		return false
-	}
-	for _, lhs := range assign.Lhs {
-		if lhs == sel {
-			return true
-		}
-	}
-	return false
-}
-
 func boundaryRequestDefaultingStmt(pass *analysis.Pass, stmt ast.Stmt, target castTarget) bool {
 	ifstmt, ok := stmt.(*ast.IfStmt)
 	if !ok || ifstmt.Init != nil || ifstmt.Else != nil || ifstmt.Body == nil {
@@ -378,11 +408,24 @@ func boundaryRequestDefaultingStmt(pass *analysis.Pass, stmt ast.Stmt, target ca
 		if !ok || targetKeyForExpr(pass, lhs) != selector {
 			return false
 		}
-		if boundaryRequestUse(pass, &ast.ExprStmt{X: assign.Rhs[0]}, target, nil, nil, nil) {
+		if boundaryRequestExprReferencesTarget(pass, assign.Rhs[0], target) {
 			return false
 		}
 	}
 	return true
+}
+
+func boundaryRequestExprReferencesTarget(pass *analysis.Pass, expr ast.Expr, target castTarget) bool {
+	found := false
+	ast.Inspect(expr, func(node ast.Node) bool {
+		candidate, ok := node.(ast.Expr)
+		if !ok || !target.matchesExpr(pass, candidate) {
+			return true
+		}
+		found = true
+		return false
+	})
+	return found
 }
 
 func boundaryRequestZeroCheckSelector(pass *analysis.Pass, expr ast.Expr, target castTarget) (string, bool) {
@@ -422,25 +465,38 @@ func reportBoundaryRequestFinding(
 	param boundaryRequestParam,
 	cfg *ExceptionConfig,
 	bl *BaselineConfig,
+	result interprocPathResult,
 ) {
 	qualName := qualFuncName(pass, fn)
 	exceptionKey := qualName + "." + param.name + ".boundary-request-validation"
 	funcExceptionKey := qualName + ".boundary-request-validation"
-	if cfg != nil && (cfg.isExcepted(exceptionKey) || cfg.isExcepted(funcExceptionKey)) {
+	if protocolPolicySuppressesDefiniteFinding(
+		pathOutcomeUnsafe,
+		func() bool {
+			return cfg != nil && (cfg.isExcepted(exceptionKey) || cfg.isExcepted(funcExceptionKey))
+		},
+	) {
 		return
 	}
-	findingID := PackageScopedFindingID(
-		pass,
-		CategoryUnvalidatedBoundaryRequest,
-		qualName,
-		param.name,
-		param.typeName,
-		stablePosKey(pass, param.pos),
-	)
+	findingID := boundaryRequestFindingID(pass, fn, param)
 	msg := fmt.Sprintf(
 		"parameter %q of %s is used before checked Validate() at exported boundary",
 		param.name,
 		param.typeName,
 	)
-	reportFindingIfNotBaselined(pass, bl, param.pos, CategoryUnvalidatedBoundaryRequest, findingID, msg)
+	meta := appendProtocolRefinementMeta(map[string]string{
+		"cfg_outcome_status": cfgRefinementStatusViolation,
+	}, result)
+	reportFindingWithMetaIfNotBaselined(pass, bl, param.pos, CategoryUnvalidatedBoundaryRequest, findingID, msg, meta)
+}
+
+func boundaryRequestFindingID(pass *analysis.Pass, fn *ast.FuncDecl, param boundaryRequestParam) string {
+	return PackageScopedFindingID(
+		pass,
+		CategoryUnvalidatedBoundaryRequest,
+		qualFuncName(pass, fn),
+		param.name,
+		param.typeName,
+		semanticNodeKey(pass, param.pos),
+	)
 }

@@ -2,6 +2,6 @@
 
 [primitive]
 entries = [
-    { id = "gpl3_71af4d27c00fd9c7e819ad13acbe47c765de4eb7e76149986c0b6268f5fe0e0b", message = "struct field baseline.BaselinedStruct.Known uses primitive type string" },
-    { id = "gpl3_baeba9059b87ab33044221bca8de843583ecb5794fbe3f5f84f2aa6e14b08f1a", message = "parameter \"known\" of baseline.BaselinedFunc uses primitive type string" },
+    { id = "gpl4_417a997b9adcb7f103842b69327ce3410b839b7fe333b3707fe1e6046175fcb7", message = "struct field baseline.BaselinedStruct.Known uses primitive type string" },
+    { id = "gpl4_4abc8016c06ccee404680a78b5dd380646521b1d1384a4f3c34ecb56efeae278", message = "parameter \"known\" of baseline.BaselinedFunc uses primitive type string" },
 ]

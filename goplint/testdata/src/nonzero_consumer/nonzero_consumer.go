@@ -27,8 +27,8 @@ type CrossPkgZeroOK struct {
 
 // CrossPkgMixed has both correct and incorrect cross-package usage.
 type CrossPkgMixed struct {
-	Required nonzero.CommandName  // want `struct field nonzero_consumer\.CrossPkgMixed\.Required uses nonzero type CommandName as value`
-	Optional *nonzero.CommandName // NOT flagged — pointer
+	Required nonzero.CommandName   // want `struct field nonzero_consumer\.CrossPkgMixed\.Required uses nonzero type CommandName as value`
+	Optional *nonzero.CommandName  // NOT flagged — pointer
 	ZeroOK   nonzero.ZeroValidType // NOT flagged — no nonzero annotation
 }
 

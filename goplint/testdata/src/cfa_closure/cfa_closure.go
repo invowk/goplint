@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
-// Package cfa_closure provides test fixtures for CFA closure analysis.
-// In AST mode, closure bodies are completely skipped. In CFA mode,
-// each closure gets its own CFG and independent validation analysis.
+// Package cfa_closure provides test fixtures for canonical closure analysis.
+// Each closure gets its own CFG and independent validation analysis.
 package cfa_closure
 
 import "fmt"
@@ -25,8 +24,8 @@ func useCmd(_ CommandName) {}
 
 // --- Closure test cases ---
 
-// CastInGoroutineClosure — flagged by CFA because the closure's cast
-// has no Validate() call. In AST mode, closure bodies are skipped entirely.
+// CastInGoroutineClosure is flagged because the closure's cast has no checked
+// Validate() call.
 func CastInGoroutineClosure(raw string) { // want `parameter "raw" of cfa_closure\.CastInGoroutineClosure uses primitive type string`
 	go func() {
 		x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
@@ -46,7 +45,7 @@ func CastInClosureWithValidation(raw string) { // want `parameter "raw" of cfa_c
 	}()
 }
 
-// CastInDeferClosure — flagged by CFA (deferred closure, no validation).
+// CastInDeferClosure is flagged (deferred closure, no validation).
 func CastInDeferClosure(raw string) { // want `parameter "raw" of cfa_closure\.CastInDeferClosure uses primitive type string`
 	defer func() {
 		x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
@@ -54,7 +53,7 @@ func CastInDeferClosure(raw string) { // want `parameter "raw" of cfa_closure\.C
 	}()
 }
 
-// CastInImmediateClosure — flagged by CFA (immediately invoked, no validation).
+// CastInImmediateClosure is flagged (immediately invoked, no validation).
 func CastInImmediateClosure(raw string) { // want `parameter "raw" of cfa_closure\.CastInImmediateClosure uses primitive type string`
 	func() {
 		x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`

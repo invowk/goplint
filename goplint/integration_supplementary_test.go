@@ -5,6 +5,7 @@ package goplint
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	"golang.org/x/tools/go/analysis/analysistest"
 )
@@ -101,6 +102,7 @@ func TestCheckAll(t *testing.T) {
 	h := newAnalyzerHarness()
 	setFlag(t, h.Analyzer, "check-all", "true")
 	setFlag(t, h.Analyzer, "audit-exceptions", "true")
+	setFlag(t, h.Analyzer, "include-packages", "checkall")
 	setFlag(t, h.Analyzer, "config", filepath.Join(testdata, "src", "checkall", "goplint.toml"))
 
 	runAnalysisTest(t, testdata, h.Analyzer, "checkall")
@@ -182,7 +184,7 @@ func TestCheckStructValidate(t *testing.T) {
 }
 
 // TestCheckCastValidation exercises the --check-cast-validation mode with
-// CFA (default) against the castvalidation fixture, verifying type conversions
+// canonical protocol analysis against the castvalidation fixture, verifying type conversions
 // from raw primitives to DDD Value Types without Validate() are flagged.
 //
 // NOT parallel: shares h.Analyzer.Flags state.
@@ -261,6 +263,22 @@ func TestCheckBoundaryRequestValidation(t *testing.T) {
 	h := newAnalyzerHarness()
 	resetFlags(t, h)
 	setFlag(t, h.Analyzer, "check-boundary-request-validation", "true")
+	setFlag(t, h.Analyzer, "include-packages", "boundaryrequest")
+
+	runAnalysisTest(t, testdata, h.Analyzer, "boundaryrequest")
+}
+
+// TestBoundaryRequestInconclusiveIgnoresConfigException proves configured
+// policy exceptions cannot hide blocking boundary-analysis uncertainty.
+func TestBoundaryRequestInconclusiveIgnoresConfigException(t *testing.T) {
+	t.Parallel()
+
+	testdata := analysistest.TestData()
+	h := newAnalyzerHarness()
+	resetFlags(t, h)
+	setFlag(t, h.Analyzer, "check-boundary-request-validation", "true")
+	setFlag(t, h.Analyzer, "include-packages", "boundaryrequest")
+	setFlag(t, h.Analyzer, "config", filepath.Join(testdata, "src", "boundaryrequest", "goplint.toml"))
 
 	runAnalysisTest(t, testdata, h.Analyzer, "boundaryrequest")
 }
@@ -345,7 +363,7 @@ func TestCheckConstructorValidates(t *testing.T) {
 }
 
 // TestCheckConstructorValidatesInconclusiveStateBudget verifies constructor
-// CFA reports an inconclusive category when exploration truncates via
+// Protocol analysis reports an inconclusive category when exploration truncates via
 // cfg-max-states.
 func TestCheckConstructorValidatesInconclusiveStateBudget(t *testing.T) {
 	t.Parallel()
@@ -356,7 +374,74 @@ func TestCheckConstructorValidatesInconclusiveStateBudget(t *testing.T) {
 	setFlag(t, h.Analyzer, "check-constructor-validates", "true")
 	setFlag(t, h.Analyzer, "cfg-max-states", "1")
 
-	runAnalysisTest(t, testdata, h.Analyzer, "constructorvalidates_inconclusive")
+	results := runAnalysisTest(t, testdata, h.Analyzer, "constructorvalidates_inconclusive")
+	assertRealAnalyzerInconclusiveMetadata(
+		t,
+		results,
+		CategoryMissingConstructorValidateInc,
+		pathOutcomeReasonStateBudget,
+		"",
+		"",
+	)
+}
+
+func TestCheckCastValidationInconclusiveCooperativeTimeout(t *testing.T) {
+	t.Parallel()
+
+	testdata := analysistest.TestData()
+	h := newAnalyzerHarness()
+	resetFlags(t, h)
+	setFlag(t, h.Analyzer, "check-cast-validation", "true")
+	h.state.protocolControlFactory = func(time.Duration) protocolAnalysisControl {
+		return &steppedFeasibilityDeadline{expiresAt: 1}
+	}
+
+	results := runAnalysisTest(t, testdata, h.Analyzer, "cfa_cooperative_timeout")
+	assertRealAnalyzerInconclusiveMetadata(
+		t,
+		results,
+		CategoryUnvalidatedCastInconclusive,
+		pathOutcomeReasonFeasibilityUnknown,
+		cfgFeasibilityResultUnknown,
+		cfgFeasibilityReasonTimeout,
+	)
+}
+
+func assertRealAnalyzerInconclusiveMetadata(
+	t *testing.T,
+	results []*analysistest.Result,
+	category string,
+	wantPathReason pathOutcomeReason,
+	wantFeasibilityResult string,
+	wantFeasibilityReason string,
+) {
+	t.Helper()
+
+	for _, result := range results {
+		for _, diagnostic := range result.Diagnostics {
+			if diagnostic.Category != category {
+				continue
+			}
+			pathReason := FindingMetaFromDiagnosticURL(diagnostic.URL, "cfg_inconclusive_reason")
+			feasibilityResult := FindingMetaFromDiagnosticURL(diagnostic.URL, "cfg_feasibility_result")
+			feasibilityReason := FindingMetaFromDiagnosticURL(diagnostic.URL, "cfg_feasibility_reason")
+			status := FindingMetaFromDiagnosticURL(diagnostic.URL, "cfg_refinement_status")
+			if pathReason != string(wantPathReason) ||
+				(wantFeasibilityResult != "" && feasibilityResult != wantFeasibilityResult) ||
+				(wantFeasibilityReason != "" && feasibilityReason != wantFeasibilityReason) ||
+				status != cfgRefinementStatusInconclusive {
+				t.Fatalf(
+					"inconclusive metadata = path %q, feasibility %q/%q, status %q",
+					pathReason,
+					feasibilityResult,
+					feasibilityReason,
+					status,
+				)
+			}
+			return
+		}
+	}
+	t.Fatalf("real analyzer emitted no %q diagnostic", category)
 }
 
 // TestCheckConstructorValidatesMethodValue verifies constructor-validates
@@ -374,21 +459,6 @@ func TestCheckConstructorValidatesMethodValue(t *testing.T) {
 	runAnalysisTest(t, testdata, h.Analyzer, "constructorvalidates_method_value")
 }
 
-// TestCheckConstructorValidatesCFABackendASTConservative verifies the AST
-// backend treats calls conservatively and can report missing Validate() on
-// no-return paths.
-func TestCheckConstructorValidatesCFABackendASTConservative(t *testing.T) {
-	t.Parallel()
-
-	testdata := analysistest.TestData()
-	h := newAnalyzerHarness()
-	resetFlags(t, h)
-	setFlag(t, h.Analyzer, "check-constructor-validates", "true")
-	setFlag(t, h.Analyzer, "cfg-backend", cfgBackendAST)
-
-	runAnalysisTest(t, testdata, h.Analyzer, "constructor_backend_ast")
-}
-
 // TestCheckConstructorValidatesCFABackendSSAHandlesNoReturn verifies the SSA
 // backend prunes no-return paths and avoids false positives for constructors
 // that cannot reach a return.
@@ -399,7 +469,6 @@ func TestCheckConstructorValidatesCFABackendSSAHandlesNoReturn(t *testing.T) {
 	h := newAnalyzerHarness()
 	resetFlags(t, h)
 	setFlag(t, h.Analyzer, "check-constructor-validates", "true")
-	setFlag(t, h.Analyzer, "cfg-backend", cfgBackendSSA)
 
 	runAnalysisTest(t, testdata, h.Analyzer, "constructor_backend_ssa")
 }
@@ -436,10 +505,8 @@ func TestCheckConstructorReturnErrorAlias(t *testing.T) {
 	runAnalysisTest(t, testdata, h.Analyzer, "constructorreturn_error_alias")
 }
 
-// TestConstructorValidatesCrossPackage exercises --check-constructor-validates
-// with a cross-package helper annotated with //goplint:validates-type=TypeName.
-// Verifies that the ValidatesTypeFact is exported from the helper package and
-// imported correctly in the consuming package. Also enables
+// TestConstructorValidatesCrossPackage verifies that a conditional protocol
+// summary is exported from a helper package and imported by its consumer. It also enables
 // --check-constructor-return-error since the shared fixture has expectations
 // for both checks.
 //
@@ -458,7 +525,7 @@ func TestConstructorValidatesCrossPackage(t *testing.T) {
 		"constructorvalidates_cross/myapp")
 }
 
-// TestConstructorValidatesCrossPackageThirdPartyType verifies validates-type
+// TestConstructorValidatesCrossPackageThirdPartyType verifies protocol summary
 // facts carry the validated type identity (package path + type name), not the
 // helper package path, when the helper validates a third package's type.
 //
@@ -508,6 +575,19 @@ func TestConstructorValidatesGenericInstantiation(t *testing.T) {
 	setFlag(t, h.Analyzer, "check-constructor-validates", "true")
 
 	runAnalysisTest(t, testdata, h.Analyzer, "constructorvalidates_generic")
+}
+
+func TestProtocolValidationCounterexamplesUseConditionalSuccessEdges(t *testing.T) {
+	t.Parallel()
+
+	testdata := analysistest.TestData()
+	h := newAnalyzerHarness()
+	resetFlags(t, h)
+	setFlag(t, h.Analyzer, "check-cast-validation", "true")
+
+	analysistestParallelLimiter <- struct{}{}
+	defer func() { <-analysistestParallelLimiter }()
+	analysistest.Run(t, testdata, h.Analyzer, "protocol_validation_counterexamples")
 }
 
 // TestCheckConstructorReturnErrorCrossPackage exercises

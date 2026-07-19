@@ -87,7 +87,7 @@ func isAutoSkipContext(pass *analysis.Pass, call *ast.CallExpr, parent ast.Node,
 	// Chained Validate: DddType(x).Validate() — validated directly on cast result.
 	// The parent of the type conversion CallExpr is the SelectorExpr that
 	// forms the .Validate() method call.
-	if sel, ok := parent.(*ast.SelectorExpr); ok && sel.Sel.Name == "Validate" && selectorIsDirectCallTarget(sel, parentMap) {
+	if sel, ok := parent.(*ast.SelectorExpr); ok && sel.Sel.Name == validateMethodName && selectorIsDirectCallTarget(sel, parentMap) {
 		return true
 	}
 
@@ -198,6 +198,9 @@ func isPackageCall(pass *analysis.Pass, call *ast.CallExpr, importPaths ...strin
 	if pass == nil || pass.TypesInfo == nil || call == nil {
 		return false
 	}
+	if function, ok := protocolCalledFunction(pass.TypesInfo, call.Fun); ok && function.Pkg() != nil {
+		return slices.Contains(importPaths, function.Pkg().Path())
+	}
 
 	switch fun := call.Fun.(type) {
 	case *ast.SelectorExpr:
@@ -269,6 +272,12 @@ func packageCallFuncName(call *ast.CallExpr) string {
 		return ""
 	}
 	switch fun := call.Fun.(type) {
+	case *ast.IndexExpr:
+		return packageCallFuncName(&ast.CallExpr{Fun: fun.X})
+	case *ast.IndexListExpr:
+		return packageCallFuncName(&ast.CallExpr{Fun: fun.X})
+	case *ast.ParenExpr:
+		return packageCallFuncName(&ast.CallExpr{Fun: fun.X})
 	case *ast.SelectorExpr:
 		return fun.Sel.Name
 	case *ast.Ident:
@@ -387,16 +396,25 @@ func receiverImplementsError(pass *analysis.Pass, expr ast.Expr) bool {
 // DddType(someString) from DddType(otherNamedType) — the latter is a
 // named-to-named cast that doesn't need validation.
 func isRawPrimitive(t types.Type) bool {
+	return classifyRawPrimitive(t) == primitiveConstraintDefinite
+}
+
+func classifyRawPrimitive(t types.Type) primitiveConstraintClass {
 	t = types.Unalias(t)
 
 	switch t := t.(type) {
 	case *types.Basic:
-		return isPrimitiveBasic(t) || t.Kind() == types.Bool || t.Kind() == types.UntypedBool
+		if isPrimitiveBasic(t) || t.Kind() == types.Bool || t.Kind() == types.UntypedBool {
+			return primitiveConstraintDefinite
+		}
+		return primitiveConstraintIrrelevant
+	case *types.TypeParam:
+		return classifyPrimitiveConstraint(t.Constraint())
 	case *types.Named:
 		// Named type → not a raw primitive.
-		return false
+		return primitiveConstraintIrrelevant
 	default:
-		return false
+		return primitiveConstraintIrrelevant
 	}
 }
 

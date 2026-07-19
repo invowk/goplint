@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/BurntSushi/toml"
 )
@@ -30,11 +29,9 @@ type BaselineConfig struct {
 	MissingStructValidate         BaselineCategory `toml:"missing-struct-validate"`
 	WrongStructValidateSig        BaselineCategory `toml:"wrong-struct-validate-sig"`
 	UnvalidatedCast               BaselineCategory `toml:"unvalidated-cast"`
-	UnvalidatedCastInconclusive   BaselineCategory `toml:"unvalidated-cast-inconclusive"`
 	UnusedValidateResult          BaselineCategory `toml:"unused-validate-result"`
 	UnusedConstructorError        BaselineCategory `toml:"unused-constructor-error"`
 	MissingConstructorValidate    BaselineCategory `toml:"missing-constructor-validate"`
-	MissingConstructorValidateInc BaselineCategory `toml:"missing-constructor-validate-inconclusive"`
 	IncompleteValidateDelegation  BaselineCategory `toml:"incomplete-validate-delegation"`
 	NonZeroValueField             BaselineCategory `toml:"nonzero-value-field"`
 	WrongFuncOptionType           BaselineCategory `toml:"wrong-func-option-type"`
@@ -42,7 +39,6 @@ type BaselineConfig struct {
 	EnumCueExtraGo                BaselineCategory `toml:"enum-cue-extra-go"`
 	UseBeforeValidateSameBlock    BaselineCategory `toml:"use-before-validate-same-block"`
 	UseBeforeValidateCrossBlock   BaselineCategory `toml:"use-before-validate-cross-block"`
-	UseBeforeValidateInconclusive BaselineCategory `toml:"use-before-validate-inconclusive"`
 	SuggestValidateAll            BaselineCategory `toml:"suggest-validate-all"`
 	MissingConstructorErrorReturn BaselineCategory `toml:"missing-constructor-error-return"`
 	RedundantConversion           BaselineCategory `toml:"redundant-conversion"`
@@ -144,7 +140,7 @@ func (b *BaselineConfig) ContainsFinding(category, findingID, _ string) bool {
 	if b == nil {
 		return false
 	}
-	if findingID == "" {
+	if findingID == "" || IsProtocolInconclusiveCategory(category) {
 		return false
 	}
 	if b.lookupByID == nil {
@@ -182,12 +178,20 @@ func (b *BaselineConfig) buildLookup() {
 // entries (stable finding ID + human-readable message).
 // Empty categories are omitted from the output.
 func WriteBaseline(path string, findings map[string][]BaselineFinding) error {
+	if err := validateBaselineFindingMap(findings); err != nil {
+		return fmt.Errorf("writing baseline file: %w", err)
+	}
+	for category, entries := range findings {
+		if IsProtocolInconclusiveCategory(category) && len(entries) > 0 {
+			return fmt.Errorf("writing baseline file: protocol inconclusive category %q is always visible", category)
+		}
+	}
+
 	var sb strings.Builder
 
 	sb.WriteString("# SPDX-License-Identifier: MPL-2.0\n")
 	sb.WriteString("#\n")
 	sb.WriteString("# goplint baseline — accepted DDD compliance findings\n")
-	sb.WriteString(fmt.Sprintf("# Generated: %s\n", time.Now().UTC().Format("2006-01-02")))
 	sb.WriteString("# Regenerate: make update-baseline\n")
 
 	// Count total findings for the header comment.
@@ -286,20 +290,14 @@ func categoryIDSet(_ string, cat BaselineCategory) map[string]bool {
 	return ids
 }
 
-// normalizeBaselineFindings removes invalid rows, deduplicates by ID, and
-// sorts by ID/message for stable diffs.
+// normalizeBaselineFindings removes invalid rows and sorts by ID/message for
+// stable diffs. Duplicate and collided IDs are rejected before normalization.
 func normalizeBaselineFindings(_ string, in []BaselineFinding) []BaselineFinding {
-	byID := make(map[string]BaselineFinding, len(in))
-
+	out := make([]BaselineFinding, 0, len(in))
 	for _, entry := range in {
 		if entry.Message == "" || entry.ID == "" {
 			continue
 		}
-		byID[entry.ID] = entry
-	}
-
-	out := make([]BaselineFinding, 0, len(byID))
-	for _, entry := range byID {
 		out = append(out, entry)
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -315,6 +313,7 @@ func validateBaselineEntries(cfg *BaselineConfig) error {
 	if cfg == nil {
 		return nil
 	}
+	seen := make(map[string]baselineIDOwner)
 	for _, catName := range BaselinedCategoryNames() {
 		cat := cfg.categoryForName(catName)
 		for i, entry := range cat.Entries {
@@ -324,9 +323,64 @@ func validateBaselineEntries(cfg *BaselineConfig) error {
 			if strings.TrimSpace(entry.Message) == "" {
 				return fmt.Errorf("parsing baseline TOML: [%s].entries[%d].message must be non-empty", catName, i)
 			}
+			if err := recordBaselineIDOwner(seen, catName, i, entry); err != nil {
+				return fmt.Errorf("parsing baseline TOML: %w", err)
+			}
 		}
 	}
 	return nil
+}
+
+type baselineIDOwner struct {
+	category string
+	index    int
+	message  string
+}
+
+func validateBaselineFindingMap(findings map[string][]BaselineFinding) error {
+	seen := make(map[string]baselineIDOwner)
+	for _, category := range BaselinedCategoryNames() {
+		for index, entry := range findings[category] {
+			if strings.TrimSpace(entry.ID) == "" || strings.TrimSpace(entry.Message) == "" {
+				continue
+			}
+			if err := recordBaselineIDOwner(seen, category, index, entry); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func recordBaselineIDOwner(
+	seen map[string]baselineIDOwner,
+	category string,
+	index int,
+	entry BaselineFinding,
+) error {
+	owner, ok := seen[entry.ID]
+	if !ok {
+		seen[entry.ID] = baselineIDOwner{category: category, index: index, message: entry.Message}
+		return nil
+	}
+	if owner.category == category && owner.message == entry.Message {
+		return fmt.Errorf(
+			"duplicate finding ID %q at [%s].entries[%d] and [%s].entries[%d]",
+			entry.ID,
+			owner.category,
+			owner.index,
+			category,
+			index,
+		)
+	}
+	return fmt.Errorf(
+		"collided finding ID %q at [%s].entries[%d] and [%s].entries[%d]",
+		entry.ID,
+		owner.category,
+		owner.index,
+		category,
+		index,
+	)
 }
 
 // quote produces a TOML-compatible double-quoted string with proper escaping.

@@ -161,13 +161,10 @@ func pathDomainNativeFilepathFunc(pass *analysis.Pass, call *ast.CallExpr) strin
 }
 
 func pathDomainDirective(genDoc *ast.CommentGroup, specDoc *ast.CommentGroup) (string, bool) {
-	for _, cg := range []*ast.CommentGroup{genDoc, specDoc} {
-		if domain, ok := directiveValue([]*ast.CommentGroup{cg}, "path-domain"); ok {
-			domain = strings.TrimSpace(strings.ToLower(domain))
-			if isPathDomainName(domain) {
-				return domain, true
-			}
-		}
+	domain, ok := directiveValue([]*ast.CommentGroup{genDoc, specDoc}, "path-domain")
+	if ok {
+		domain = strings.TrimSpace(strings.ToLower(domain))
+		return domain, true
 	}
 	return "", false
 }
@@ -207,6 +204,6 @@ func reportPathDomainNativeFilepath(
 		typeName,
 		funcQualName,
 	)
-	findingID := PackageScopedFindingID(pass, CategoryPathDomainNativeFilepath, funcQualName, stablePosKey(pass, node.Pos()))
+	findingID := PackageScopedFindingID(pass, CategoryPathDomainNativeFilepath, funcQualName, semanticNodeKey(pass, node.Pos()))
 	reportFindingIfNotBaselined(pass, bl, node.Pos(), CategoryPathDomainNativeFilepath, findingID, msg)
 }

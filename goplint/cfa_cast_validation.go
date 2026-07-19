@@ -10,40 +10,25 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-// inspectUnvalidatedCastsCFA is the CFA-enhanced replacement for
-// inspectUnvalidatedCasts. Instead of a name-based heuristic that considers
-// any Validate() call in the function body as validating all same-named
-// variables, this function uses CFG path reachability to determine whether
-// each individual cast has an unvalidated path to a return block.
-//
-// When --cfa is enabled, this function is called instead of
-// inspectUnvalidatedCasts. The two implementations are fully compartmentalized:
-// neither imports from the other.
+// inspectUnvalidatedCastsCFA runs canonical path-sensitive cast validation.
+// Each cast is tracked through SSA identity, conditional validation effects,
+// and finite interprocedural propagation.
 func inspectUnvalidatedCastsCFA(
 	pass *analysis.Pass,
 	fn *ast.FuncDecl,
 	excCfg *ExceptionConfig,
 	bl *BaselineConfig,
 	checkUBV bool,
-	ubvMode string,
-	cfgBackend string,
-	cfgInterprocEngine string,
 	cfgMaxStates int,
-	cfgMaxDepth int,
-	cfgInconclusivePolicy string,
 	cfgWitnessMaxSteps int,
-	phaseC cfgPhaseCOptions,
-	cfgAliasMode string,
+	refinement cfgProtocolRefinementOptions,
 	ssaRes *ssaResult,
 	calleeSummaryCache *sync.Map,
+	rootAvailability ssaAvailability,
 ) error {
 	if fn.Body == nil {
 		return nil
 	}
-	if shouldSkipFunc(fn) {
-		return nil
-	}
-
 	// Build the qualified function name for exception matching.
 	pkgName := packageName(pass.Pkg)
 	funcName := fn.Name.Name
@@ -59,57 +44,31 @@ func inspectUnvalidatedCastsCFA(
 	parentMap := buildParentMap(fn.Body)
 
 	// Build the CFG for path-sensitive analysis.
-	funcCFG := buildFuncCFGForBackend(pass, fn.Body, cfgBackend)
+	funcCFG := buildProtocolCFG(pass, fn.Body, ssaRes)
 	if funcCFG == nil {
 		return nil
 	}
-	solver := newInterprocSolver(pass, cfgBackend, cfgInterprocEngine, calleeSummaryCache)
-	compatTracker := newInterprocCompatTracker(cfgInterprocEngine)
-	refiner := newCFGRefinementController(phaseC)
+	solver := newInterprocSolverWithSSA(pass, ssaRes, calleeSummaryCache)
+	refiner := newCFGRefinementController(refinement)
 	effectiveBudget := adaptiveBlockVisitBudget(
 		funcCFG,
-		blockVisitBudget{maxStates: cfgMaxStates, maxDepth: cfgMaxDepth},
+		blockVisitBudget{maxStates: cfgMaxStates},
 	)
-	noReturnAliases := collectNoReturnFuncAliasEvents(pass, fn.Body)
-
-	// Collect casts using the shared CFA collection logic.
-	// Closures are delegated to inspectClosureCastsCFA.
-	var closureErr error
-	assignedCasts, unassignedCasts, closureCalls, _ := collectCFACasts(
-		pass, fn.Body, parentMap,
-		func(lit *ast.FuncLit, closureIdx int) {
-			if closureErr != nil {
-				return
-			}
-			closureErr = inspectClosureCastsCFA(
-				pass,
-				lit,
-				qualFuncName,
-				strconv.Itoa(closureIdx),
-				excCfg,
-				bl,
-				checkUBV,
-				ubvMode,
-				cfgBackend,
-				cfgInterprocEngine,
-				cfgMaxStates,
-				cfgMaxDepth,
-				cfgInconclusivePolicy,
-				cfgWitnessMaxSteps,
-				phaseC,
-				cfgAliasMode,
-				ssaRes,
-				calleeSummaryCache,
-			)
-		},
-	)
-	if closureErr != nil {
-		return closureErr
+	ssaAvailability := protocolSSAAvailabilityForDecl(pass, ssaRes, fn)
+	if !rootAvailability.ready() {
+		ssaAvailability = rootAvailability
 	}
 
-	// Enrich cast targets with SSA-derived alias sets when alias mode is active.
-	if cfgAliasMode == cfgAliasModeSSA {
-		enrichAssignedCastsWithSSA(pass, ssaRes, fn, assignedCasts)
+	// Collect casts for this procedure only. Every closure is routed exactly
+	// once from the package-wide protocol procedure inventory.
+	assignedCasts, unassignedCasts, closureCalls, _ := collectCFACasts(
+		pass, fn.Body, parentMap,
+		func(*ast.FuncLit, int) {},
+	)
+
+	// Canonical SSA must-alias enrichment is mandatory.
+	if aliasAvailability := enrichAssignedCastsWithSSA(pass, ssaRes, fn, assignedCasts); !aliasAvailability.ready() {
+		ssaAvailability = aliasAvailability
 	}
 
 	// Collect closure classifications lazily — only needed when assigned casts exist.
@@ -123,10 +82,15 @@ func inspectUnvalidatedCastsCFA(
 	if len(assignedCasts) > 0 {
 		pathSyncLits = collectSynchronousClosureLits(fn.Body)
 		pathSyncCalls = collectSynchronousClosureVarCalls(closureCalls)
-		pathMethodCalls = mergeMethodValueValidateCallSets(
-			collectMethodValueValidateCalls(pass, fn.Body),
-			collectCalleeValidatedCalls(pass, fn.Body, stackScopeFromMap(nil), calleeSummaryCache),
+		methodValueCalls := collectMethodValueValidateCalls(pass, fn.Body)
+		calleeValidatedCalls := collectCalleeValidatedCalls(
+			pass,
+			fn.Body,
+			ssaRes,
+			stackScopeFromMap(nil, ssaRes),
+			calleeSummaryCache,
 		)
+		pathMethodCalls = mergeMethodValueValidateCallSets(methodValueCalls, calleeValidatedCalls)
 		if checkUBV {
 			ubvSyncLits = collectUBVClosureLits(fn.Body)
 			ubvSyncCalls = collectUBVClosureVarCalls(closureCalls)
@@ -137,15 +101,6 @@ func inspectUnvalidatedCastsCFA(
 	// Report assigned casts where an unvalidated path to return exists.
 	scope := newFunctionCFACastFindingScope(qualFuncName)
 	for _, ac := range assignedCasts {
-		if excCfg.isExcepted(scope.exceptionKey) {
-			continue
-		}
-
-		// Check inline //goplint:ignore directive on the cast statement.
-		if hasIgnoreAtPos(pass, ac.pos.Pos()) {
-			continue
-		}
-
 		// Find the assignment in the CFG.
 		defBlock, defIdx := findDefiningBlock(funcCFG, ac.assign)
 		if defBlock == nil {
@@ -153,7 +108,7 @@ func inspectUnvalidatedCastsCFA(
 			continue
 		}
 
-		originKey := stablePosKey(pass, ac.pos.Pos())
+		originKey := semanticNodeKey(pass, ac.pos.Pos())
 		callChain := scope.callChain
 		pathAnchors := map[string]string{
 			"witness_cast_pos": originKey,
@@ -173,175 +128,81 @@ func inspectUnvalidatedCastsCFA(
 			SyncLits:        pathSyncLits,
 			SyncCalls:       pathSyncCalls,
 			MethodCalls:     pathMethodCalls,
-			NoReturnAliases: noReturnAliases,
 			MaxStates:       effectiveBudget.maxStates,
-			MaxDepth:        effectiveBudget.maxDepth,
 			CallChain:       callChain,
-			AllowSafe:       phaseC.AllowsSafeResult(),
+			AllowSafe:       refinement.AllowsSafeResult(),
+			SSAAvailability: ac.protocolAvailability(ssaAvailability),
 		}
-		pathLegacy := solver.EvaluateCastPathLegacy(castInput)
-		pathResult := solver.EvaluateCastPath(castInput)
-		pathFindingID, pathResult := refineAssignedCastPathResult(
+		pathSolver := solver.withControl(refiner.newDeadline())
+		pathResult := pathSolver.EvaluateCastPath(castInput)
+		_, pathResult = refineAssignedCastPathResult(
 			pass,
 			scope,
 			refiner,
-			solver,
+			pathSolver,
 			funcCFG,
 			ac,
 			castInput,
 			pathResult,
 			pathAnchors,
 		)
-		hasEquivalentUnsafe := pathResult.Class == interprocOutcomeUnsafe
 		pathOutcome := pathResult.toPathOutcome()
 		pathReason := pathResult.Reason
 		pathWitness := pathResult.Witness
 		if pathOutcome == pathOutcomeSafe {
-			// All paths DO have validate. Check use-before-validate with
-			// same-block priority, then cross-block.
+			// All paths validate. Use-before-validation is evaluated once from
+			// the definition instruction; the qualified hazard witness determines
+			// whether the diagnostic is same-block or cross-block.
 			if checkUBV {
-				inBlockInput := interprocUBVInBlockInput{
-					Target:        ac.target,
-					Nodes:         defBlock.Nodes,
-					StartIndex:    defIdx + 1,
-					Mode:          ubvMode,
-					OriginKey:     originKey,
-					TypeName:      ac.typeName,
-					SyncLits:      ubvSyncLits,
-					SyncCalls:     ubvSyncCalls,
-					MethodCalls:   ubvMethodCalls,
-					DefBlockIndex: defBlock.Index,
-					CallChain:     callChain,
+				ubvInput := interprocUBVCrossBlockInput{
+					Target:          ac.target,
+					DefBlock:        defBlock,
+					DefIdx:          defIdx,
+					OriginKey:       originKey,
+					TypeName:        ac.typeName,
+					SyncLits:        ubvSyncLits,
+					SyncCalls:       ubvSyncCalls,
+					MethodCalls:     ubvMethodCalls,
+					MaxStates:       effectiveBudget.maxStates,
+					CallChain:       callChain,
+					SSAAvailability: ac.protocolAvailability(ssaAvailability),
 				}
-				inBlockLegacy := solver.EvaluateUBVInBlockLegacy(inBlockInput)
-				inBlockResult := solver.EvaluateUBVInBlock(inBlockInput)
-				hasEquivalentUnsafe = hasEquivalentUnsafe || inBlockResult.Class == interprocOutcomeUnsafe
-				inBlockFindingID, inBlockResult := refineUBVInBlockResult(
+				ubvSolver := solver.withControl(refiner.newDeadline())
+				ubvResult := ubvSolver.EvaluateUBVCrossBlock(ubvInput)
+				_, ubvResult = refineUBVResult(
 					pass,
 					scope,
 					refiner,
-					solver,
+					ubvSolver,
 					funcCFG,
 					ac,
-					inBlockInput,
-					inBlockResult,
+					ubvInput,
+					ubvResult,
 					pathAnchors,
 				)
-				inBlockOutcome := inBlockResult.toPathOutcome()
-				inBlockReason := inBlockResult.Reason
-				switch inBlockOutcome {
-				case pathOutcomeUnsafe:
-					reportSameBlockUBVUnsafe(pass, scope, bl, ac, inBlockResult, originKey, ubvMode, defBlock)
-				case pathOutcomeInconclusive:
-					reportSameBlockUBVInconclusive(
-						pass,
-						scope,
-						bl,
-						cfgBackend,
-						effectiveBudget,
-						cfgInconclusivePolicy,
-						cfgWitnessMaxSteps,
-						ac,
-						inBlockReason,
-						inBlockResult,
-						originKey,
-						ubvMode,
-						defBlock,
-					)
-				default:
-					crossInput := interprocUBVCrossBlockInput{
-						Target:      ac.target,
-						DefBlock:    defBlock,
-						DefIdx:      defIdx,
-						Mode:        ubvMode,
-						OriginKey:   originKey,
-						TypeName:    ac.typeName,
-						SyncLits:    ubvSyncLits,
-						SyncCalls:   ubvSyncCalls,
-						MethodCalls: ubvMethodCalls,
-						MaxStates:   effectiveBudget.maxStates,
-						MaxDepth:    effectiveBudget.maxDepth,
-						CallChain:   callChain,
-					}
-					crossLegacy := solver.EvaluateUBVCrossBlockLegacy(crossInput)
-					crossResult := solver.EvaluateUBVCrossBlock(crossInput)
-					hasEquivalentUnsafe = hasEquivalentUnsafe || crossResult.Class == interprocOutcomeUnsafe
-					crossFindingID, crossResult := refineUBVCrossBlockResult(
-						pass,
-						scope,
-						refiner,
-						solver,
-						funcCFG,
-						ac,
-						crossInput,
-						crossResult,
-						pathAnchors,
-					)
-					compatTracker.Check(
-						CategoryUseBeforeValidateCrossBlock,
-						crossFindingID,
-						crossLegacy,
-						crossResult,
-						hasEquivalentUnsafe,
-					)
-					ubvOutcome := crossResult.toPathOutcome()
-					ubvReason := crossResult.Reason
-					ubvWitness := crossResult.Witness
-					if ubvOutcome == pathOutcomeUnsafe {
-						// Cross-block UBV: the variable is used in a successor
-						// block before any block on that path calls Validate().
-						reportCrossBlockUBVUnsafe(pass, scope, bl, cfgWitnessMaxSteps, ac, crossResult, ubvWitness, originKey, ubvMode, defBlock)
-					} else if ubvOutcome == pathOutcomeInconclusive {
-						reportCrossBlockUBVInconclusive(
-							pass,
-							scope,
-							bl,
-							cfgBackend,
-							effectiveBudget,
-							cfgInconclusivePolicy,
-							cfgWitnessMaxSteps,
-							ac,
-							ubvReason,
-							ubvWitness,
-							crossResult,
-							originKey,
-							ubvMode,
-							defBlock,
-						)
-					}
-				}
-				compatTracker.Check(
-					CategoryUseBeforeValidateSameBlock,
-					inBlockFindingID,
-					inBlockLegacy,
-					inBlockResult,
-					hasEquivalentUnsafe,
-				)
+				reportUBVResult(pass, scope, bl, effectiveBudget, cfgWitnessMaxSteps, ac, ubvResult, ubvInput)
 			}
-			compatTracker.Check(
-				CategoryUnvalidatedCast,
-				pathFindingID,
-				pathLegacy,
-				pathResult,
-				hasEquivalentUnsafe,
-			)
 			continue // all paths validated
 		}
-		compatTracker.Check(
-			CategoryUnvalidatedCast,
-			pathFindingID,
-			pathLegacy,
-			pathResult,
-			hasEquivalentUnsafe,
-		)
 		if pathOutcome == pathOutcomeInconclusive {
+			if checkUBV && !ssaAvailability.ready() {
+				reportSSAUnavailableUBVInconclusive(
+					pass,
+					scope,
+					bl,
+					effectiveBudget,
+					cfgWitnessMaxSteps,
+					ac,
+					pathResult,
+					originKey,
+					defBlock,
+				)
+			}
 			reportAssignedCastInconclusive(
 				pass,
 				scope,
 				bl,
-				cfgBackend,
 				effectiveBudget,
-				cfgInconclusivePolicy,
 				cfgWitnessMaxSteps,
 				ac,
 				pathReason,
@@ -352,12 +213,19 @@ func inspectUnvalidatedCastsCFA(
 			)
 			continue
 		}
+		if protocolPolicySuppressesDefiniteFinding(
+			pathOutcome,
+			func() bool { return excCfg != nil && excCfg.isExcepted(scope.exceptionKey) },
+			func() bool { return hasIgnoreAtPos(pass, ac.pos.Pos()) },
+		) {
+			continue
+		}
 
 		msg := unvalidatedCastMessage(ac.typeName)
-		findingID := scope.findingID(pass, CategoryUnvalidatedCast, ac.typeName, "assigned", originKey, ac.target.key())
+		findingID := scope.findingID(pass, CategoryUnvalidatedCast, ac.typeName, "assigned", originKey)
 		var meta map[string]string
-		if pathResult.PhaseC.Enabled {
-			meta = appendPhaseCMeta(copyFindingMeta(pathAnchors), pathResult)
+		if pathResult.Refinement.Enabled {
+			meta = appendProtocolRefinementMeta(copyFindingMeta(pathAnchors), pathResult)
 			addCFGWitnessMeta(meta, pathWitness, cfgWitnessMaxSteps)
 			addCFGWitnessCallChainMeta(meta, scope.callChain, cfgWitnessMaxSteps)
 		}
@@ -366,19 +234,22 @@ func inspectUnvalidatedCastsCFA(
 
 	// Unassigned casts: always report (no variable to track).
 	for _, uc := range unassignedCasts {
-		if excCfg.isExcepted(scope.exceptionKey) {
+		if uc.uncertainSourceTypeSet {
+			reportUnassignedCastInconclusive(pass, scope, bl, effectiveBudget, uc)
 			continue
 		}
-
-		// Check inline //goplint:ignore directive on the cast expression.
-		if hasIgnoreAtPos(pass, uc.pos.Pos()) {
+		if protocolPolicySuppressesDefiniteFinding(
+			pathOutcomeUnsafe,
+			func() bool { return excCfg != nil && excCfg.isExcepted(scope.exceptionKey) },
+			func() bool { return hasIgnoreAtPos(pass, uc.pos.Pos()) },
+		) {
 			continue
 		}
 
 		msg := unvalidatedCastMessage(uc.typeName)
-		findingID := scope.findingID(pass, CategoryUnvalidatedCast, uc.typeName, "unassigned", stablePosKey(pass, uc.pos.Pos()))
+		findingID := scope.findingID(pass, CategoryUnvalidatedCast, uc.typeName, "unassigned", semanticNodeKey(pass, uc.pos.Pos()))
 		reportFindingIfNotBaselined(pass, bl, uc.pos.Pos(), CategoryUnvalidatedCast, findingID, msg)
 	}
 
-	return compatTracker.Err()
+	return nil
 }

@@ -1,0 +1,3 @@
+[[exceptions]]
+pattern = "castvalidation_suppression.ConfigSuppressed.cast-validation"
+reason = "config suppression coverage"

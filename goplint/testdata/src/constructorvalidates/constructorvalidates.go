@@ -86,7 +86,9 @@ type engineImpl struct {
 	name string // want `struct field constructorvalidates\.engineImpl\.name uses primitive type string`
 }
 
-func (e *engineImpl) Run() error      { return nil }
+func (e *engineImpl) Run() error { // want Run:"protocol-summary:v5:constructorvalidates:\\(\\*constructorvalidates.engineImpl\\).Run:1"
+	return nil
+}
 func (e *engineImpl) Validate() error { return nil }
 
 func NewEngine(name string) Engine { // want `parameter "name" of constructorvalidates\.NewEngine uses primitive type string`
@@ -235,9 +237,8 @@ func NewPartial(name string, validate bool) (*Partial, error) { // want `paramet
 }
 
 // --- Deep transitive chain: NewPipeline → buildStages → initStage → stage.Validate() ---
-// This is a 3-level delegation chain (depth 0→1→2→validate). Previously,
-// len(visited) >= 3 would have stopped at the 3rd unique function, but
-// the fix uses explicit depth tracking so chains up to maxTransitiveDepth (5) work.
+// Conditional procedure summaries preserve the validation effect across the
+// complete finite helper chain.
 
 type Pipeline struct {
 	name string // want `struct field constructorvalidates\.Pipeline\.name uses primitive type string`
@@ -267,15 +268,14 @@ func assemblePipeline(name string) (*Pipeline, error) { // want `parameter "name
 }
 
 // NewPipeline delegates through assemblePipeline → buildStages → initStage → p.Validate().
-// NOT flagged — the 4-level chain (depth 0→1→2→3) is within the maxTransitiveDepth limit.
+// It is not flagged because the fixed-point summaries preserve the effect.
 func NewPipeline(name string) (*Pipeline, error) { // want `parameter "name" of constructorvalidates\.NewPipeline uses primitive type string`
 	return assemblePipeline(name)
 }
 
-// --- Depth boundary: exactly maxTransitiveDepth-1 (5 hops, depth 0→4) ---
-// This chain passes through 5 functions before reaching Validate().
-// The depth guard is `depth >= maxTransitiveDepth` (5), so depths
-// 0, 1, 2, 3, 4 are all accepted. NOT flagged.
+// --- Five-hop finite summary chain ---
+// This chain passes through five functions before reaching Validate() and is
+// accepted without a semantic call-depth cutoff.
 
 type DepthBoundary struct {
 	name string // want `struct field constructorvalidates\.DepthBoundary\.name uses primitive type string`
@@ -302,15 +302,14 @@ func boundaryAssemble(name string) (*DepthBoundary, error) { // want `parameter 
 }
 
 // NewDepthBoundary delegates through boundaryAssemble → L1 → L2 → L3 → L4 → Validate().
-// NOT flagged — depth 0→1→2→3→4 is within maxTransitiveDepth (5).
+// It is not flagged because summary convergence is independent of stack depth.
 func NewDepthBoundary(name string) (*DepthBoundary, error) { // want `parameter "name" of constructorvalidates\.NewDepthBoundary uses primitive type string`
 	return boundaryAssemble(name)
 }
 
-// --- Depth beyond: exactly maxTransitiveDepth (6 hops, depth 0→5) ---
-// This chain passes through 6 functions before reaching Validate().
-// At depth 5, `depth >= maxTransitiveDepth` (5) stops recursion.
-// SHOULD be flagged because the analyzer cannot see the Validate() call.
+// --- Deep finite chain beyond the historical DFS cutoff ---
+// The canonical fixed-point solver follows the complete finite call chain
+// without a semantic depth cutoff.
 
 type DepthBeyond struct {
 	name string // want `struct field constructorvalidates\.DepthBeyond\.name uses primitive type string`
@@ -338,8 +337,8 @@ func beyondAssemble(name string) (*DepthBeyond, error) { // want `parameter "nam
 }
 
 // NewDepthBeyond delegates through beyondAssemble → L1 → L2 → L3 → L4 → L5 → Validate().
-// FLAGGED — depth 0→1→2→3→4→5 hits maxTransitiveDepth cutoff at L5.
-func NewDepthBeyond(name string) (*DepthBeyond, error) { // want `parameter "name" of constructorvalidates\.NewDepthBeyond uses primitive type string` `constructor constructorvalidates\.NewDepthBeyond returns constructorvalidates\.DepthBeyond which has Validate\(\) but never calls it`
+// NOT flagged — the canonical summary reaches Validate() and converges.
+func NewDepthBeyond(name string) (*DepthBeyond, error) { // want `parameter "name" of constructorvalidates\.NewDepthBeyond uses primitive type string`
 	return beyondAssemble(name)
 }
 
@@ -431,7 +430,7 @@ func (s *Session) Validate() error {
 }
 
 // NewSession uses a closure variable call to invoke Validate(). This should
-// satisfy constructor-validates in CFA mode.
+// satisfy canonical constructor validation.
 func NewSession(addr string) (*Session, error) { // want `parameter "addr" of constructorvalidates\.NewSession uses primitive type string`
 	s := &Session{addr: addr}
 	validateFn := func() error {
@@ -472,7 +471,7 @@ func NewGateway(gc GatewayConfig) (*Gateway, error) { // want `constructor const
 	return &Gateway{config: gc}, nil
 }
 
-// --- Multi-path constructor: CFA detects partial validation ---
+// --- Multi-path constructor: path analysis detects partial validation ---
 
 type MultiPath struct {
 	name string // want `struct field constructorvalidates\.MultiPath\.name uses primitive type string`
@@ -485,7 +484,7 @@ func (m *MultiPath) Validate() error {
 	return nil
 }
 
-// NewMultiPath validates on only one path — CFA flags this because the
+// NewMultiPath validates on only one path — analysis flags this because the
 // "fast" path returns without calling Validate().
 func NewMultiPath(name string, fast bool) (*MultiPath, error) { // want `parameter "name" of constructorvalidates\.NewMultiPath uses primitive type string` `constructor constructorvalidates\.NewMultiPath returns constructorvalidates\.MultiPath which has Validate\(\) but never calls it`
 	m := &MultiPath{name: name}
@@ -495,7 +494,7 @@ func NewMultiPath(name string, fast bool) (*MultiPath, error) { // want `paramet
 	return m, m.Validate()
 }
 
-// NewMultiPathAllPaths validates on ALL paths — NOT flagged by CFA.
+// NewMultiPathAllPaths validates on all paths and is not flagged.
 func NewMultiPathAllPaths(name string, mode bool) (*MultiPath, error) { // want `parameter "name" of constructorvalidates\.NewMultiPathAllPaths uses primitive type string`
 	m := &MultiPath{name: name}
 	if mode {
@@ -536,6 +535,17 @@ func NewEarlyReturn(name string, fail bool) (*EarlyReturn, error) { // want `par
 	return e, nil
 }
 
+// NewElseBranchSuccess returns an unvalidated value from the nil-error edge.
+// The enclosing non-nil check must not make its else branch unsuccessful.
+func NewElseBranchSuccess(name string, err error) (*EarlyReturn, error) { // want `parameter "name" of constructorvalidates\.NewElseBranchSuccess uses primitive type string` `constructor constructorvalidates\.NewElseBranchSuccess returns constructorvalidates\.EarlyReturn which has Validate\(\) but never calls it`
+	e := &EarlyReturn{name: name}
+	if err != nil {
+		return nil, err
+	} else {
+		return e, err
+	}
+}
+
 // --- Path-sensitive transitive validation ---
 
 type PathSensitive struct {
@@ -563,7 +573,7 @@ func NewPathSensitive(name string) (*PathSensitive, error) { // want `parameter 
 	return p, nil
 }
 
-// --- Deferred closure validation should count in CFA mode ---
+// --- Deferred closure validation should count on constructor paths ---
 
 type DeferredValidated struct {
 	name string // want `struct field constructorvalidates\.DeferredValidated\.name uses primitive type string`
@@ -644,4 +654,120 @@ func NewDecoyValidated(name string) (*DecoyValidated, error) { // want `paramete
 	}
 	real := &DecoyValidated{name: name}
 	return real, nil
+}
+
+// NewHistoricallyRebound validates the value held by result before rebinding
+// the same variable to a distinct allocation. Historical assignment closure
+// must not transfer validation to the allocation that reaches the return.
+func NewHistoricallyRebound(name string) (*DecoyValidated, error) { // want `parameter "name" of constructorvalidates\.NewHistoricallyRebound uses primitive type string` `constructor constructorvalidates\.NewHistoricallyRebound returns constructorvalidates\.DecoyValidated which has Validate\(\) but never calls it`
+	first := &DecoyValidated{name: name}
+	result := first
+	if err := result.Validate(); err != nil {
+		return nil, err
+	}
+	second := &DecoyValidated{name: name}
+	result = second
+	return result, nil
+}
+
+// NewFreshLiteralAfterValidation validates one allocation and then returns a
+// distinct same-typed literal. Equal Go types do not establish identity.
+func NewFreshLiteralAfterValidation(name string) (*DecoyValidated, error) { // want `parameter "name" of constructorvalidates\.NewFreshLiteralAfterValidation uses primitive type string` `constructor constructorvalidates\.NewFreshLiteralAfterValidation returns constructorvalidates\.DecoyValidated which has Validate\(\) but never calls it`
+	validated := &DecoyValidated{name: name}
+	if err := validated.Validate(); err != nil {
+		return nil, err
+	}
+	return &DecoyValidated{name: name}, nil
+}
+
+// NewCrossPathMismatched validates one candidate unconditionally, but a
+// different same-typed allocation reaches one return. Each return identity
+// carries an independent obligation through the join.
+func NewCrossPathMismatched(name string, first bool) (*DecoyValidated, error) { // want `parameter "name" of constructorvalidates\.NewCrossPathMismatched uses primitive type string` `constructor constructorvalidates\.NewCrossPathMismatched returns constructorvalidates\.DecoyValidated which has Validate\(\) but never calls it`
+	a := &DecoyValidated{name: name}
+	b := &DecoyValidated{name: name}
+	if err := b.Validate(); err != nil {
+		return nil, err
+	}
+	if first {
+		return a, nil
+	}
+	return b, nil
+}
+
+// NewCrossPathMatched validates exactly the allocation returned by each
+// branch. The independent identity obligations are both discharged.
+func NewCrossPathMatched(name string, first bool) (*DecoyValidated, error) { // want `parameter "name" of constructorvalidates\.NewCrossPathMatched uses primitive type string`
+	a := &DecoyValidated{name: name}
+	b := &DecoyValidated{name: name}
+	if first {
+		if err := a.Validate(); err != nil {
+			return nil, err
+		}
+		return a, nil
+	}
+	if err := b.Validate(); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// NewConditionallyRebound may return either allocation after validating only
+// the conditionally assigned one. The reaching identity at the join is
+// ambiguous, so analysis must block with an inconclusive result.
+func NewConditionallyRebound(name string, replace bool) (*DecoyValidated, error) { // want `parameter "name" of constructorvalidates\.NewConditionallyRebound uses primitive type string` `constructor constructorvalidates\.NewConditionallyRebound returns constructorvalidates\.DecoyValidated with inconclusive Validate\(\) path analysis`
+	result := &DecoyValidated{name: name}
+	if replace {
+		result = &DecoyValidated{name: name}
+	}
+	if err := result.Validate(); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// --- Conditional helper results and inverse validation guards ---
+
+type HelperResultValidated struct {
+	name string // want `struct field constructorvalidates\.HelperResultValidated\.name uses primitive type string`
+}
+
+func (h *HelperResultValidated) Validate() error {
+	if h.name == "" {
+		return fmt.Errorf("name required")
+	}
+	return nil
+}
+
+func validateHelperResult(h *HelperResultValidated) error {
+	return h.Validate()
+}
+
+// NewDiscardedHelperResult ignores the conditional helper result, so it does
+// not establish that the returned value is valid.
+func NewDiscardedHelperResult(name string) (*HelperResultValidated, error) { // want `parameter "name" of constructorvalidates\.NewDiscardedHelperResult uses primitive type string` `constructor constructorvalidates\.NewDiscardedHelperResult returns constructorvalidates\.HelperResultValidated which has Validate\(\) but never calls it`
+	h := &HelperResultValidated{name: name}
+	_ = validateHelperResult(h)
+	return h, nil
+}
+
+// NewCheckedHelperResult checks the helper result before returning the value.
+func NewCheckedHelperResult(name string) (*HelperResultValidated, error) { // want `parameter "name" of constructorvalidates\.NewCheckedHelperResult uses primitive type string`
+	h := &HelperResultValidated{name: name}
+	if err := validateHelperResult(h); err != nil {
+		return nil, err
+	}
+	return h, nil
+}
+
+// NewInverseValidationGuard returns the candidate only together with the exact
+// non-nil validation error, so that return is unsuccessful and has no pending
+// constructor validation obligation.
+func NewInverseValidationGuard(name string) (*HelperResultValidated, error) { // want `parameter "name" of constructorvalidates\.NewInverseValidationGuard uses primitive type string`
+	h := &HelperResultValidated{name: name}
+	if err := h.Validate(); err == nil {
+		return nil, nil
+	} else {
+		return h, err
+	}
 }

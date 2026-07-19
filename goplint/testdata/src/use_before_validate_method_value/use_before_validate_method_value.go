@@ -15,37 +15,37 @@ func (c CommandName) Validate() error {
 
 func useCmd(_ CommandName) {}
 
-// MethodValueUseBeforeValidate should report UBV: x is consumed before the
-// bound Validate method is called.
+// MethodValueUseBeforeValidate remains unvalidated because the bound method's
+// error result is ignored.
 func MethodValueUseBeforeValidate(raw string) { // want `parameter "raw" of use_before_validate_method_value\.MethodValueUseBeforeValidate uses primitive type string`
-	x := CommandName(raw) // want `variable x of type CommandName used before Validate\(\) in same block`
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	useCmd(x)
 	validateFn := x.Validate
 	_ = validateFn()
 }
 
-// MethodValueValidateBeforeUse should not report UBV.
+// MethodValueValidateBeforeUse remains unvalidated because its error is ignored.
 func MethodValueValidateBeforeUse(raw string) { // want `parameter "raw" of use_before_validate_method_value\.MethodValueValidateBeforeUse uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	validateFn := x.Validate
 	_ = validateFn()
 	useCmd(x)
 }
 
-// MethodValueAliasValidateBeforeUse should not report UBV when invocation goes
-// through an alias variable.
+// MethodValueAliasValidateBeforeUse remains unvalidated through the alias
+// because its error is ignored.
 func MethodValueAliasValidateBeforeUse(raw string) { // want `parameter "raw" of use_before_validate_method_value\.MethodValueAliasValidateBeforeUse uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	validateFn := x.Validate
 	alias := validateFn
 	_ = alias()
 	useCmd(x)
 }
 
-// MethodValueDeferredValidate should report UBV: deferred method-value
-// invocation does not validate before use.
+// MethodValueDeferredValidate remains unvalidated because the deferred
+// method-value result is ignored.
 func MethodValueDeferredValidate(raw string) { // want `parameter "raw" of use_before_validate_method_value\.MethodValueDeferredValidate uses primitive type string`
-	x := CommandName(raw) // want `variable x of type CommandName used before Validate\(\) in same block`
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	validateFn := x.Validate
 	defer validateFn()
 	useCmd(x)

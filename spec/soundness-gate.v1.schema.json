@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://invowk.dev/schemas/goplint/soundness-gate.v1.schema.json",
+  "title": "goplint aggregate soundness gate manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "registry_path",
+    "profiles",
+    "subgates"
+  ],
+  "properties": {
+    "format_version": {
+      "const": 1
+    },
+    "registry_path": {
+      "$ref": "#/$defs/path"
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
+    },
+    "subgates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/subgate"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\S(?:.*\\S)?$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!\\.\\.?/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "population_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "minimum"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "minimum": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "subgate_ids"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "core",
+            "complete"
+          ]
+        },
+        "subgate_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      }
+    },
+    "subgate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "working_directory",
+        "command",
+        "timeout_seconds",
+        "report_file",
+        "required_registration_ids",
+        "required_populations"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "working_directory": {
+          "$ref": "#/$defs/path"
+        },
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "report_file": {
+          "type": "string",
+          "pattern": "^[^/\\\\]+\\.json$"
+        },
+        "required_registration_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "required_populations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/population_requirement"
+          }
+        }
+      }
+    }
+  }
+}

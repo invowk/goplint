@@ -20,7 +20,7 @@ const semanticRulesCatalogVersion = "v1"
 
 var (
 	semanticOutcomeDomainAllowed   = []string{"safe", "unsafe", "inconclusive"}
-	semanticInterprocEngineAllowed = []string{cfgInterprocEngineLegacy, cfgInterprocEngineIFDS, cfgInterprocEngineCompare}
+	semanticInterprocEngineAllowed = []string{"canonical-ifds"}
 	semanticEdgeFunctionTagAllowed = []string{
 		string(ideEdgeFuncIdentity),
 		string(ideEdgeFuncValidate),
@@ -28,31 +28,38 @@ var (
 		string(ideEdgeFuncConsume),
 	}
 	semanticRefinementStatusAllowed = []string{
-		cfgRefinementStatusUnsafe,
-		cfgRefinementStatusInconclusiveRefined,
-		cfgRefinementStatusInconclusiveRaw,
-		cfgRefinementStatusProvenSafe,
+		cfgRefinementStatusViolation,
+		cfgRefinementStatusInconclusive,
+		cfgRefinementStatusDischargedInfeasible,
 	}
 )
 
 type semanticRuleCatalog struct {
 	Version                string                         `json:"version"`
+	CategoryCatalog        []semanticCategoryCatalogEntry `json:"category_catalog"`
 	Rules                  []semanticRuleSpec             `json:"rules"`
 	OracleMatrix           []semanticOracleSpec           `json:"oracle_matrix"`
 	HistoricalMissFixtures []string                       `json:"historical_miss_fixtures"`
 	HistoricalMissOracles  []semanticHistoricalMissOracle `json:"historical_miss_oracles"`
 }
 
+type semanticCategoryCatalogEntry struct {
+	Category       string   `json:"category"`
+	Kind           string   `json:"kind"`
+	OwnerKey       string   `json:"owner_key"`
+	OracleStrategy string   `json:"oracle_strategy"`
+	RequiredLayers []string `json:"required_layers"`
+}
+
 type semanticRuleSpec struct {
 	Category                   string   `json:"category"`
 	Family                     string   `json:"family"`
-	Entrypoints                []string `json:"entrypoints"`
 	EnabledByFlags             []string `json:"enabled_by_flags"`
 	RunControls                []string `json:"run_controls"`
 	TraversalMode              string   `json:"traversal_mode"`
 	StateDomain                []string `json:"state_domain"`
 	OutcomeDomain              []string `json:"outcome_domain"`
-	InterprocEngineModes       []string `json:"interproc_engine_modes,omitempty"`
+	InterprocEngine            string   `json:"interproc_engine,omitempty"`
 	FactFamilies               []string `json:"fact_families,omitempty"`
 	EdgeFunctionTags           []string `json:"edge_function_tags,omitempty"`
 	InconclusiveReasons        []string `json:"inconclusive_reasons,omitempty"`
@@ -63,9 +70,10 @@ type semanticRuleSpec struct {
 }
 
 type semanticOracleSpec struct {
-	Category      string                `json:"category"`
-	MustReport    []semanticOracleEntry `json:"must_report"`
-	MustNotReport []semanticOracleEntry `json:"must_not_report"`
+	Category           string                `json:"category"`
+	MustReport         []semanticOracleEntry `json:"must_report"`
+	MustNotReport      []semanticOracleEntry `json:"must_not_report"`
+	MustBeInconclusive []semanticOracleEntry `json:"must_be_inconclusive,omitempty"`
 }
 
 type semanticOracleEntry struct {
@@ -204,6 +212,12 @@ func validateSemanticRuleCatalog(catalog semanticRuleCatalog) error {
 	if catalog.Version != semanticRulesCatalogVersion {
 		return fmt.Errorf("semantic rules version must be %q (got %q)", semanticRulesCatalogVersion, catalog.Version)
 	}
+	if err := validateSemanticRegistries(); err != nil {
+		return fmt.Errorf("invalid live semantic registry: %w", err)
+	}
+	if err := validateSemanticCategoryCatalog(catalog.CategoryCatalog); err != nil {
+		return err
+	}
 	if len(catalog.Rules) == 0 {
 		return errors.New("semantic rules catalog must declare at least one rule")
 	}
@@ -213,10 +227,18 @@ func validateSemanticRuleCatalog(catalog semanticRuleCatalog) error {
 		if err := validateSemanticRuleSpec(rule); err != nil {
 			return fmt.Errorf("invalid rule[%d]: %w", idx, err)
 		}
+		if _, registered := diagnosticCategorySpec(rule.Category); !registered {
+			return fmt.Errorf("rule category %q is not registered", rule.Category)
+		}
 		if _, exists := ruleCategories[rule.Category]; exists {
 			return fmt.Errorf("duplicate rule category %q", rule.Category)
 		}
 		ruleCategories[rule.Category] = struct{}{}
+	}
+	for _, category := range diagnosticCategoryRegistry() {
+		if _, ok := ruleCategories[category.Name]; !ok {
+			return fmt.Errorf("registered category %q has no rule contract", category.Name)
+		}
 	}
 
 	if len(catalog.OracleMatrix) == 0 {
@@ -234,6 +256,11 @@ func validateSemanticRuleCatalog(catalog semanticRuleCatalog) error {
 			return fmt.Errorf("duplicate oracle_matrix category %q", oracle.Category)
 		}
 		oracleCategories[oracle.Category] = struct{}{}
+	}
+	for _, category := range diagnosticCategoryRegistry() {
+		if _, ok := oracleCategories[category.Name]; !ok {
+			return fmt.Errorf("registered category %q has no oracle_matrix entry", category.Name)
+		}
 	}
 
 	if len(catalog.HistoricalMissFixtures) == 0 {
@@ -277,6 +304,47 @@ func validateSemanticRuleCatalog(catalog semanticRuleCatalog) error {
 	return nil
 }
 
+func validateSemanticCategoryCatalog(entries []semanticCategoryCatalogEntry) error {
+	if len(entries) == 0 {
+		return errors.New("semantic rules catalog must include category_catalog entries")
+	}
+
+	seen := make(map[string]struct{}, len(entries))
+	for idx, entry := range entries {
+		category := strings.TrimSpace(entry.Category)
+		if category == "" {
+			return fmt.Errorf("category_catalog[%d] has an empty category", idx)
+		}
+		if _, duplicate := seen[category]; duplicate {
+			return fmt.Errorf("duplicate category_catalog category %q", category)
+		}
+		live, err := semanticCategoryByName(category)
+		if err != nil {
+			return fmt.Errorf("stale category_catalog entry: %w", err)
+		}
+		if entry.Kind != string(live.Kind) {
+			return fmt.Errorf("category_catalog category %q kind = %q, want %q", category, entry.Kind, live.Kind)
+		}
+		if entry.OwnerKey != string(live.Owner) {
+			return fmt.Errorf("category_catalog category %q owner_key = %q, want %q", category, entry.OwnerKey, live.Owner)
+		}
+		if entry.OracleStrategy != string(live.OracleStrategy) {
+			return fmt.Errorf("category_catalog category %q oracle_strategy = %q, want %q", category, entry.OracleStrategy, live.OracleStrategy)
+		}
+		wantLayers := evidenceLayerStrings(requiredOracleLayersForKind(live.Kind))
+		if !slices.Equal(entry.RequiredLayers, wantLayers) {
+			return fmt.Errorf("category_catalog category %q required_layers = %v, want %v", category, entry.RequiredLayers, wantLayers)
+		}
+		seen[category] = struct{}{}
+	}
+	for _, live := range semanticCategoryRegistry() {
+		if _, present := seen[live.Category]; !present {
+			return fmt.Errorf("registered semantic category %q is missing from category_catalog", live.Category)
+		}
+	}
+	return nil
+}
+
 func validateSemanticRuleSpec(rule semanticRuleSpec) error {
 	if strings.TrimSpace(rule.Category) == "" {
 		return errors.New("category must be non-empty")
@@ -287,11 +355,10 @@ func validateSemanticRuleSpec(rule semanticRuleSpec) error {
 	if strings.TrimSpace(rule.TraversalMode) == "" {
 		return errors.New("traversal_mode must be non-empty")
 	}
-	if err := requireUniqueNonEmpty(rule.Entrypoints, "entrypoints"); err != nil {
-		return err
-	}
-	if err := requireUniqueNonEmpty(rule.EnabledByFlags, "enabled_by_flags"); err != nil {
-		return err
+	if len(rule.EnabledByFlags) > 0 {
+		if err := requireUniqueNonEmpty(rule.EnabledByFlags, "enabled_by_flags"); err != nil {
+			return err
+		}
 	}
 	if err := requireUniqueNonEmpty(rule.RunControls, "run_controls"); err != nil {
 		return err
@@ -304,8 +371,8 @@ func validateSemanticRuleSpec(rule semanticRuleSpec) error {
 	}
 	requiresInterprocSpec := strings.HasPrefix(rule.Family, "cfa-")
 	if requiresInterprocSpec {
-		if err := requireUniqueNonEmpty(rule.InterprocEngineModes, "interproc_engine_modes"); err != nil {
-			return err
+		if strings.TrimSpace(rule.InterprocEngine) == "" {
+			return errors.New("interproc_engine must be non-empty")
 		}
 		if err := requireUniqueNonEmpty(rule.FactFamilies, "fact_families"); err != nil {
 			return err
@@ -314,11 +381,6 @@ func validateSemanticRuleSpec(rule semanticRuleSpec) error {
 			return err
 		}
 	} else {
-		if len(rule.InterprocEngineModes) > 0 {
-			if err := requireUniqueNonEmpty(rule.InterprocEngineModes, "interproc_engine_modes"); err != nil {
-				return err
-			}
-		}
 		if len(rule.FactFamilies) > 0 {
 			if err := requireUniqueNonEmpty(rule.FactFamilies, "fact_families"); err != nil {
 				return err
@@ -335,10 +397,8 @@ func validateSemanticRuleSpec(rule semanticRuleSpec) error {
 			return fmt.Errorf("outcome_domain contains unsupported value %q", outcome)
 		}
 	}
-	for _, engine := range rule.InterprocEngineModes {
-		if !slices.Contains(semanticInterprocEngineAllowed, engine) {
-			return fmt.Errorf("interproc_engine_modes contains unsupported value %q", engine)
-		}
+	if rule.InterprocEngine != "" && !slices.Contains(semanticInterprocEngineAllowed, rule.InterprocEngine) {
+		return fmt.Errorf("interproc_engine contains unsupported value %q", rule.InterprocEngine)
 	}
 	for _, tag := range rule.EdgeFunctionTags {
 		if !slices.Contains(semanticEdgeFunctionTagAllowed, tag) {
@@ -398,7 +458,30 @@ func validateSemanticOracleSpec(spec semanticOracleSpec) error {
 			return err
 		}
 	}
+	category, ok := diagnosticCategorySpec(spec.Category)
+	if !ok {
+		return fmt.Errorf("category %q is not registered", spec.Category)
+	}
+	if category.SemanticKind == semanticKindProtocol && len(spec.MustBeInconclusive) == 0 {
+		return errors.New("must_be_inconclusive must contain at least one entry for protocol categories")
+	}
+	if category.SemanticKind != semanticKindProtocol && len(spec.MustBeInconclusive) > 0 {
+		return errors.New("must_be_inconclusive is only valid for protocol categories")
+	}
+	for _, entry := range spec.MustBeInconclusive {
+		if entryErr := validateSemanticOracleEntry(entry, "must_be_inconclusive"); entryErr != nil {
+			return entryErr
+		}
+	}
 	return nil
+}
+
+func evidenceLayerStrings(layers []semanticEvidenceLayer) []string {
+	result := make([]string, 0, len(layers))
+	for _, layer := range layers {
+		result = append(result, string(layer))
+	}
+	return result
 }
 
 func validateSemanticOracleEntry(entry semanticOracleEntry, fieldName string) error {

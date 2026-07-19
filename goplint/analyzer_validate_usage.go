@@ -5,7 +5,6 @@ package goplint
 import (
 	"go/ast"
 	"go/token"
-	"strconv"
 
 	"golang.org/x/tools/go/analysis"
 )
@@ -60,7 +59,7 @@ func inspectValidateUsageInBody(
 
 		// Check for x.Validate() pattern.
 		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != "Validate" {
+		if !ok || sel.Sel.Name != validateMethodName {
 			return true
 		}
 
@@ -159,7 +158,7 @@ func reportValidateUsageFinding(
 		return
 	}
 
-	findingID := StableFindingID(CategoryUnusedValidateResult, qualFuncName, message, strconv.Itoa(int(pos)))
+	findingID := PackageScopedFindingID(pass, CategoryUnusedValidateResult, qualFuncName, semanticNodeKey(pass, pos))
 	if bl.ContainsFinding(CategoryUnusedValidateResult, findingID, message) {
 		return
 	}

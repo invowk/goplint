@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://invowk.dev/schemas/goplint/protocol-oracle-bounds.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "generator",
+    "enumeration",
+    "dimensions",
+    "scenarios",
+    "blocking",
+    "scheduled",
+    "required_features",
+    "expected_program_count"
+  ],
+  "properties": {
+    "format_version": { "const": 3 },
+    "generator": { "const": "normalized-protocol-v3" },
+    "enumeration": { "const": "one-factor-plus-integrated-scheduled-v1" },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "procedure_counts",
+        "nodes_per_procedure",
+        "identity_counts",
+        "call_site_counts",
+        "call_depths",
+        "topologies",
+        "branch_joins",
+        "recursion",
+        "operations",
+        "conditional_results",
+        "alias_actions",
+        "unknown_effects",
+        "constraints",
+        "initial_facts"
+      ],
+      "properties": {
+        "procedure_counts": { "$ref": "#/$defs/positiveIntegers" },
+        "nodes_per_procedure": { "$ref": "#/$defs/nodeCounts" },
+        "identity_counts": { "$ref": "#/$defs/positiveIntegers" },
+        "call_site_counts": { "$ref": "#/$defs/nonNegativeIntegers" },
+        "call_depths": { "$ref": "#/$defs/nonNegativeIntegers" },
+        "topologies": { "$ref": "#/$defs/nonEmptyStrings" },
+        "branch_joins": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "boolean" } },
+        "recursion": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "boolean" } },
+        "operations": { "$ref": "#/$defs/nonEmptyStrings" },
+        "conditional_results": { "$ref": "#/$defs/nonEmptyStrings" },
+        "alias_actions": { "$ref": "#/$defs/nonEmptyStrings" },
+        "unknown_effects": { "$ref": "#/$defs/nonEmptyStrings" },
+        "constraints": { "$ref": "#/$defs/nonEmptyStrings" },
+        "initial_facts": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "enum": ["needs-validation", "validated"] }
+        }
+      }
+    },
+    "scenarios": { "$ref": "#/$defs/nonEmptyStrings" },
+    "blocking": { "$ref": "#/$defs/profile" },
+    "scheduled": { "$ref": "#/$defs/profile" },
+    "required_features": { "$ref": "#/$defs/nonEmptyStrings" },
+    "expected_program_count": { "type": "integer", "minimum": 1 }
+  },
+  "$defs": {
+    "positiveIntegers": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 1 }
+    },
+    "nonNegativeIntegers": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 0 }
+    },
+    "nodeCounts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "integer", "minimum": 4 }
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shards", "minimum_programs", "max_states", "pairwise_semantics", "expected_program_count"],
+      "properties": {
+        "shards": { "type": "integer", "minimum": 1 },
+        "minimum_programs": { "type": "integer", "minimum": 1 },
+        "max_states": { "type": "integer", "minimum": 1 },
+        "pairwise_semantics": { "type": "boolean" },
+        "expected_program_count": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

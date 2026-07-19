@@ -58,7 +58,7 @@ func (w WrongStringParams) String(x int) string { return "" } // want `parameter
 type unexportedWithStringer string
 
 func (u unexportedWithStringer) Validate() error { return nil }
-func (u unexportedWithStringer) string() string { return string(u) } // want `return value of stringer\.unexportedWithStringer\.string uses primitive type string`
+func (u unexportedWithStringer) string() string  { return string(u) } // want `return value of stringer\.unexportedWithStringer\.string uses primitive type string`
 
 // unexportedMissing has neither String() nor string() — flagged.
 type unexportedMissing string // want `named type stringer\.unexportedMissing has no String\(\) method`
@@ -68,5 +68,5 @@ func (u unexportedMissing) Validate() error { return nil }
 // unexportedWrongSig has string() returning int — wrong sig.
 type unexportedWrongSig string // want `named type stringer\.unexportedWrongSig has String\(\) but wrong signature`
 
-func (u unexportedWrongSig) Validate() error  { return nil }
-func (u unexportedWrongSig) string() int      { return 0 } // want `return value of stringer\.unexportedWrongSig\.string uses primitive type int`
+func (u unexportedWrongSig) Validate() error { return nil }
+func (u unexportedWrongSig) string() int     { return 0 } // want `return value of stringer\.unexportedWrongSig\.string uses primitive type int`

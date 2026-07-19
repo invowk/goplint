@@ -1,0 +1,27 @@
+{
+  "format_version": 1,
+  "runs": [
+    {
+      "id": "architecture-tests",
+      "packages": ["./goplint"],
+      "tests": [
+        "TestProtocolProductionArchitecture",
+        "TestProtocolFindingPolicyIsConsultedOnlyAfterClassification",
+        "TestProtocolTestsUseCanonicalComponents"
+      ],
+      "count": 1,
+      "timeout_seconds": 120
+    }
+  ],
+  "populations": [
+    {
+      "id": "architecture-guards",
+      "selectors": [
+        {
+          "run": "architecture-tests",
+          "scope": "roots"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2563 @@
+{
+  "format_version": 2,
+  "registrations": [
+    {
+      "id": "missing-constructor-validate-inconclusive.determinism",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "determinism",
+      "feature_id": "constructor-validation",
+      "producer_id": "determinism",
+      "test_id": "TestCategoryDeterminismEvidence/missing-constructor-validate-inconclusive",
+      "boundary": "determinism-analyzer",
+      "expected": {
+        "outcome": "deterministic",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "equivalent-schedules-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "equivalent-schedules"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.fuzz",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "fuzz",
+      "feature_id": "constructor-validation",
+      "producer_id": "fuzz-seeds",
+      "test_id": "TestCategoryFuzzSeedEvidence/missing-constructor-validate-inconclusive",
+      "boundary": "fuzz-decoder",
+      "expected": {
+        "outcome": "property-detected",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "decoded-structure-matched-category",
+          "independent-property-checked"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "historical-counterexamples",
+          "seed-structures"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.generated",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "generated",
+      "feature_id": "constructor-validation",
+      "producer_id": "end-to-end-oracle",
+      "test_id": "TestCategoryGeneratedEvidence/missing-constructor-validate-inconclusive",
+      "boundary": "independent-boundary-oracle",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "boundary-oracle-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "oracle-outcomes"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.metamorphic",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "metamorphic",
+      "feature_id": "constructor-validation",
+      "producer_id": "protocol-oracle",
+      "test_id": "TestCategoryMetamorphicEvidence/missing-constructor-validate-inconclusive",
+      "boundary": "metamorphic-analyzer",
+      "expected": {
+        "outcome": "relation-preserved",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "production-analyzer-executed",
+          "relation-checked"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "relations"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.must-be-inconclusive",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "must-be-inconclusive",
+      "feature_id": "constructor-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/missing-constructor-validate-inconclusive/must-be-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-be-inconclusive",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "blocking-inconclusive-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.must-not-report",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "must-not-report",
+      "feature_id": "constructor-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/missing-constructor-validate-inconclusive/must-not-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-not-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "fixture-executed",
+          "no-diagnostic-emitted"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.must-report",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "must-report",
+      "feature_id": "constructor-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/missing-constructor-validate-inconclusive/must-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "diagnostic-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.mutation",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "mutation",
+      "feature_id": "constructor-validation",
+      "producer_id": "targeted-mutation",
+      "test_id": "cmd/targeted-mutation/missing-constructor-validate-inconclusive",
+      "boundary": "mutation-runner",
+      "expected": {
+        "outcome": "mutant-killed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "clean-control-passed",
+          "declared-guard-selected",
+          "exact-anchor-selected",
+          "exact-transformation-applied",
+          "intended-mismatch-observed",
+          "mismatch-repeatable",
+          "mutant-compiled",
+          "post-control-passed",
+          "source-restored"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "guards",
+          "mutants"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.owner-route",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "owner-route",
+      "feature_id": "constructor-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestProtocolProductionRoutingEvidence/missing-constructor-validate-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "route-executed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "category-owner-executed",
+          "production-route-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.production-integration",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "production-integration",
+      "feature_id": "constructor-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestSemanticEvidenceProduction/missing-constructor-validate-inconclusive/production-integration",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "negative-path-executed",
+          "positive-path-executed",
+          "uncertainty-path-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate-inconclusive.rule-contract",
+      "category": "missing-constructor-validate-inconclusive",
+      "layer": "rule-contract",
+      "feature_id": "constructor-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceContract/missing-constructor-validate-inconclusive/rule-contract",
+      "boundary": "catalog-validation",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": null,
+        "required_properties": [
+          "catalog-rule-matched",
+          "exact-category-bound"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.determinism",
+      "category": "missing-constructor-validate",
+      "layer": "determinism",
+      "feature_id": "constructor-validation",
+      "producer_id": "determinism",
+      "test_id": "TestCategoryDeterminismEvidence/missing-constructor-validate",
+      "boundary": "determinism-analyzer",
+      "expected": {
+        "outcome": "deterministic",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "equivalent-schedules-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "equivalent-schedules"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.fuzz",
+      "category": "missing-constructor-validate",
+      "layer": "fuzz",
+      "feature_id": "constructor-validation",
+      "producer_id": "fuzz-seeds",
+      "test_id": "TestCategoryFuzzSeedEvidence/missing-constructor-validate",
+      "boundary": "fuzz-decoder",
+      "expected": {
+        "outcome": "property-detected",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "decoded-structure-matched-category",
+          "independent-property-checked"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "historical-counterexamples",
+          "seed-structures"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.generated",
+      "category": "missing-constructor-validate",
+      "layer": "generated",
+      "feature_id": "constructor-validation",
+      "producer_id": "end-to-end-oracle",
+      "test_id": "TestCategoryGeneratedEvidence/missing-constructor-validate",
+      "boundary": "independent-boundary-oracle",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "boundary-oracle-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "oracle-outcomes"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.metamorphic",
+      "category": "missing-constructor-validate",
+      "layer": "metamorphic",
+      "feature_id": "constructor-validation",
+      "producer_id": "protocol-oracle",
+      "test_id": "TestCategoryMetamorphicEvidence/missing-constructor-validate",
+      "boundary": "metamorphic-analyzer",
+      "expected": {
+        "outcome": "relation-preserved",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "production-analyzer-executed",
+          "relation-checked"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "relations"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.must-be-inconclusive",
+      "category": "missing-constructor-validate",
+      "layer": "must-be-inconclusive",
+      "feature_id": "constructor-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/missing-constructor-validate/must-be-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-be-inconclusive",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "blocking-inconclusive-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.must-not-report",
+      "category": "missing-constructor-validate",
+      "layer": "must-not-report",
+      "feature_id": "constructor-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/missing-constructor-validate/must-not-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-not-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "fixture-executed",
+          "no-diagnostic-emitted"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.must-report",
+      "category": "missing-constructor-validate",
+      "layer": "must-report",
+      "feature_id": "constructor-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/missing-constructor-validate/must-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "diagnostic-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.mutation",
+      "category": "missing-constructor-validate",
+      "layer": "mutation",
+      "feature_id": "constructor-validation",
+      "producer_id": "targeted-mutation",
+      "test_id": "cmd/targeted-mutation/missing-constructor-validate",
+      "boundary": "mutation-runner",
+      "expected": {
+        "outcome": "mutant-killed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "clean-control-passed",
+          "declared-guard-selected",
+          "exact-anchor-selected",
+          "exact-transformation-applied",
+          "intended-mismatch-observed",
+          "mismatch-repeatable",
+          "mutant-compiled",
+          "post-control-passed",
+          "source-restored"
+        ],
+        "required_dimensions": [
+          "constructor-validation",
+          "guards",
+          "mutants"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.owner-route",
+      "category": "missing-constructor-validate",
+      "layer": "owner-route",
+      "feature_id": "constructor-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestProtocolProductionRoutingEvidence/missing-constructor-validate",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "route-executed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "category-owner-executed",
+          "production-route-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.production-integration",
+      "category": "missing-constructor-validate",
+      "layer": "production-integration",
+      "feature_id": "constructor-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestSemanticEvidenceProduction/missing-constructor-validate/production-integration",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "negative-path-executed",
+          "positive-path-executed",
+          "uncertainty-path-executed"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "missing-constructor-validate.rule-contract",
+      "category": "missing-constructor-validate",
+      "layer": "rule-contract",
+      "feature_id": "constructor-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceContract/missing-constructor-validate/rule-contract",
+      "boundary": "catalog-validation",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": null,
+        "required_properties": [
+          "catalog-rule-matched",
+          "exact-category-bound"
+        ],
+        "required_dimensions": [
+          "constructor-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.determinism",
+      "category": "unvalidated-boundary-request",
+      "layer": "determinism",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "determinism",
+      "test_id": "TestCategoryDeterminismEvidence/unvalidated-boundary-request",
+      "boundary": "determinism-analyzer",
+      "expected": {
+        "outcome": "deterministic",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "equivalent-schedules-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation",
+          "equivalent-schedules"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.fuzz",
+      "category": "unvalidated-boundary-request",
+      "layer": "fuzz",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "fuzz-seeds",
+      "test_id": "TestCategoryFuzzSeedEvidence/unvalidated-boundary-request",
+      "boundary": "fuzz-decoder",
+      "expected": {
+        "outcome": "property-detected",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "decoded-structure-matched-category",
+          "independent-property-checked"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation",
+          "historical-counterexamples",
+          "seed-structures"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.generated",
+      "category": "unvalidated-boundary-request",
+      "layer": "generated",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "end-to-end-oracle",
+      "test_id": "TestCategoryGeneratedEvidence/unvalidated-boundary-request",
+      "boundary": "independent-boundary-oracle",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "boundary-oracle-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation",
+          "oracle-outcomes"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.metamorphic",
+      "category": "unvalidated-boundary-request",
+      "layer": "metamorphic",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "protocol-oracle",
+      "test_id": "TestCategoryMetamorphicEvidence/unvalidated-boundary-request",
+      "boundary": "metamorphic-analyzer",
+      "expected": {
+        "outcome": "relation-preserved",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "production-analyzer-executed",
+          "relation-checked"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation",
+          "relations"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.must-be-inconclusive",
+      "category": "unvalidated-boundary-request",
+      "layer": "must-be-inconclusive",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-boundary-request/must-be-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-be-inconclusive",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "blocking-inconclusive-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.must-not-report",
+      "category": "unvalidated-boundary-request",
+      "layer": "must-not-report",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-boundary-request/must-not-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-not-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "fixture-executed",
+          "no-diagnostic-emitted"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.must-report",
+      "category": "unvalidated-boundary-request",
+      "layer": "must-report",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-boundary-request/must-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "diagnostic-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.mutation",
+      "category": "unvalidated-boundary-request",
+      "layer": "mutation",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "targeted-mutation",
+      "test_id": "cmd/targeted-mutation/unvalidated-boundary-request",
+      "boundary": "mutation-runner",
+      "expected": {
+        "outcome": "mutant-killed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "clean-control-passed",
+          "declared-guard-selected",
+          "exact-anchor-selected",
+          "exact-transformation-applied",
+          "intended-mismatch-observed",
+          "mismatch-repeatable",
+          "mutant-compiled",
+          "post-control-passed",
+          "source-restored"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation",
+          "guards",
+          "mutants"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.owner-route",
+      "category": "unvalidated-boundary-request",
+      "layer": "owner-route",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestProtocolProductionRoutingEvidence/unvalidated-boundary-request",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "route-executed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "category-owner-executed",
+          "production-route-executed"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.production-integration",
+      "category": "unvalidated-boundary-request",
+      "layer": "production-integration",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-boundary-request/production-integration",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "negative-path-executed",
+          "positive-path-executed",
+          "uncertainty-path-executed"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-boundary-request.rule-contract",
+      "category": "unvalidated-boundary-request",
+      "layer": "rule-contract",
+      "feature_id": "boundary-request-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceContract/unvalidated-boundary-request/rule-contract",
+      "boundary": "catalog-validation",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": null,
+        "required_properties": [
+          "catalog-rule-matched",
+          "exact-category-bound"
+        ],
+        "required_dimensions": [
+          "boundary-request-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.determinism",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "determinism",
+      "feature_id": "cast-validation",
+      "producer_id": "determinism",
+      "test_id": "TestCategoryDeterminismEvidence/unvalidated-cast-inconclusive",
+      "boundary": "determinism-analyzer",
+      "expected": {
+        "outcome": "deterministic",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "equivalent-schedules-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation",
+          "equivalent-schedules"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.fuzz",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "fuzz",
+      "feature_id": "cast-validation",
+      "producer_id": "fuzz-seeds",
+      "test_id": "TestCategoryFuzzSeedEvidence/unvalidated-cast-inconclusive",
+      "boundary": "fuzz-decoder",
+      "expected": {
+        "outcome": "property-detected",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "decoded-seed-matched-category",
+          "independent-property-checked"
+        ],
+        "required_dimensions": [
+          "cast-validation",
+          "historical-counterexamples",
+          "seed-structures"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.generated",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "generated",
+      "feature_id": "cast-validation",
+      "producer_id": "end-to-end-oracle",
+      "test_id": "TestCategoryGeneratedEvidence/unvalidated-cast-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "independent-model-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "aliases",
+          "call-sites",
+          "cast-validation",
+          "constraints",
+          "facts",
+          "return-edges"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.metamorphic",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "metamorphic",
+      "feature_id": "cast-validation",
+      "producer_id": "protocol-oracle",
+      "test_id": "TestCategoryMetamorphicEvidence/unvalidated-cast-inconclusive",
+      "boundary": "metamorphic-analyzer",
+      "expected": {
+        "outcome": "relation-preserved",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "production-analyzer-executed",
+          "relation-checked"
+        ],
+        "required_dimensions": [
+          "cast-validation",
+          "relations"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.must-be-inconclusive",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "must-be-inconclusive",
+      "feature_id": "cast-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-cast-inconclusive/must-be-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-be-inconclusive",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "blocking-inconclusive-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.must-not-report",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "must-not-report",
+      "feature_id": "cast-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-cast-inconclusive/must-not-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-not-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "fixture-executed",
+          "no-diagnostic-emitted"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.must-report",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "must-report",
+      "feature_id": "cast-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-cast-inconclusive/must-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "diagnostic-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.mutation",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "mutation",
+      "feature_id": "cast-validation",
+      "producer_id": "targeted-mutation",
+      "test_id": "cmd/targeted-mutation/unvalidated-cast-inconclusive",
+      "boundary": "mutation-runner",
+      "expected": {
+        "outcome": "mutant-killed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "clean-control-passed",
+          "declared-guard-selected",
+          "exact-anchor-selected",
+          "exact-transformation-applied",
+          "intended-mismatch-observed",
+          "mismatch-repeatable",
+          "mutant-compiled",
+          "post-control-passed",
+          "source-restored"
+        ],
+        "required_dimensions": [
+          "cast-validation",
+          "guards",
+          "mutants"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.owner-route",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "owner-route",
+      "feature_id": "cast-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestProtocolProductionRoutingEvidence/unvalidated-cast-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "route-executed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "category-owner-executed",
+          "production-route-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.production-integration",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "production-integration",
+      "feature_id": "cast-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-cast-inconclusive/production-integration",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "negative-path-executed",
+          "positive-path-executed",
+          "uncertainty-path-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast-inconclusive.rule-contract",
+      "category": "unvalidated-cast-inconclusive",
+      "layer": "rule-contract",
+      "feature_id": "cast-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceContract/unvalidated-cast-inconclusive/rule-contract",
+      "boundary": "catalog-validation",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": null,
+        "required_properties": [
+          "catalog-rule-matched",
+          "exact-category-bound"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.determinism",
+      "category": "unvalidated-cast",
+      "layer": "determinism",
+      "feature_id": "cast-validation",
+      "producer_id": "determinism",
+      "test_id": "TestCategoryDeterminismEvidence/unvalidated-cast",
+      "boundary": "determinism-analyzer",
+      "expected": {
+        "outcome": "deterministic",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "equivalent-schedules-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation",
+          "equivalent-schedules"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.fuzz",
+      "category": "unvalidated-cast",
+      "layer": "fuzz",
+      "feature_id": "cast-validation",
+      "producer_id": "fuzz-seeds",
+      "test_id": "TestCategoryFuzzSeedEvidence/unvalidated-cast",
+      "boundary": "fuzz-decoder",
+      "expected": {
+        "outcome": "property-detected",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "decoded-seed-matched-category",
+          "independent-property-checked"
+        ],
+        "required_dimensions": [
+          "cast-validation",
+          "historical-counterexamples",
+          "seed-structures"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.generated",
+      "category": "unvalidated-cast",
+      "layer": "generated",
+      "feature_id": "cast-validation",
+      "producer_id": "end-to-end-oracle",
+      "test_id": "TestCategoryGeneratedEvidence/unvalidated-cast",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "independent-model-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "aliases",
+          "call-sites",
+          "cast-validation",
+          "constraints",
+          "facts",
+          "return-edges"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.metamorphic",
+      "category": "unvalidated-cast",
+      "layer": "metamorphic",
+      "feature_id": "cast-validation",
+      "producer_id": "protocol-oracle",
+      "test_id": "TestCategoryMetamorphicEvidence/unvalidated-cast",
+      "boundary": "metamorphic-analyzer",
+      "expected": {
+        "outcome": "relation-preserved",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "production-analyzer-executed",
+          "relation-checked"
+        ],
+        "required_dimensions": [
+          "cast-validation",
+          "relations"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.must-be-inconclusive",
+      "category": "unvalidated-cast",
+      "layer": "must-be-inconclusive",
+      "feature_id": "cast-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-cast/must-be-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-be-inconclusive",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "blocking-inconclusive-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.must-not-report",
+      "category": "unvalidated-cast",
+      "layer": "must-not-report",
+      "feature_id": "cast-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-cast/must-not-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-not-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "fixture-executed",
+          "no-diagnostic-emitted"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.must-report",
+      "category": "unvalidated-cast",
+      "layer": "must-report",
+      "feature_id": "cast-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-cast/must-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "diagnostic-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.mutation",
+      "category": "unvalidated-cast",
+      "layer": "mutation",
+      "feature_id": "cast-validation",
+      "producer_id": "targeted-mutation",
+      "test_id": "cmd/targeted-mutation/unvalidated-cast",
+      "boundary": "mutation-runner",
+      "expected": {
+        "outcome": "mutant-killed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "clean-control-passed",
+          "declared-guard-selected",
+          "exact-anchor-selected",
+          "exact-transformation-applied",
+          "intended-mismatch-observed",
+          "mismatch-repeatable",
+          "mutant-compiled",
+          "post-control-passed",
+          "source-restored"
+        ],
+        "required_dimensions": [
+          "cast-validation",
+          "guards",
+          "mutants"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.owner-route",
+      "category": "unvalidated-cast",
+      "layer": "owner-route",
+      "feature_id": "cast-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestProtocolProductionRoutingEvidence/unvalidated-cast",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "route-executed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "category-owner-executed",
+          "production-route-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.production-integration",
+      "category": "unvalidated-cast",
+      "layer": "production-integration",
+      "feature_id": "cast-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestSemanticEvidenceProduction/unvalidated-cast/production-integration",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "negative-path-executed",
+          "positive-path-executed",
+          "uncertainty-path-executed"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "unvalidated-cast.rule-contract",
+      "category": "unvalidated-cast",
+      "layer": "rule-contract",
+      "feature_id": "cast-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceContract/unvalidated-cast/rule-contract",
+      "boundary": "catalog-validation",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": null,
+        "required_properties": [
+          "catalog-rule-matched",
+          "exact-category-bound"
+        ],
+        "required_dimensions": [
+          "cast-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.determinism",
+      "category": "use-before-validate-cross-block",
+      "layer": "determinism",
+      "feature_id": "use-before-validation",
+      "producer_id": "determinism",
+      "test_id": "TestCategoryDeterminismEvidence/use-before-validate-cross-block",
+      "boundary": "determinism-analyzer",
+      "expected": {
+        "outcome": "deterministic",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "equivalent-schedules-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "equivalent-schedules",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.fuzz",
+      "category": "use-before-validate-cross-block",
+      "layer": "fuzz",
+      "feature_id": "use-before-validation",
+      "producer_id": "fuzz-seeds",
+      "test_id": "TestCategoryFuzzSeedEvidence/use-before-validate-cross-block",
+      "boundary": "fuzz-decoder",
+      "expected": {
+        "outcome": "property-detected",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "decoded-structure-matched-category",
+          "independent-property-checked"
+        ],
+        "required_dimensions": [
+          "historical-counterexamples",
+          "seed-structures",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.generated",
+      "category": "use-before-validate-cross-block",
+      "layer": "generated",
+      "feature_id": "use-before-validation",
+      "producer_id": "end-to-end-oracle",
+      "test_id": "TestCategoryGeneratedEvidence/use-before-validate-cross-block",
+      "boundary": "independent-boundary-oracle",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "boundary-oracle-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "oracle-outcomes",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.metamorphic",
+      "category": "use-before-validate-cross-block",
+      "layer": "metamorphic",
+      "feature_id": "use-before-validation",
+      "producer_id": "protocol-oracle",
+      "test_id": "TestCategoryMetamorphicEvidence/use-before-validate-cross-block",
+      "boundary": "metamorphic-analyzer",
+      "expected": {
+        "outcome": "relation-preserved",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "production-analyzer-executed",
+          "relation-checked"
+        ],
+        "required_dimensions": [
+          "relations",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.must-be-inconclusive",
+      "category": "use-before-validate-cross-block",
+      "layer": "must-be-inconclusive",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-cross-block/must-be-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-be-inconclusive",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "blocking-inconclusive-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.must-not-report",
+      "category": "use-before-validate-cross-block",
+      "layer": "must-not-report",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-cross-block/must-not-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-not-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "fixture-executed",
+          "no-diagnostic-emitted"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.must-report",
+      "category": "use-before-validate-cross-block",
+      "layer": "must-report",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-cross-block/must-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "diagnostic-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.mutation",
+      "category": "use-before-validate-cross-block",
+      "layer": "mutation",
+      "feature_id": "use-before-validation",
+      "producer_id": "targeted-mutation",
+      "test_id": "cmd/targeted-mutation/use-before-validate-cross-block",
+      "boundary": "mutation-runner",
+      "expected": {
+        "outcome": "mutant-killed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "clean-control-passed",
+          "declared-guard-selected",
+          "exact-anchor-selected",
+          "exact-transformation-applied",
+          "intended-mismatch-observed",
+          "mismatch-repeatable",
+          "mutant-compiled",
+          "post-control-passed",
+          "source-restored"
+        ],
+        "required_dimensions": [
+          "guards",
+          "mutants",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.owner-route",
+      "category": "use-before-validate-cross-block",
+      "layer": "owner-route",
+      "feature_id": "use-before-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestProtocolProductionRoutingEvidence/use-before-validate-cross-block",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "route-executed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "category-owner-executed",
+          "production-route-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.production-integration",
+      "category": "use-before-validate-cross-block",
+      "layer": "production-integration",
+      "feature_id": "use-before-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-cross-block/production-integration",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "negative-path-executed",
+          "positive-path-executed",
+          "uncertainty-path-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-cross-block.rule-contract",
+      "category": "use-before-validate-cross-block",
+      "layer": "rule-contract",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceContract/use-before-validate-cross-block/rule-contract",
+      "boundary": "catalog-validation",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": null,
+        "required_properties": [
+          "catalog-rule-matched",
+          "exact-category-bound"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.determinism",
+      "category": "use-before-validate-inconclusive",
+      "layer": "determinism",
+      "feature_id": "use-before-validation",
+      "producer_id": "determinism",
+      "test_id": "TestCategoryDeterminismEvidence/use-before-validate-inconclusive",
+      "boundary": "determinism-analyzer",
+      "expected": {
+        "outcome": "deterministic",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "equivalent-schedules-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "equivalent-schedules",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.fuzz",
+      "category": "use-before-validate-inconclusive",
+      "layer": "fuzz",
+      "feature_id": "use-before-validation",
+      "producer_id": "fuzz-seeds",
+      "test_id": "TestCategoryFuzzSeedEvidence/use-before-validate-inconclusive",
+      "boundary": "fuzz-decoder",
+      "expected": {
+        "outcome": "property-detected",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "decoded-structure-matched-category",
+          "independent-property-checked"
+        ],
+        "required_dimensions": [
+          "historical-counterexamples",
+          "seed-structures",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.generated",
+      "category": "use-before-validate-inconclusive",
+      "layer": "generated",
+      "feature_id": "use-before-validation",
+      "producer_id": "end-to-end-oracle",
+      "test_id": "TestCategoryGeneratedEvidence/use-before-validate-inconclusive",
+      "boundary": "independent-boundary-oracle",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "boundary-oracle-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "oracle-outcomes",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.metamorphic",
+      "category": "use-before-validate-inconclusive",
+      "layer": "metamorphic",
+      "feature_id": "use-before-validation",
+      "producer_id": "protocol-oracle",
+      "test_id": "TestCategoryMetamorphicEvidence/use-before-validate-inconclusive",
+      "boundary": "metamorphic-analyzer",
+      "expected": {
+        "outcome": "relation-preserved",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "production-analyzer-executed",
+          "relation-checked"
+        ],
+        "required_dimensions": [
+          "relations",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.must-be-inconclusive",
+      "category": "use-before-validate-inconclusive",
+      "layer": "must-be-inconclusive",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-inconclusive/must-be-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-be-inconclusive",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "blocking-inconclusive-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.must-not-report",
+      "category": "use-before-validate-inconclusive",
+      "layer": "must-not-report",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-inconclusive/must-not-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-not-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "fixture-executed",
+          "no-diagnostic-emitted"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.must-report",
+      "category": "use-before-validate-inconclusive",
+      "layer": "must-report",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-inconclusive/must-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "diagnostic-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.mutation",
+      "category": "use-before-validate-inconclusive",
+      "layer": "mutation",
+      "feature_id": "use-before-validation",
+      "producer_id": "targeted-mutation",
+      "test_id": "cmd/targeted-mutation/use-before-validate-inconclusive",
+      "boundary": "mutation-runner",
+      "expected": {
+        "outcome": "mutant-killed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "clean-control-passed",
+          "declared-guard-selected",
+          "exact-anchor-selected",
+          "exact-transformation-applied",
+          "intended-mismatch-observed",
+          "mismatch-repeatable",
+          "mutant-compiled",
+          "post-control-passed",
+          "source-restored"
+        ],
+        "required_dimensions": [
+          "guards",
+          "mutants",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.owner-route",
+      "category": "use-before-validate-inconclusive",
+      "layer": "owner-route",
+      "feature_id": "use-before-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestProtocolProductionRoutingEvidence/use-before-validate-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "route-executed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "category-owner-executed",
+          "production-route-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.production-integration",
+      "category": "use-before-validate-inconclusive",
+      "layer": "production-integration",
+      "feature_id": "use-before-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-inconclusive/production-integration",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "negative-path-executed",
+          "positive-path-executed",
+          "uncertainty-path-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-inconclusive.rule-contract",
+      "category": "use-before-validate-inconclusive",
+      "layer": "rule-contract",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceContract/use-before-validate-inconclusive/rule-contract",
+      "boundary": "catalog-validation",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": null,
+        "required_properties": [
+          "catalog-rule-matched",
+          "exact-category-bound"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.determinism",
+      "category": "use-before-validate-same-block",
+      "layer": "determinism",
+      "feature_id": "use-before-validation",
+      "producer_id": "determinism",
+      "test_id": "TestCategoryDeterminismEvidence/use-before-validate-same-block",
+      "boundary": "determinism-analyzer",
+      "expected": {
+        "outcome": "deterministic",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "equivalent-schedules-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "equivalent-schedules",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.fuzz",
+      "category": "use-before-validate-same-block",
+      "layer": "fuzz",
+      "feature_id": "use-before-validation",
+      "producer_id": "fuzz-seeds",
+      "test_id": "TestCategoryFuzzSeedEvidence/use-before-validate-same-block",
+      "boundary": "fuzz-decoder",
+      "expected": {
+        "outcome": "property-detected",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "decoded-structure-matched-category",
+          "independent-property-checked"
+        ],
+        "required_dimensions": [
+          "historical-counterexamples",
+          "seed-structures",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.generated",
+      "category": "use-before-validate-same-block",
+      "layer": "generated",
+      "feature_id": "use-before-validation",
+      "producer_id": "end-to-end-oracle",
+      "test_id": "TestCategoryGeneratedEvidence/use-before-validate-same-block",
+      "boundary": "independent-boundary-oracle",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "boundary-oracle-compared",
+          "production-analyzer-executed"
+        ],
+        "required_dimensions": [
+          "oracle-outcomes",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.metamorphic",
+      "category": "use-before-validate-same-block",
+      "layer": "metamorphic",
+      "feature_id": "use-before-validation",
+      "producer_id": "protocol-oracle",
+      "test_id": "TestCategoryMetamorphicEvidence/use-before-validate-same-block",
+      "boundary": "metamorphic-analyzer",
+      "expected": {
+        "outcome": "relation-preserved",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "production-analyzer-executed",
+          "relation-checked"
+        ],
+        "required_dimensions": [
+          "relations",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.must-be-inconclusive",
+      "category": "use-before-validate-same-block",
+      "layer": "must-be-inconclusive",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-same-block/must-be-inconclusive",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-be-inconclusive",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "blocking-inconclusive-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.must-not-report",
+      "category": "use-before-validate-same-block",
+      "layer": "must-not-report",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-same-block/must-not-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-not-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "fixture-executed",
+          "no-diagnostic-emitted"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.must-report",
+      "category": "use-before-validate-same-block",
+      "layer": "must-report",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-same-block/must-report",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "must-report",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 1
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "diagnostic-emitted",
+          "fixture-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.mutation",
+      "category": "use-before-validate-same-block",
+      "layer": "mutation",
+      "feature_id": "use-before-validation",
+      "producer_id": "targeted-mutation",
+      "test_id": "cmd/targeted-mutation/use-before-validate-same-block",
+      "boundary": "mutation-runner",
+      "expected": {
+        "outcome": "mutant-killed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "identity",
+          "graph-construction",
+          "propagation",
+          "refinement",
+          "aggregation",
+          "reporting"
+        ],
+        "required_properties": [
+          "clean-control-passed",
+          "declared-guard-selected",
+          "exact-anchor-selected",
+          "exact-transformation-applied",
+          "intended-mismatch-observed",
+          "mismatch-repeatable",
+          "mutant-compiled",
+          "post-control-passed",
+          "source-restored"
+        ],
+        "required_dimensions": [
+          "guards",
+          "mutants",
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.owner-route",
+      "category": "use-before-validate-same-block",
+      "layer": "owner-route",
+      "feature_id": "use-before-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestProtocolProductionRoutingEvidence/use-before-validate-same-block",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "route-executed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "category-owner-executed",
+          "production-route-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.production-integration",
+      "category": "use-before-validate-same-block",
+      "layer": "production-integration",
+      "feature_id": "use-before-validation",
+      "producer_id": "production-integration",
+      "test_id": "TestSemanticEvidenceProduction/use-before-validate-same-block/production-integration",
+      "boundary": "production-analyzer",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "negative-path-executed",
+          "positive-path-executed",
+          "uncertainty-path-executed"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    },
+    {
+      "id": "use-before-validate-same-block.rule-contract",
+      "category": "use-before-validate-same-block",
+      "layer": "rule-contract",
+      "feature_id": "use-before-validation",
+      "producer_id": "catalog",
+      "test_id": "TestSemanticEvidenceContract/use-before-validate-same-block/rule-contract",
+      "boundary": "catalog-validation",
+      "expected": {
+        "outcome": "model-agrees",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": null,
+        "required_properties": [
+          "catalog-rule-matched",
+          "exact-category-bound"
+        ],
+        "required_dimensions": [
+          "use-before-validation"
+        ]
+      }
+    }
+  ]
+}

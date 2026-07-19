@@ -14,12 +14,12 @@ func TestBuildFuncCFGForPass(t *testing.T) {
 	t.Run("nil body", func(t *testing.T) {
 		t.Parallel()
 
-		if got := buildFuncCFGForPass(nil, nil); got != nil {
+		if got := buildFuncCFGForPass(nil, nil, nil); got != nil {
 			t.Fatalf("buildFuncCFGForPass(nil, nil) = %v, want nil", got)
 		}
 	})
 
-	t.Run("fallback without pass", func(t *testing.T) {
+	t.Run("rejects missing pass", func(t *testing.T) {
 		t.Parallel()
 
 		src := `package p
@@ -28,13 +28,13 @@ func f() {
 	_ = x
 }`
 		body, _ := parseFuncBody(t, src)
-		cfg := buildFuncCFGForPass(nil, body)
-		if cfg == nil || len(cfg.Blocks) == 0 {
-			t.Fatalf("fallback CFG = %v, want non-nil with blocks", cfg)
+		cfg := buildFuncCFGForPass(nil, body, nil)
+		if cfg != nil {
+			t.Fatalf("buildFuncCFGForPass(nil, body) = %v, want nil", cfg)
 		}
 	})
 
-	t.Run("fallback without types info", func(t *testing.T) {
+	t.Run("rejects missing types info", func(t *testing.T) {
 		t.Parallel()
 
 		src := `package p
@@ -43,9 +43,9 @@ func f() {
 	_ = x
 }`
 		body, _ := parseFuncBody(t, src)
-		cfg := buildFuncCFGForPass(&analysis.Pass{}, body)
-		if cfg == nil || len(cfg.Blocks) == 0 {
-			t.Fatalf("fallback CFG with nil TypesInfo = %v, want non-nil with blocks", cfg)
+		cfg := buildFuncCFGForPass(&analysis.Pass{}, body, nil)
+		if cfg != nil {
+			t.Fatalf("buildFuncCFGForPass(pass without TypesInfo, body) = %v, want nil", cfg)
 		}
 	})
 
@@ -58,7 +58,7 @@ func f() {
 }`
 		pass, file := buildTypedPassFromSource(t, src)
 		fn := findFuncDecl(t, file, "f")
-		cfg := buildFuncCFGForPass(pass, fn.Body)
+		cfg := buildFuncCFGForPass(pass, fn.Body, buildSSAForPass(pass))
 		if cfg == nil || len(cfg.Blocks) == 0 {
 			t.Fatalf("typed CFG = %v, want non-nil with blocks", cfg)
 		}

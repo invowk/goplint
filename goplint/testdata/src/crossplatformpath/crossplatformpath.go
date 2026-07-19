@@ -70,8 +70,9 @@ func fromSlashOnly(input WorkDir) ResolvedPath {
 
 // --- NOT FLAGGED: IsAbs in a function with //goplint:ignore ---
 
-//goplint:ignore -- legacy path resolver kept for back-compat behind an
 // explicit adapter boundary that documents the cross-platform issue.
+//
+//goplint:ignore -- fixture-specific adapter boundary for native path checks
 func ignoredFunction(workdir WorkDir) bool {
 	nativePath := filepath.FromSlash(string(workdir))
 	return filepath.IsAbs(nativePath)

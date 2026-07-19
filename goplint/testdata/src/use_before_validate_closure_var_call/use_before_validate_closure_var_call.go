@@ -15,10 +15,10 @@ func (c CommandName) Validate() error {
 
 func useCmd(_ CommandName) {}
 
-// DirectClosureVarUseBeforeValidate should report UBV because the direct
-// closure-variable call uses x before x.Validate() is called.
+// DirectClosureVarUseBeforeValidate remains unvalidated because the eventual
+// validation error is ignored.
 func DirectClosureVarUseBeforeValidate(raw string) { // want `parameter "raw" of use_before_validate_closure_var_call\.DirectClosureVarUseBeforeValidate uses primitive type string`
-	x := CommandName(raw) // want `variable x of type CommandName used before Validate\(\) in same block`
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	f := func() {
 		useCmd(x)
 	}
@@ -26,10 +26,10 @@ func DirectClosureVarUseBeforeValidate(raw string) { // want `parameter "raw" of
 	_ = x.Validate()
 }
 
-// DeferredClosureVarValidateDoesNotSuppressUBV should report UBV because
-// deferred validation happens after use in the same block.
+// DeferredClosureVarValidateDoesNotSuppressUBV remains unvalidated because
+// the deferred closure ignores the validation error.
 func DeferredClosureVarValidateDoesNotSuppressUBV(raw string) { // want `parameter "raw" of use_before_validate_closure_var_call\.DeferredClosureVarValidateDoesNotSuppressUBV uses primitive type string`
-	x := CommandName(raw) // want `variable x of type CommandName used before Validate\(\) in same block`
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	f := func() {
 		_ = x.Validate()
 	}
@@ -37,10 +37,10 @@ func DeferredClosureVarValidateDoesNotSuppressUBV(raw string) { // want `paramet
 	useCmd(x)
 }
 
-// DirectClosureVarValidateBeforeUse should not report UBV because direct
-// closure-variable validation executes before use.
+// DirectClosureVarValidateBeforeUse is still unvalidated because direct
+// execution does not make the ignored error a checked success.
 func DirectClosureVarValidateBeforeUse(raw string) { // want `parameter "raw" of use_before_validate_closure_var_call\.DirectClosureVarValidateBeforeUse uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	f := func() {
 		_ = x.Validate()
 	}

@@ -76,8 +76,8 @@ func CrossBlockValidateInBranch(raw string, cond bool) { // want `parameter "raw
 
 // CrossBlockUseOnOnePath — SHOULD be flagged. The if-body uses x in a
 // successor block before the Validate() call that happens after the if.
-// All paths DO reach validate (the `mode == 1` branch falls through to
-// the validate call), so hasPathToReturnWithoutValidate returns false.
+// All paths DO reach validation (the `mode == 1` branch falls through to
+// the validation call), so cast-path analysis succeeds while UBV still fails.
 // But the mode=1 path uses x before reaching the validate block.
 func CrossBlockUseOnOnePath(raw string, mode int) { // want `parameter "raw" of use_before_validate_cross\.CrossBlockUseOnOnePath uses primitive type string` `parameter "mode" of use_before_validate_cross\.CrossBlockUseOnOnePath uses primitive type int`
 	x := CommandName(raw) // want `variable x of type CommandName used before Validate\(\) across blocks`
@@ -89,10 +89,10 @@ func CrossBlockUseOnOnePath(raw string, mode int) { // want `parameter "raw" of 
 	}
 }
 
-// CrossBlockNoUse — should NOT be flagged. The variable is validated
-// but never used in a non-display context.
+// CrossBlockNoUse has no UBV hazard, but the ignored validation result leaves
+// the cast unvalidated.
 func CrossBlockNoUse(raw string, cond bool) { // want `parameter "raw" of use_before_validate_cross\.CrossBlockNoUse uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	if cond {
 		fmt.Println(x.String()) // display-only — not a use
 	}

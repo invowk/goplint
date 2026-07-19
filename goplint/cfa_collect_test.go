@@ -90,23 +90,19 @@ func use() {
 		}
 	})
 
-	t.Run("fallback without selections", func(t *testing.T) {
+	t.Run("rejects missing selections", func(t *testing.T) {
 		t.Parallel()
 
 		cloned := clonePassTypesInfo(pass)
 		delete(cloned.TypesInfo.Selections, selectorMethodVal)
 		delete(cloned.TypesInfo.Selections, selectorField)
 
-		receiver, isMethodExpr, ok := validateMethodReceiverFromExpr(cloned, selectorMethodVal)
-		if !ok || isMethodExpr {
-			t.Fatalf("validateMethodReceiverFromExpr(fallback method value) = (_, %v, %v), want (_, false, true)", isMethodExpr, ok)
-		}
-		if got := types.ExprString(receiver); got != "x" {
-			t.Fatalf("receiver = %q, want %q", got, "x")
+		if receiver, isMethodExpr, ok := validateMethodReceiverFromExpr(cloned, selectorMethodVal); receiver != nil || isMethodExpr || ok {
+			t.Fatalf("validateMethodReceiverFromExpr(missing method selection) = (%v, %v, %v), want (nil, false, false)", receiver, isMethodExpr, ok)
 		}
 
-		if recv, fallbackMethodExpr, fallbackOK := validateMethodReceiverFromExpr(cloned, selectorField); recv != nil || fallbackMethodExpr || fallbackOK {
-			t.Fatalf("validateMethodReceiverFromExpr(fallback field) = (%v, %v, %v), want (nil, false, false)", recv, fallbackMethodExpr, fallbackOK)
+		if recv, methodExpr, selectionOK := validateMethodReceiverFromExpr(cloned, selectorField); recv != nil || methodExpr || selectionOK {
+			t.Fatalf("validateMethodReceiverFromExpr(missing field selection) = (%v, %v, %v), want (nil, false, false)", recv, methodExpr, selectionOK)
 		}
 	})
 }

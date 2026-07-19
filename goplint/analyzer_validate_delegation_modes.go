@@ -15,7 +15,30 @@ import (
 // hasValidateAllDirective checks whether a type declaration has the
 // //goplint:validate-all directive.
 func hasValidateAllDirective(genDoc *ast.CommentGroup, specDoc *ast.CommentGroup) bool {
-	return hasDirectiveKey(genDoc, nil, "validate-all") || hasDirectiveKey(specDoc, nil, "validate-all")
+	return hasDirectiveKey(genDoc, specDoc, "validate-all")
+}
+
+func hasValidateAllDirectiveForType(
+	pass *analysis.Pass,
+	typeName string,
+	genDoc *ast.CommentGroup,
+	specDoc *ast.CommentGroup,
+) bool {
+	if hasValidateAllDirective(genDoc, specDoc) {
+		return true
+	}
+	for _, file := range pass.Files {
+		for _, declaration := range file.Decls {
+			function, ok := declaration.(*ast.FuncDecl)
+			if !ok || function.Recv == nil || function.Name.Name != validateMethodName || len(function.Recv.List) == 0 {
+				continue
+			}
+			if receiverTypeName(function.Recv.List[0].Type) == typeName && hasMethodDirective(pass, function, "validate-all") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // inspectSuggestValidateAll reports structs that have Validate() and at least
@@ -64,7 +87,7 @@ func inspectSuggestValidateAll(
 				}
 
 				// Skip if already annotated.
-				if hasValidateAllDirective(gd.Doc, ts.Doc) {
+				if hasValidateAllDirectiveForType(pass, ts.Name.Name, gd.Doc, ts.Doc) {
 					continue
 				}
 
@@ -103,7 +126,7 @@ func inspectSuggestValidateAll(
 				msg := fmt.Sprintf(
 					"struct %s has Validate() and %d validatable field(s) but no //goplint:validate-all directive",
 					qualName, validatableFieldCount)
-				findingID := StableFindingID(CategorySuggestValidateAll, qualName)
+				findingID := PackageScopedFindingID(pass, CategorySuggestValidateAll, qualName)
 				if bl.ContainsFinding(CategorySuggestValidateAll, findingID, msg) {
 					continue
 				}
@@ -220,7 +243,7 @@ func inspectValidateDelegationAll(pass *analysis.Pass, cfg *ExceptionConfig, bl 
 				// Skip structs with //goplint:validate-all — those are handled
 				// by the opt-in --check-validate-delegation mode. This avoids
 				// duplicate findings when both modes are active.
-				if hasValidateAllDirective(gd.Doc, ts.Doc) {
+				if hasValidateAllDirectiveForType(pass, ts.Name.Name, gd.Doc, ts.Doc) {
 					continue
 				}
 

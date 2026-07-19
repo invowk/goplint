@@ -14,19 +14,31 @@ import (
 // cfaAssignedCast records a type conversion assigned to a named variable,
 // along with its containing AssignStmt for CFG lookup.
 type cfaAssignedCast struct {
-	target    castTarget
-	typeName  string
-	pos       ast.Node
-	assign    ast.Node // AssignStmt or ValueSpec containing this cast
-	castIndex int
+	target                 castTarget
+	typeName               string
+	pos                    ast.Node
+	assign                 ast.Node // AssignStmt or ValueSpec containing this cast
+	castIndex              int
+	uncertainSourceTypeSet bool
 }
 
 // cfaUnassignedCast records a type conversion not assigned to a named
 // variable (e.g., return, function argument, blank identifier).
 type cfaUnassignedCast struct {
-	typeName  string
-	pos       ast.Node
-	castIndex int
+	typeName               string
+	pos                    ast.Node
+	castIndex              int
+	uncertainSourceTypeSet bool
+}
+
+func (c cfaAssignedCast) protocolAvailability(base ssaAvailability) ssaAvailability {
+	if !c.uncertainSourceTypeSet {
+		return base
+	}
+	return ssaAvailability{
+		Status: ssaAvailabilityUnsupportedInstruction,
+		Detail: "mixed or unsupported relevant generic type set",
+	}
 }
 
 // cfaClosureHandler is called when the cast-collection walk encounters a
@@ -68,9 +80,9 @@ type methodValueValidateCall struct {
 
 // collectCFACasts walks a function or closure body and classifies type
 // conversions from raw primitives to DDD Value Types into assigned and
-// unassigned casts. Executable closures (IIFEs, go/defer closure calls)
-// are delegated to the provided handler rather than being analyzed inline.
-// Non-executable literals (for example, detached func values) are skipped.
+// unassigned casts. Every closure is delegated to the provided handler as an
+// independent procedure, including literals stored, returned, or passed
+// elsewhere without an invocation visible in the current package.
 //
 // This is the shared cast-collection logic used by both
 // inspectUnvalidatedCastsCFA (outer functions) and
@@ -103,9 +115,7 @@ func collectCFACasts(
 
 	ast.Inspect(body, func(n ast.Node) bool {
 		if lit, ok := n.(*ast.FuncLit); ok {
-			if isExecutableClosureLiteral(lit, parentMap) {
-				analyzeClosure(lit)
-			}
+			analyzeClosure(lit)
 			return false
 		}
 
@@ -155,21 +165,25 @@ func collectCFACasts(
 		if isErrorMessageExpr(pass, call.Args[0]) {
 			return true // error-message source — skip
 		}
-		if !isRawPrimitive(srcTV.Type) {
+		sourceClass := classifyRawPrimitive(srcTV.Type)
+		if sourceClass == primitiveConstraintIrrelevant {
 			return true // named-to-named cast — skip
 		}
+		uncertainSourceTypeSet := sourceClass == primitiveConstraintUncertain
 
 		targetTypeName := qualifiedTypeName(targetType, pass.Pkg)
 		parent := parentMap[call]
 
 		target, assignNode, assigned := resolveCastAssignmentTarget(pass, call, parentMap)
 		if assigned {
+			target.typeKey = typeIdentityKey(targetType)
 			assignedCasts = append(assignedCasts, cfaAssignedCast{
-				target:    target,
-				typeName:  targetTypeName,
-				pos:       call,
-				assign:    assignNode,
-				castIndex: castIndex,
+				target:                 target,
+				typeName:               targetTypeName,
+				pos:                    call,
+				assign:                 assignNode,
+				castIndex:              castIndex,
+				uncertainSourceTypeSet: uncertainSourceTypeSet,
 			})
 			castIndex++
 			return true
@@ -181,52 +195,16 @@ func collectCFACasts(
 		}
 
 		unassignedCasts = append(unassignedCasts, cfaUnassignedCast{
-			typeName:  targetTypeName,
-			pos:       call,
-			castIndex: castIndex,
+			typeName:               targetTypeName,
+			pos:                    call,
+			castIndex:              castIndex,
+			uncertainSourceTypeSet: uncertainSourceTypeSet,
 		})
 		castIndex++
 		return true
 	})
 
 	return assignedCasts, unassignedCasts, closureCalls, methodValueCalls
-}
-
-// isExecutableClosureLiteral reports whether lit is directly invoked in-place:
-// func() { ... }(), go func() { ... }(), or defer func() { ... }().
-func isExecutableClosureLiteral(lit *ast.FuncLit, parentMap map[ast.Node]ast.Node) bool {
-	if lit == nil || parentMap == nil {
-		return false
-	}
-	call, ok := closureLiteralCall(lit, parentMap)
-	if !ok {
-		return false
-	}
-	return stripParens(call.Fun) == lit
-}
-
-// closureLiteralCall returns the CallExpr that invokes lit, allowing any number
-// of parenthesized wrappers between the literal and the call expression.
-func closureLiteralCall(lit *ast.FuncLit, parentMap map[ast.Node]ast.Node) (*ast.CallExpr, bool) {
-	if lit == nil || parentMap == nil {
-		return nil, false
-	}
-	current := ast.Node(lit)
-	for {
-		parent := parentMap[current]
-		if parent == nil {
-			return nil, false
-		}
-		if paren, ok := parent.(*ast.ParenExpr); ok && paren.X == current {
-			current = paren
-			continue
-		}
-		call, ok := parent.(*ast.CallExpr)
-		if !ok {
-			return nil, false
-		}
-		return call, true
-	}
 }
 
 func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) map[string][]closureBindingEvent {
@@ -251,14 +229,14 @@ func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) ma
 			if rhsIdent, rhsOK := stripParens(rhs).(*ast.Ident); rhsOK {
 				rhsObj := objectForIdent(pass, rhsIdent)
 				if rhsObj != nil {
-					if matched, aliasOK := latestClosureBindingBefore(bindings[objectKey(rhsObj)], atPos); aliasOK {
+					if matched, aliasOK := latestClosureBindingBefore(bindings[objectKeyAt(pass, rhsObj)], atPos); aliasOK {
 						lit = matched
 						ok = true
 					}
 				}
 			}
 		}
-		key := objectKey(obj)
+		key := objectKeyAt(pass, obj)
 		event := closureBindingEvent{pos: atPos}
 		if ok {
 			event.lit = lit
@@ -336,26 +314,26 @@ func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.Bloc
 	}
 	bindings := make(map[string][]validateMethodValueBindingEvent)
 
-	resolveBinding := func(lhs ast.Expr, rhs ast.Expr, atPos token.Pos) (string, string, validateMethodValueBindingEvent, bool) {
+	resolveBinding := func(lhs ast.Expr, rhs ast.Expr, atPos token.Pos) (string, validateMethodValueBindingEvent, bool) {
 		if lhs == nil {
-			return "", "", validateMethodValueBindingEvent{}, false
+			return "", validateMethodValueBindingEvent{}, false
 		}
 		lhsExpr := stripParens(lhs)
 		if ident, ok := lhsExpr.(*ast.Ident); ok {
 			if ident.Name == "_" {
-				return "", "", validateMethodValueBindingEvent{}, false
+				return "", validateMethodValueBindingEvent{}, false
 			}
 			obj := objectForIdent(pass, ident)
 			if obj == nil {
-				return "", "", validateMethodValueBindingEvent{}, false
+				return "", validateMethodValueBindingEvent{}, false
 			}
 			if _, isVar := obj.(*types.Var); !isVar {
-				return "", "", validateMethodValueBindingEvent{}, false
+				return "", validateMethodValueBindingEvent{}, false
 			}
 		}
 		lhsKey := targetKeyForExpr(pass, lhsExpr)
 		if lhsKey == "" {
-			return "", "", validateMethodValueBindingEvent{}, false
+			return "", validateMethodValueBindingEvent{}, false
 		}
 		receiver, isMethodExpr, ok := validateMethodReceiverFromExpr(pass, rhs)
 		if !ok {
@@ -374,68 +352,54 @@ func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.Bloc
 			event.receiver = receiver
 			event.isMethodExpr = isMethodExpr
 		}
-		fallbackKey := targetKeyForExpr(nil, lhsExpr)
-		if fallbackKey == lhsKey {
-			fallbackKey = ""
-		}
-		return lhsKey, fallbackKey, event, true
+		return lhsKey, event, true
 	}
 
 	ast.Inspect(body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
 			type pendingBinding struct {
-				key         string
-				fallbackKey string
-				event       validateMethodValueBindingEvent
+				key   string
+				event validateMethodValueBindingEvent
 			}
 			pending := make([]pendingBinding, 0, len(node.Rhs))
 			for i, rhs := range node.Rhs {
 				if i >= len(node.Lhs) {
 					break
 				}
-				key, fallbackKey, event, ok := resolveBinding(node.Lhs[i], rhs, node.Lhs[i].Pos())
+				key, event, ok := resolveBinding(node.Lhs[i], rhs, node.Lhs[i].Pos())
 				if !ok {
 					continue
 				}
 				pending = append(pending, pendingBinding{
-					key:         key,
-					fallbackKey: fallbackKey,
-					event:       event,
+					key:   key,
+					event: event,
 				})
 			}
 			for _, entry := range pending {
 				bindings[entry.key] = append(bindings[entry.key], entry.event)
-				if entry.fallbackKey != "" {
-					bindings[entry.fallbackKey] = append(bindings[entry.fallbackKey], entry.event)
-				}
 			}
 		case *ast.ValueSpec:
 			type pendingBinding struct {
-				key         string
-				fallbackKey string
-				event       validateMethodValueBindingEvent
+				key   string
+				event validateMethodValueBindingEvent
 			}
 			pending := make([]pendingBinding, 0, len(node.Values))
 			for i, rhs := range node.Values {
 				if i >= len(node.Names) {
 					break
 				}
-				key, fallbackKey, event, ok := resolveBinding(node.Names[i], rhs, node.Names[i].Pos())
+				key, event, ok := resolveBinding(node.Names[i], rhs, node.Names[i].Pos())
 				if !ok {
 					continue
 				}
 				pending = append(pending, pendingBinding{
-					key:         key,
-					fallbackKey: fallbackKey,
-					event:       event,
+					key:   key,
+					event: event,
 				})
 			}
 			for _, entry := range pending {
 				bindings[entry.key] = append(bindings[entry.key], entry.event)
-				if entry.fallbackKey != "" {
-					bindings[entry.fallbackKey] = append(bindings[entry.fallbackKey], entry.event)
-				}
 			}
 		}
 		return true
@@ -484,11 +448,7 @@ func validateMethodReceiverFromExpr(pass *analysis.Pass, expr ast.Expr) (receive
 		}
 	}
 
-	recvType := pass.TypesInfo.TypeOf(sel.X)
-	if recvType == nil || !hasValidateMethod(recvType) {
-		return nil, false, false
-	}
-	return sel.X, false, true
+	return nil, false, false
 }
 
 func validateMethodReceiverForCall(
@@ -513,11 +473,6 @@ func validateMethodReceiverForCall(
 		return nil, false
 	}
 	events := bindings[key]
-	if len(events) == 0 {
-		if fallbackKey := targetKeyForExpr(nil, funExpr); fallbackKey != "" && fallbackKey != key {
-			events = bindings[fallbackKey]
-		}
-	}
 	matched, ok := latestValidateMethodBindingBefore(events, call.Pos())
 	if !ok {
 		return nil, false
@@ -549,7 +504,7 @@ func collectMethodValueValidateCalls(pass *analysis.Pass, body *ast.BlockStmt) m
 		if !ok {
 			return true
 		}
-		out[call] = receiver
+		out[call] = methodValueValidationCall{receiver: receiver}
 		return true
 	})
 	if len(out) == 0 {
@@ -586,7 +541,7 @@ func executableClosureVarCall(
 		return nil, closureInvocationDirect, false
 	}
 
-	events, ok := bindings[objectKey(obj)]
+	events, ok := bindings[objectKeyAt(pass, obj)]
 	if !ok || len(events) == 0 {
 		return nil, closureInvocationDirect, false
 	}

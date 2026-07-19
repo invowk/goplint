@@ -1,0 +1,76 @@
+{
+  "format_version": 1,
+  "runs": [
+    {
+      "id": "category-determinism",
+      "packages": ["./goplint"],
+      "tests": ["TestCategoryDeterminismEvidence"],
+      "count": 1,
+      "timeout_seconds": 300
+    },
+    {
+      "id": "repeated-determinism",
+      "packages": ["./goplint"],
+      "tests": [
+        "TestRealAnalyzerDeterminismAcrossPackageFileAndScheduleOrder",
+        "TestProtocolDeterminismAcrossWorklistAndPackageOrder",
+        "TestRefinementEvidenceIsByteDeterministic"
+      ],
+      "count": 5,
+      "timeout_seconds": 900
+    }
+  ],
+  "populations": [
+    {
+      "id": "determinism-runs",
+      "selectors": [
+        {
+          "run": "category-determinism",
+          "scope": "all-tests",
+          "members": [
+            "TestCategoryDeterminismEvidence",
+            "TestCategoryDeterminismEvidence/missing-constructor-validate-inconclusive",
+            "TestCategoryDeterminismEvidence/missing-constructor-validate",
+            "TestCategoryDeterminismEvidence/unvalidated-boundary-request",
+            "TestCategoryDeterminismEvidence/unvalidated-cast-inconclusive",
+            "TestCategoryDeterminismEvidence/unvalidated-cast",
+            "TestCategoryDeterminismEvidence/use-before-validate-cross-block",
+            "TestCategoryDeterminismEvidence/use-before-validate-inconclusive",
+            "TestCategoryDeterminismEvidence/use-before-validate-same-block"
+          ]
+        },
+        {
+          "run": "repeated-determinism",
+          "scope": "all-tests",
+          "members": [
+            "TestRealAnalyzerDeterminismAcrossPackageFileAndScheduleOrder",
+            "TestProtocolDeterminismAcrossWorklistAndPackageOrder",
+            "TestProtocolDeterminismAcrossWorklistAndPackageOrder/edge_insertion_order_preserves_complete_solver_result",
+            "TestProtocolDeterminismAcrossWorklistAndPackageOrder/package_summary_order_preserves_facts_and_reasons",
+            "TestRefinementEvidenceIsByteDeterministic"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "protocol-categories",
+      "selectors": [
+        {
+          "run": "category-determinism",
+          "scope": "immediate-subtests",
+          "root": "TestCategoryDeterminismEvidence",
+          "members": [
+            "missing-constructor-validate-inconclusive",
+            "missing-constructor-validate",
+            "unvalidated-boundary-request",
+            "unvalidated-cast-inconclusive",
+            "unvalidated-cast",
+            "use-before-validate-cross-block",
+            "use-before-validate-inconclusive",
+            "use-before-validate-same-block"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -4,7 +4,6 @@ package util
 
 import "constructorvalidates_cross_third/model"
 
-//goplint:validates-type=Server
-func ValidateServer(s *model.Server) error { // want ValidateServer:"validates-type\\(Server\\)"
+func ValidateServer(s *model.Server) error { // want ValidateServer:"protocol-summary:v5:constructorvalidates_cross_third/util:constructorvalidates_cross_third/util.ValidateServer:1"
 	return s.Validate()
 }

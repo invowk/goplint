@@ -1,0 +1,4 @@
+[unvalidated-cast]
+entries = [
+    { id = "gpl4_0ae0dadc33426cf8baafe6b12e596b38bda8eb28da537dc261a79b530be6b4e3", message = "type conversion to CommandName from non-constant without Validate() check" },
+]

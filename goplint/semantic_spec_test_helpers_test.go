@@ -29,20 +29,6 @@ func mustLoadSemanticRuleCatalog(t *testing.T) semanticRuleCatalog {
 
 func collectDiagnosticsForPackages(t *testing.T, analyzer *analysis.Analyzer, pkgs ...string) ([]analysis.Diagnostic, []string, []*analysistest.Result) {
 	t.Helper()
-
-	// Semantic spec and historical fixtures encode legacy-path contracts.
-	// IFDS/compare equivalence is asserted by dedicated compatibility tests.
-	// Phase C refinement is asserted by dedicated Phase C gate tests.
-	setFlag(t, analyzer, "cfg-interproc-engine", cfgInterprocEngineLegacy)
-	setFlag(t, analyzer, "cfg-feasibility-engine", cfgFeasibilityEngineOff)
-	setFlag(t, analyzer, "cfg-refinement-mode", cfgRefinementModeOff)
-	setFlag(t, analyzer, "cfg-alias-mode", cfgAliasModeOff)
-
-	return collectDiagnosticsForPackagesRespectCurrentEngine(t, analyzer, pkgs...)
-}
-
-func collectDiagnosticsForPackagesRespectCurrentEngine(t *testing.T, analyzer *analysis.Analyzer, pkgs ...string) ([]analysis.Diagnostic, []string, []*analysistest.Result) {
-	t.Helper()
 	analysistestParallelLimiter <- struct{}{}
 	defer func() { <-analysistestParallelLimiter }()
 

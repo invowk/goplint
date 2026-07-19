@@ -39,23 +39,15 @@ func TestParseFindingsJSONL(t *testing.T) {
 		}
 	})
 
-	t.Run("duplicates are deduplicated by id", func(t *testing.T) {
+	t.Run("collided IDs fail closed", func(t *testing.T) {
 		t.Parallel()
 		input := []byte(strings.Join([]string{
 			`{"category":"primitive","id":"id-1","message":"msg-a","posn":"pkg/a.go:1:1"}`,
 			`{"category":"primitive","id":"id-1","message":"msg-b","posn":"pkg/a.go:2:1"}`,
 			"",
 		}, "\n"))
-		findings, err := goplint.CollectBaselineFindingsFromStream(input)
-		if err != nil {
-			t.Fatalf("goplint.CollectBaselineFindingsFromStream() error = %v", err)
-		}
-		entries := findings[goplint.CategoryPrimitive]
-		if len(entries) != 1 {
-			t.Fatalf("expected 1 deduplicated finding, got %d", len(entries))
-		}
-		if entries[0].ID != "id-1" {
-			t.Fatalf("expected id-1, got %q", entries[0].ID)
+		if _, err := goplint.CollectBaselineFindingsFromStream(input); err == nil || !strings.Contains(err.Error(), "collided finding ID") {
+			t.Fatalf("goplint.CollectBaselineFindingsFromStream() error = %v, want collided ID rejection", err)
 		}
 	})
 

@@ -20,12 +20,11 @@ func buildInterprocSupergraphFromCFGWithResolution(
 	pass *analysis.Pass,
 	cfg *gocfg.CFG,
 	funcKey string,
-	backend string,
 ) interprocSupergraph {
 	if cfg == nil {
 		return newInterprocSupergraph()
 	}
-	return buildInterprocSupergraphFromBlocksWithResolution(pass, cfg.Blocks, funcKey, backend)
+	return buildInterprocSupergraphFromBlocksWithResolution(pass, cfg.Blocks, funcKey)
 }
 
 func buildInterprocSupergraphFromReachableBlocks(defBlock *gocfg.Block, funcKey string) interprocSupergraph {
@@ -37,80 +36,38 @@ func buildInterprocSupergraphFromReachableBlocksWithResolution(
 	pass *analysis.Pass,
 	defBlock *gocfg.Block,
 	funcKey string,
-	backend string,
 ) interprocSupergraph {
 	blocks := collectReachableBlocks(defBlock)
-	return buildInterprocSupergraphFromBlocksWithResolution(pass, blocks, funcKey, backend)
+	return buildInterprocSupergraphFromBlocksWithResolution(pass, blocks, funcKey)
 }
 
 func buildInterprocSupergraphFromBlocks(blocks []*gocfg.Block, funcKey string) interprocSupergraph {
-	graph := newInterprocSupergraph()
-	if len(blocks) == 0 {
-		return graph
-	}
-
-	blockEntryNode := map[int32]interprocNodeID{}
-	for _, block := range blocks {
-		if block == nil || len(block.Nodes) == 0 {
-			continue
-		}
-		first := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: 0, Kind: interprocNodeKindCFG}
-		blockEntryNode[block.Index] = first
-	}
-
-	for _, block := range blocks {
-		if block == nil || len(block.Nodes) == 0 {
-			continue
-		}
-		for idx := range block.Nodes {
-			nodeID := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx, Kind: interprocNodeKindCFG}
-			graph.addNode(nodeID, block.Nodes[idx])
-			if idx > 0 {
-				prev := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx - 1, Kind: interprocNodeKindCFG}
-				graph.addEdge(interprocEdge{From: prev, To: nodeID, Kind: interprocEdgeIntra})
-			}
-			if !nodeContainsCallExpr(block.Nodes[idx]) {
-				continue
-			}
-			callNode := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx, Kind: interprocNodeKindCall}
-			retNode := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx, Kind: interprocNodeKindReturn}
-			graph.addEdge(interprocEdge{From: nodeID, To: callNode, Kind: interprocEdgeCall})
-			graph.addEdge(interprocEdge{From: callNode, To: retNode, Kind: interprocEdgeCallToReturn, Reason: pathOutcomeReasonUnresolvedTarget})
-			if idx+1 < len(block.Nodes) {
-				next := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx + 1, Kind: interprocNodeKindCFG}
-				graph.addEdge(interprocEdge{From: retNode, To: next, Kind: interprocEdgeReturn})
-			}
-		}
-
-		lastNode := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: len(block.Nodes) - 1, Kind: interprocNodeKindCFG}
-		hasMappedSucc := false
-		for _, succ := range block.Succs {
-			if succ == nil {
-				continue
-			}
-			entry, ok := blockEntryNode[succ.Index]
-			if !ok {
-				continue
-			}
-			hasMappedSucc = true
-			graph.addEdge(interprocEdge{From: lastNode, To: entry, Kind: interprocEdgeIntra})
-		}
-		if !hasMappedSucc {
-			graph.terminalCFGNodes[lastNode.Key()] = true
-		}
-	}
-	return graph
+	return buildInterprocSupergraphFromBlocksCanonical(nil, blocks, funcKey, false)
 }
 
 func buildInterprocSupergraphFromBlocksWithResolution(
 	pass *analysis.Pass,
 	blocks []*gocfg.Block,
 	funcKey string,
-	backend string,
+) interprocSupergraph {
+	return buildInterprocSupergraphFromBlocksCanonical(pass, blocks, funcKey, true)
+}
+
+func buildInterprocSupergraphFromBlocksCanonical(
+	pass *analysis.Pass,
+	blocks []*gocfg.Block,
+	funcKey string,
+	resolve bool,
 ) interprocSupergraph {
 	graph := newInterprocSupergraph()
 	if len(blocks) == 0 {
 		return graph
+	}
+	var ssaRes *ssaResult
+	if resolve && pass != nil {
+		ssaRes = buildSSAForPass(pass)
+		graph.callEventIndex = buildProtocolCallEventIndex(pass, ssaRes)
+		graph.procedureIndex = buildProtocolProcedureIndex(pass, ssaRes)
 	}
 
 	blockEntryNode := map[int32]interprocNodeID{}
@@ -123,66 +80,119 @@ func buildInterprocSupergraphFromBlocksWithResolution(
 	}
 
 	cache := make(map[string]*interprocFunctionSummary)
+	noReturnCalls := noReturnCallResolver{ssa: ssaRes}
+	predicateValues := buildCFGSSAValueIndexFromResult(noReturnCalls.ssa)
+	mayReturn := computeProtocolMayReturn(pass, noReturnCalls)
+	for key, returns := range mayReturn {
+		if !returns {
+			graph.nonReturningFunctions[key] = true
+		}
+	}
 	for _, block := range blocks {
 		if block == nil || len(block.Nodes) == 0 {
 			continue
 		}
-		for idx := range block.Nodes {
-			nodeID := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx, Kind: interprocNodeKindCFG}
-			graph.addNode(nodeID, block.Nodes[idx])
-			if idx > 0 {
-				prev := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx - 1, Kind: interprocNodeKindCFG}
-				graph.addEdge(interprocEdge{From: prev, To: nodeID, Kind: interprocEdgeIntra})
+		continuationNode := interprocNodeID{}
+		canContinue := false
+		for nodeIndex, node := range block.Nodes {
+			nodeID := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: nodeIndex, Kind: interprocNodeKindCFG}
+			graph.addNode(nodeID, node)
+			if canContinue {
+				graph.addEdge(interprocEdge{From: continuationNode, To: nodeID, Kind: interprocEdgeIntra})
 			}
-			callExpr := firstCallExprInNode(block.Nodes[idx])
-			if callExpr == nil {
-				continue
-			}
-			callNode := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx, Kind: interprocNodeKindCall}
-			retNode := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx, Kind: interprocNodeKindReturn}
-			graph.addEdge(interprocEdge{From: nodeID, To: callNode, Kind: interprocEdgeCall})
-
-			resolved := false
-			if pass != nil {
-				if fnObj := calledFunctionObject(pass, callExpr); fnObj != nil {
-					if calleeDecl := findFuncDeclForObject(pass, fnObj); calleeDecl != nil && calleeDecl.Body != nil {
-						if calleeSummary, ok := appendInterprocFunctionGraph(pass, calleeDecl, backend, &graph, cache); ok {
-							graph.addEdge(interprocEdge{From: callNode, To: calleeSummary.entry, Kind: interprocEdgeCall})
-							for _, exitNode := range calleeSummary.exits {
-								graph.addEdge(interprocEdge{From: exitNode, To: retNode, Kind: interprocEdgeReturn})
-							}
-							resolved = len(calleeSummary.exits) > 0
-						}
-					}
+			continuationNode = nodeID
+			canContinue = true
+			for ordinal, event := range graph.callEventIndex.eventsForNode(pass, funcKey, node) {
+				callNode := interprocNodeID{
+					FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: nodeIndex,
+					CallOrdinal: ordinal, Kind: interprocNodeKindCall,
 				}
+				returnNode := callNode
+				returnNode.Kind = interprocNodeKindReturn
+				graph.addCallNode(callNode, event)
+				graph.addCallNode(returnNode, event)
+				graph.addNode(returnNode, node)
+				graph.addEdge(interprocEdge{From: continuationNode, To: callNode, Kind: interprocEdgeIntra})
+				if resolve {
+					canContinue = appendInterprocCallEvent(
+						pass, event, callNode, returnNode, &graph, cache, mayReturn, noReturnCalls, predicateValues,
+					)
+				} else {
+					reason := pathOutcomeReasonUnresolvedTarget
+					if event.Phase != protocolCallEventSync || protocolCallIsBuiltin(event) {
+						reason = pathOutcomeReasonNone
+					}
+					if !event.Mapped {
+						reason = pathOutcomeReasonCallMapping
+					}
+					graph.addEdge(interprocEdge{
+						From: callNode, To: returnNode, Kind: interprocEdgeCallToReturn,
+						CallSite: callNode.Key(), Reason: reason,
+					})
+				}
+				if !canContinue {
+					break
+				}
+				continuationNode = returnNode
 			}
-			if !resolved {
-				graph.addEdge(interprocEdge{From: callNode, To: retNode, Kind: interprocEdgeCallToReturn, Reason: pathOutcomeReasonUnresolvedTarget})
-			}
-			if idx+1 < len(block.Nodes) {
-				next := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: idx + 1, Kind: interprocNodeKindCFG}
-				graph.addEdge(interprocEdge{From: retNode, To: next, Kind: interprocEdgeReturn})
+			if !canContinue {
+				break
 			}
 		}
-
-		lastNode := interprocNodeID{FuncKey: funcKey, BlockIndex: block.Index, NodeIndex: len(block.Nodes) - 1, Kind: interprocNodeKindCFG}
 		hasMappedSucc := false
 		for _, succ := range block.Succs {
-			if succ == nil {
-				continue
+			if !canContinue {
+				break
 			}
-			entry, ok := blockEntryNode[succ.Index]
-			if !ok {
-				continue
+			for _, entry := range nonEmptySuccessorEntries(succ, blockEntryNode) {
+				hasMappedSucc = true
+				graph.addEdge(interprocEdge{
+					From:                continuationNode,
+					To:                  entry,
+					Kind:                interprocEdgeIntra,
+					PredicateProvenance: cfgSSAPredicateProvenance(pass, predicateValues, block, succ),
+				})
 			}
-			hasMappedSucc = true
-			graph.addEdge(interprocEdge{From: lastNode, To: entry, Kind: interprocEdgeIntra})
 		}
-		if !hasMappedSucc {
-			graph.terminalCFGNodes[lastNode.Key()] = true
+		if canContinue && !hasMappedSucc {
+			graph.terminalCFGNodes[continuationNode.Key()] = true
+			graph.functionExitNodes[continuationNode.Key()] = true
 		}
 	}
 	return graph
+}
+
+func nonEmptySuccessorEntries(
+	start *gocfg.Block,
+	entries map[int32]interprocNodeID,
+) []interprocNodeID {
+	if start == nil {
+		return nil
+	}
+	seenBlocks := make(map[int32]bool)
+	seenEntries := make(map[string]bool)
+	queue := []*gocfg.Block{start}
+	result := make([]interprocNodeID, 0, 1)
+	for len(queue) > 0 {
+		block := queue[0]
+		queue = queue[1:]
+		if block == nil || seenBlocks[block.Index] {
+			continue
+		}
+		seenBlocks[block.Index] = true
+		if entry, ok := entries[block.Index]; ok {
+			if !seenEntries[entry.Key()] {
+				seenEntries[entry.Key()] = true
+				result = append(result, entry)
+			}
+			continue
+		}
+		queue = append(queue, block.Succs...)
+	}
+	sort.Slice(result, func(left, right int) bool {
+		return result[left].Key() < result[right].Key()
+	})
+	return result
 }
 
 func collectReachableBlocks(start *gocfg.Block) []*gocfg.Block {

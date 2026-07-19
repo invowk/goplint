@@ -1,0 +1,69 @@
+{
+  "format_version": 3,
+  "generator": "normalized-protocol-v3",
+  "enumeration": "one-factor-plus-integrated-scheduled-v1",
+  "dimensions": {
+    "procedure_counts": [1, 2],
+    "nodes_per_procedure": [4, 5],
+    "identity_counts": [1, 2],
+    "call_site_counts": [0, 1, 2],
+    "call_depths": [0, 1, 2],
+    "topologies": ["linear", "branch-join", "call-return", "recursive"],
+    "branch_joins": [false, true],
+    "recursion": [false, true],
+    "operations": ["noop", "validate", "consume", "mutate", "replace", "escape", "unresolved"],
+    "conditional_results": ["none", "nil", "non-nil", "unknown"],
+    "alias_actions": ["none", "copy", "kill"],
+    "unknown_effects": ["none", "unresolved", "concurrent-mutation", "escaped-heap-mutation"],
+    "constraints": ["none", "sat", "unsat"],
+    "initial_facts": ["needs-validation", "validated"]
+  },
+  "scenarios": [
+    "validated-nil",
+    "validation-non-nil",
+    "validation-unknown",
+    "alias-copy",
+    "alias-kill",
+    "post-validation-mutation",
+    "post-validation-unknown",
+    "matched-return",
+    "branch-join",
+    "recursive-summary",
+    "post-validation-escape",
+    "refinement-unsat"
+  ],
+  "blocking": {
+    "shards": 4,
+    "minimum_programs": 42,
+    "max_states": 512,
+    "pairwise_semantics": false,
+    "expected_program_count": 42
+  },
+  "scheduled": {
+    "shards": 16,
+    "minimum_programs": 2058,
+    "max_states": 2048,
+    "pairwise_semantics": true,
+    "expected_program_count": 2058
+  },
+  "required_features": [
+    "alias-copy",
+    "alias-kill",
+    "branch-join",
+    "condition-nil",
+    "condition-non-nil",
+    "condition-unknown",
+    "constraint-unsat",
+    "initial-fact-needs-validation",
+    "initial-fact-validated",
+    "matched-return",
+    "mutation",
+    "operation-escape",
+    "recursion",
+    "replacement",
+    "unknown-concurrent-mutation",
+    "unknown-escaped-heap-mutation",
+    "unknown-unresolved"
+  ],
+  "expected_program_count": 42
+}

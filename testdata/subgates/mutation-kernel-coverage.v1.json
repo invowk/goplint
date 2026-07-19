@@ -1,0 +1,6 @@
+{
+  "format_version": 1,
+  "semantic_rules": "spec/semantic-rules.v1.json",
+  "blocking_profile": "testdata/mutation/profiles/blocking-v2.json",
+  "mutant_catalog": "testdata/mutation/soundness-mutants-v2.json"
+}

@@ -30,7 +30,9 @@ func useCmd(_ CommandName) {}
 
 // IsBuiltin is a non-display method on CommandName used to test
 // that non-display method receivers are detected as "uses" by UBV.
-func (c CommandName) IsBuiltin() bool { return c == "help" }
+func (c CommandName) IsBuiltin() bool {
+	return c == "help"
+}
 
 // GoString implements fmt.GoStringer (display-only, exempt from UBV).
 func (c CommandName) GoString() string { return "CommandName(" + string(c) + ")" }
@@ -40,7 +42,8 @@ type Server struct {
 	cmd CommandName
 }
 
-func (s *Server) Setup()          {}
+func (s *Server) Setup() { // want Setup:"protocol-summary:v5:use_before_validate:\\(\\*use_before_validate.Server\\).Setup:1"
+}
 func (s *Server) Validate() error { return nil }
 
 // --- Use-before-validate test cases ---
@@ -190,10 +193,10 @@ func ChannelSendAfterValidate(raw string, ch chan CommandName) { // want `parame
 	ch <- x
 }
 
-// DeferredValidateBeforeUse — SHOULD be flagged. Deferred Validate executes
-// at function exit and must not suppress a prior use in UBV checks.
+// DeferredValidateBeforeUse is an unvalidated cast: the deferred validation
+// result is ignored, so validation success is never established.
 func DeferredValidateBeforeUse(raw string) error { // want `parameter "raw" of use_before_validate\.DeferredValidateBeforeUse uses primitive type string`
-	x := CommandName(raw) // want `variable x of type CommandName used before Validate\(\) in same block`
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	defer func() {
 		_ = x.Validate()
 	}()
@@ -201,10 +204,10 @@ func DeferredValidateBeforeUse(raw string) error { // want `parameter "raw" of u
 	return nil
 }
 
-// ImmediateValidateBeforeUse — should NOT be flagged. IIFE Validate executes
-// immediately and can satisfy UBV ordering before later uses.
+// ImmediateValidateBeforeUse remains unvalidated because the IIFE ignores the
+// validation result even though it executes immediately.
 func ImmediateValidateBeforeUse(raw string) { // want `parameter "raw" of use_before_validate\.ImmediateValidateBeforeUse uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	func() {
 		_ = x.Validate()
 	}()
@@ -215,16 +218,16 @@ func useThenValidate(_ CommandName, _ error) {}
 
 func validateThenUse(_ error, _ CommandName) {}
 
-// UseThenValidateInSameNode — SHOULD be flagged. Go evaluates call arguments
-// left-to-right, so x is used before x.Validate() within one node.
+// UseThenValidateInSameNode remains unvalidated because the validation result
+// is passed to a helper that does not propagate it.
 func UseThenValidateInSameNode(raw string) { // want `parameter "raw" of use_before_validate\.UseThenValidateInSameNode uses primitive type string`
-	x := CommandName(raw) // want `variable x of type CommandName used before Validate\(\) in same block`
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	useThenValidate(x, x.Validate())
 }
 
-// ValidateThenUseInSameNode — should NOT be flagged. Validate argument is
-// evaluated before the value-use argument in the same call expression.
+// ValidateThenUseInSameNode also remains unvalidated because argument order
+// does not make the ignored validation result a checked success.
 func ValidateThenUseInSameNode(raw string) { // want `parameter "raw" of use_before_validate\.ValidateThenUseInSameNode uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	validateThenUse(x.Validate(), x)
 }

@@ -59,24 +59,19 @@ func reportFindingWithMetaIfNotBaselined(
 
 func reportInconclusiveFindingWithMetaIfNotBaselined(
 	pass *analysis.Pass,
-	bl *BaselineConfig,
-	inconclusivePolicy string,
+	_ *BaselineConfig,
 	pos token.Pos,
 	category, findingID, message string,
 	meta map[string]string,
 ) {
-	if inconclusivePolicy == cfgInconclusivePolicyOff {
-		return
-	}
 	effectiveMeta := copyFindingMeta(meta)
 	if effectiveMeta == nil {
 		effectiveMeta = make(map[string]string)
 	}
-	effectiveMeta["cfg_inconclusive_policy"] = inconclusivePolicy
-	if inconclusivePolicy == cfgInconclusivePolicyWarn {
-		effectiveMeta["cfg_inconclusive_severity"] = "warning"
-	}
-	reportFindingWithMetaIfNotBaselined(pass, bl, pos, category, findingID, message, effectiveMeta)
+	effectiveMeta["cfg_outcome_status"] = cfgRefinementStatusInconclusive
+	// Proof uncertainty is not accepted debt. Bypass baseline lookup even when
+	// stale in-memory or on-disk data names the exact category and finding ID.
+	reportDiagnosticWithMeta(pass, pos, category, findingID, message, effectiveMeta)
 }
 
 func copyFindingMeta(meta map[string]string) map[string]string {

@@ -31,7 +31,7 @@ type CombinedDirectiveStruct struct {
 
 // UnknownDirectiveStruct tests unknown directive key warnings.
 type UnknownDirectiveStruct struct {
-	Name string //plint:ignore,foo -- want unknown-directive warning for "foo"  // want `unknown directive key "foo" in goplint directive`
+	Name string //plint:ignore,foo -- // want `unknown directive key "foo" in goplint directive` `struct field exceptions\.UnknownDirectiveStruct\.Name uses primitive type string`
 }
 
 // --- Render directive tests ---

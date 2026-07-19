@@ -250,7 +250,7 @@ func reportPathmatrixDivergentFinding(
 	funcQualName, fieldName, constName string,
 	bl *BaselineConfig,
 ) {
-	posKey := stablePosKey(pass, call.Pos())
+	posKey := semanticNodeKey(pass, call.Pos())
 	msg := fmt.Sprintf(
 		"pathmatrix.PassRelative on platform-divergent vector %s in %s "+
 			"(argument references %s); on Windows, filepath.IsAbs treats this "+

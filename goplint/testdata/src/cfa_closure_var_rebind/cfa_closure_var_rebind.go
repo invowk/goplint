@@ -39,7 +39,7 @@ func RebindingTracksCallSite(raw string) { // want `parameter "raw" of cfa_closu
 // OuterCastValidatedViaClosureVar verifies direct closure-variable calls can
 // satisfy outer-path validation checks.
 func OuterCastValidatedViaClosureVar(raw string) { // want `parameter "raw" of cfa_closure_var_rebind\.OuterCastValidatedViaClosureVar uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	f := func() {
 		_ = x.Validate()
 	}

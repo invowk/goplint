@@ -6,8 +6,10 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"testing"
 
+	"golang.org/x/tools/go/analysis"
 	gocfg "golang.org/x/tools/go/cfg"
 )
 
@@ -26,23 +28,14 @@ func parseFuncBody(t *testing.T, src string) (*ast.BlockStmt, *gocfg.CFG) {
 		if !ok || fn.Body == nil {
 			continue
 		}
-		cfg := buildFuncCFG(fn.Body)
+		cfg := gocfg.New(fn.Body, func(*ast.CallExpr) bool { return true })
 		return fn.Body, cfg
 	}
 	t.Fatal("no function found in source")
 	return nil, nil
 }
 
-func TestBuildFuncCFG_NilBody(t *testing.T) {
-	t.Parallel()
-
-	g := buildFuncCFG(nil)
-	if g != nil {
-		t.Error("expected nil CFG for nil body")
-	}
-}
-
-func TestBuildFuncCFG_SimpleFunction(t *testing.T) {
+func TestParseFuncBodyBuildsSimpleCFG(t *testing.T) {
 	t.Parallel()
 
 	src := `package p
@@ -367,16 +360,16 @@ func TestCastTargetMatchesExpr_IndexParensCanonicalization(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parse lhs: %v", err)
 			}
-			target, ok := castTargetFromExpr(nil, lhsExpr)
-			if !ok {
-				t.Fatalf("castTargetFromExpr returned ok=false for %q", tt.lhs)
-			}
-
 			matchExpr, err := parser.ParseExpr(tt.target)
 			if err != nil {
 				t.Fatalf("parse target: %v", err)
 			}
-			if !target.matchesExpr(nil, matchExpr) {
+			pass := bindTestExprObjects(lhsExpr, matchExpr)
+			target, ok := castTargetFromExpr(pass, lhsExpr)
+			if !ok {
+				t.Fatalf("castTargetFromExpr returned ok=false for %q", tt.lhs)
+			}
+			if !target.matchesExpr(pass, matchExpr) {
 				t.Fatalf("expected %q to match target from %q", tt.target, tt.lhs)
 			}
 		})
@@ -390,90 +383,37 @@ func TestCastTargetMatchesExpr_AddressOfReceiverCanonicalization(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse lhs: %v", err)
 	}
-	target, ok := castTargetFromExpr(nil, lhsExpr)
-	if !ok {
-		t.Fatal("castTargetFromExpr returned ok=false for lhs x")
-	}
-
 	receiverExpr, err := parser.ParseExpr("(&x)")
 	if err != nil {
 		t.Fatalf("parse receiver: %v", err)
 	}
-	if !target.matchesExpr(nil, receiverExpr) {
+	pass := bindTestExprObjects(lhsExpr, receiverExpr)
+	target, ok := castTargetFromExpr(pass, lhsExpr)
+	if !ok {
+		t.Fatal("castTargetFromExpr returned ok=false for typed lhs x")
+	}
+	if !target.matchesExpr(pass, receiverExpr) {
 		t.Fatal("expected (&x) receiver to match target derived from x")
 	}
 }
 
-func TestHasUseBeforeValidateInBlock_DeferredValidateDoesNotSuppress(t *testing.T) {
-	t.Parallel()
-
-	src := `package p
-type T string
-func f() {
-	var x T
-	defer func() { _ = x.Validate() }()
-	use(x)
-}
-func (t T) Validate() error { return nil }
-func use(_ T) {}`
-
-	body, _ := parseFuncBody(t, src)
-	if len(body.List) < 3 {
-		t.Fatalf("expected at least 3 statements, got %d", len(body.List))
+func bindTestExprObjects(expressions ...ast.Expr) *analysis.Pass {
+	objects := make(map[string]types.Object)
+	info := &types.Info{Uses: make(map[*ast.Ident]types.Object)}
+	for _, expression := range expressions {
+		ast.Inspect(expression, func(node ast.Node) bool {
+			identifier, ok := node.(*ast.Ident)
+			if !ok {
+				return true
+			}
+			object := objects[identifier.Name]
+			if object == nil {
+				object = types.NewVar(identifier.Pos(), nil, identifier.Name, types.Typ[types.Int])
+				objects[identifier.Name] = object
+			}
+			info.Uses[identifier] = object
+			return true
+		})
 	}
-	target := newCastTargetFromName("x")
-	nodes := make([]ast.Node, 0, len(body.List))
-	for _, stmt := range body.List {
-		nodes = append(nodes, stmt)
-	}
-
-	if hasUseBeforeValidateInBlock(nil, nodes, 1, target, collectSynchronousClosureLits(body), nil, nil) {
-		t.Fatal("expected sync closure set to treat deferred Validate as ordering-safe")
-	}
-	if !hasUseBeforeValidateInBlock(nil, nodes, 1, target, collectUBVClosureLits(body), nil, nil) {
-		t.Fatal("expected UBV closure set to flag use before deferred Validate")
-	}
-}
-
-func TestFirstUseValidateOrderInNode_AsyncValidateIgnored(t *testing.T) {
-	t.Parallel()
-
-	src := `package p
-type T string
-func (t T) Validate() error { return nil }
-func f() {
-	var x T
-	go x.Validate()
-	defer x.Validate()
-}`
-
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "test.go", src, 0)
-	if err != nil {
-		t.Fatalf("parse error: %v", err)
-	}
-
-	var fn *ast.FuncDecl
-	for _, decl := range file.Decls {
-		candidate, ok := decl.(*ast.FuncDecl)
-		if !ok || candidate.Name.Name != "f" {
-			continue
-		}
-		fn = candidate
-		break
-	}
-	if fn == nil {
-		t.Fatal("function f not found")
-	}
-	if len(fn.Body.List) < 3 {
-		t.Fatalf("expected at least 3 statements, got %d", len(fn.Body.List))
-	}
-
-	target := newCastTargetFromName("x")
-	if got := firstUseValidateOrderInNode(nil, fn.Body.List[1], target, nil, nil, nil); got != ubvOrderNone {
-		t.Fatalf("go x.Validate() order = %v, want %v", got, ubvOrderNone)
-	}
-	if got := firstUseValidateOrderInNode(nil, fn.Body.List[2], target, nil, nil, nil); got != ubvOrderNone {
-		t.Fatalf("defer x.Validate() order = %v, want %v", got, ubvOrderNone)
-	}
+	return &analysis.Pass{TypesInfo: info}
 }

@@ -429,7 +429,7 @@ func varRefThroughStringConversion(pass *analysis.Pass, expr ast.Expr) *types.Va
 // reportCrossPlatformPathFinding emits the V1 cross-platform-path diagnostic
 // (FromSlash → IsAbs chain) at the IsAbs call site, honoring baseline suppression.
 func reportCrossPlatformPathFinding(pass *analysis.Pass, call *ast.CallExpr, funcQualName string, bl *BaselineConfig) {
-	posKey := stablePosKey(pass, call.Pos())
+	posKey := semanticNodeKey(pass, call.Pos())
 	msg := fmt.Sprintf(
 		"filepath.IsAbs called on filepath.FromSlash result in %s; "+
 			"on Windows, FromSlash(\"/foo\") = \"\\foo\" which IsAbs reports as not absolute. "+
@@ -448,7 +448,7 @@ func reportCrossPlatformPathFinding(pass *analysis.Pass, call *ast.CallExpr, fun
 // (IsAbs on a CUE-fed-typed value without HasPrefix guard) at the IsAbs
 // call site, honoring baseline suppression.
 func reportCueFedPathFinding(pass *analysis.Pass, call *ast.CallExpr, funcQualName, typeName string, bl *BaselineConfig) {
-	posKey := stablePosKey(pass, call.Pos())
+	posKey := semanticNodeKey(pass, call.Pos())
 	msg := fmt.Sprintf(
 		"filepath.IsAbs called on %s value in %s without prior strings.HasPrefix(_, \"/\") guard; "+
 			"%s holds CUE-fed forward-slash paths and IsAbs(\"/foo\") is false on Windows. "+
@@ -536,5 +536,5 @@ func exportCueFedPathFacts(pass *analysis.Pass, gd *ast.GenDecl) {
 // //goplint:cue-fed-path directive on either the GenDecl-level doc (for
 // single-spec type blocks) or the TypeSpec-level doc.
 func hasCueFedPathDirective(genDoc *ast.CommentGroup, specDoc *ast.CommentGroup) bool {
-	return hasDirectiveKey(genDoc, nil, "cue-fed-path") || hasDirectiveKey(specDoc, nil, "cue-fed-path")
+	return hasDirectiveKey(genDoc, specDoc, "cue-fed-path")
 }

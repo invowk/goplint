@@ -3,52 +3,21 @@
 package goplint
 
 import (
-	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/tools/go/analysis"
 )
 
 const (
-	defaultUBVMode = "escape"
-	ubvModeOrder   = "order"
-	ubvModeEscape  = "escape"
-
-	defaultCFGBackend = "ssa"
-	cfgBackendSSA     = "ssa"
-	cfgBackendAST     = "ast"
-
-	defaultCFGInterprocEngine = "ifds"
-	cfgInterprocEngineLegacy  = "legacy"
-	cfgInterprocEngineIFDS    = "ifds"
-	cfgInterprocEngineCompare = "compare"
-
 	defaultCFGMaxStates = 20_000
-	defaultCFGMaxDepth  = 512
-
-	defaultCFGInconclusivePolicy = "error"
-	cfgInconclusivePolicyError   = "error"
-	cfgInconclusivePolicyWarn    = "warn"
-	cfgInconclusivePolicyOff     = "off"
 
 	defaultCFGWitnessMaxSteps = 12
-
-	defaultCFGFeasibilityEngine = "off"
-	cfgFeasibilityEngineOff     = "off"
-	cfgFeasibilityEngineSMT     = "smt"
-
-	defaultCFGRefinementMode = "off"
-	cfgRefinementModeOff     = "off"
-	cfgRefinementModeOnce    = "once"
-	cfgRefinementModeCEGAR   = "cegar"
+	cfgSSAConstraintsEngine   = "ssa-constraints"
 
 	defaultCFGRefinementMaxIterations = 3
 	defaultCFGFeasibilityMaxQueries   = 16
-	defaultCFGFeasibilityTimeoutMS    = 200
-
-	defaultCFGAliasMode = "off"
-	cfgAliasModeOff     = "off"
-	cfgAliasModeSSA     = "ssa"
+	defaultCFGFeasibilityTimeoutMS    = 1000
 )
 
 // flagState contains one analyzer instance's parsed flag values. Keeping this
@@ -58,19 +27,11 @@ type flagState struct {
 	baselinePath                  string
 	emitFindingsPath              string
 	includePackages               string // comma-separated package prefixes (CLI override)
-	ubvMode                       string
-	cfgBackend                    string
-	cfgInterprocEngine            string
 	cfgMaxStates                  int
-	cfgMaxDepth                   int
-	cfgInconclusivePolicy         string
 	cfgWitnessMaxSteps            int
-	cfgFeasibilityEngine          string
-	cfgRefinementMode             string
 	cfgRefinementMaxIterations    int
 	cfgFeasibilityMaxQueries      int
 	cfgFeasibilityTimeoutMS       int
-	cfgAliasMode                  string
 	includePackagesExplicit       bool
 	configPathExplicit            bool
 	baselinePathExplicit          bool
@@ -108,11 +69,15 @@ type flagState struct {
 	checkPathDomainNativeFilepath bool
 
 	// runtime caches/state are intentionally analyzer-instance scoped.
-	overdueReviewMu    sync.Mutex
-	overdueReviewSeen  map[string]bool
-	configCache        sync.Map // map[configCacheKey]*configCacheEntry
-	baselineCache      sync.Map // map[baselineCacheKey]*baselineCacheEntry
-	calleeSummaryCache sync.Map // map[string]calleeSummaryEntry keyed by objectKey(func)+slot
+	overdueReviewMu            sync.Mutex
+	overdueReviewSeen          map[string]bool
+	configCache                sync.Map // map[configCacheKey]*configCacheEntry
+	baselineCache              sync.Map // map[baselineCacheKey]*baselineCacheEntry
+	calleeSummaryCache         sync.Map // map[string]calleeSummaryEntry keyed by objectKey(func)+slot
+	ssaBuilder                 func(*analysis.Pass) *ssaResult
+	protocolControlFactory     func(time.Duration) protocolAnalysisControl
+	protocolFeasibilityBackend cfgFeasibilityBackend
+	semanticEvidenceObserver   semanticEvidenceObserver
 }
 
 type trackedStringFlag struct {
@@ -336,7 +301,7 @@ func modeFlagSpecs() []modeFlagSpec {
 		},
 		{
 			flagName:          "check-use-before-validate",
-			usage:             "report DDD Value Type variables used before Validate() across execution paths (CFA only)",
+			usage:             "report DDD Value Type variables used before Validate() across canonical protocol paths",
 			defaultValue:      false,
 			includeInCheckAll: true,
 			stateBoolField: func(fs *flagState) *bool {
@@ -516,7 +481,7 @@ func modeFlagSpecs() []modeFlagSpec {
 		},
 		{
 			flagName:          "check-all",
-			usage:             "enable all DDD compliance checks (validate + stringer + constructors + structural + cast-validation + validate-usage + constructor-error-usage + constructor-validates + nonzero + redundant-conversion + universal validate-delegation + CFA)",
+			usage:             "enable all DDD compliance checks (validate + stringer + constructors + structural + cast-validation + validate-usage + constructor-error-usage + constructor-validates + nonzero + redundant-conversion + universal validate-delegation + protocol analysis)",
 			defaultValue:      false,
 			includeInCheckAll: false,
 			stateBoolField: func(fs *flagState) *bool {
@@ -542,32 +507,16 @@ func bindAnalyzerFlags(analyzer *analysis.Analyzer, state *flagState) {
 
 	analyzer.Flags.Var(&trackedStringFlag{value: &state.includePackages, explicit: &state.includePackagesExplicit}, "include-packages",
 		"comma-separated package path prefixes; only emit diagnostics for matching packages (overrides TOML include_packages)")
-	analyzer.Flags.StringVar(&state.ubvMode, "ubv-mode", defaultUBVMode,
-		"use-before-validate semantics mode: order or escape")
-	analyzer.Flags.StringVar(&state.cfgBackend, "cfg-backend", defaultCFGBackend,
-		"path analysis backend: ssa or ast")
-	analyzer.Flags.StringVar(&state.cfgInterprocEngine, "cfg-interproc-engine", defaultCFGInterprocEngine,
-		"interprocedural path engine: legacy, ifds, or compare")
 	analyzer.Flags.IntVar(&state.cfgMaxStates, "cfg-max-states", defaultCFGMaxStates,
-		"maximum CFG states explored before conservative fallback")
-	analyzer.Flags.IntVar(&state.cfgMaxDepth, "cfg-max-depth", defaultCFGMaxDepth,
-		"maximum CFG traversal depth before conservative fallback")
-	analyzer.Flags.StringVar(&state.cfgInconclusivePolicy, "cfg-inconclusive-policy", defaultCFGInconclusivePolicy,
-		"policy for inconclusive CFA outcomes: error, warn, or off")
+		"maximum protocol states explored before a blocking inconclusive outcome")
 	analyzer.Flags.IntVar(&state.cfgWitnessMaxSteps, "cfg-witness-max-steps", defaultCFGWitnessMaxSteps,
 		"maximum number of CFG witness steps encoded in inconclusive finding metadata")
-	analyzer.Flags.StringVar(&state.cfgFeasibilityEngine, "cfg-feasibility-engine", defaultCFGFeasibilityEngine,
-		"Phase C feasibility engine: off or smt")
-	analyzer.Flags.StringVar(&state.cfgRefinementMode, "cfg-refinement-mode", defaultCFGRefinementMode,
-		"Phase C refinement mode: off, once, or cegar")
-	analyzer.Flags.IntVar(&state.cfgRefinementMaxIterations, "cfg-refinement-max-iterations", defaultCFGRefinementMaxIterations,
-		"maximum Phase C refinement iterations for one witness")
-	analyzer.Flags.IntVar(&state.cfgFeasibilityMaxQueries, "cfg-feasibility-max-queries", defaultCFGFeasibilityMaxQueries,
-		"maximum Phase C feasibility queries per witness")
-	analyzer.Flags.IntVar(&state.cfgFeasibilityTimeoutMS, "cfg-feasibility-timeout-ms", defaultCFGFeasibilityTimeoutMS,
-		"maximum Phase C feasibility query time in milliseconds")
-	analyzer.Flags.StringVar(&state.cfgAliasMode, "cfg-alias-mode", defaultCFGAliasMode,
-		"Phase D alias tracking: off or ssa (SSA-based must-alias enrichment)")
+	analyzer.Flags.IntVar(&state.cfgRefinementMaxIterations, "protocol-refinement-max-iterations", defaultCFGRefinementMaxIterations,
+		"maximum checked protocol refinement iterations for one witness")
+	analyzer.Flags.IntVar(&state.cfgFeasibilityMaxQueries, "protocol-feasibility-max-queries", defaultCFGFeasibilityMaxQueries,
+		"maximum protocol feasibility queries per witness")
+	analyzer.Flags.IntVar(&state.cfgFeasibilityTimeoutMS, "protocol-feasibility-timeout-ms", defaultCFGFeasibilityTimeoutMS,
+		"maximum protocol feasibility query time in milliseconds")
 
 	for _, spec := range modeFlagSpecs() {
 		analyzer.Flags.BoolVar(spec.stateBoolField(state), spec.flagName, spec.defaultValue, spec.usage)
@@ -582,19 +531,11 @@ func resetFlagStateDefaults(state *flagState) {
 	state.baselinePath = ""
 	state.emitFindingsPath = ""
 	state.includePackages = ""
-	state.ubvMode = defaultUBVMode
-	state.cfgBackend = defaultCFGBackend
-	state.cfgInterprocEngine = defaultCFGInterprocEngine
 	state.cfgMaxStates = defaultCFGMaxStates
-	state.cfgMaxDepth = defaultCFGMaxDepth
-	state.cfgInconclusivePolicy = defaultCFGInconclusivePolicy
 	state.cfgWitnessMaxSteps = defaultCFGWitnessMaxSteps
-	state.cfgFeasibilityEngine = defaultCFGFeasibilityEngine
-	state.cfgRefinementMode = defaultCFGRefinementMode
 	state.cfgRefinementMaxIterations = defaultCFGRefinementMaxIterations
 	state.cfgFeasibilityMaxQueries = defaultCFGFeasibilityMaxQueries
 	state.cfgFeasibilityTimeoutMS = defaultCFGFeasibilityTimeoutMS
-	state.cfgAliasMode = defaultCFGAliasMode
 	state.includePackagesExplicit = false
 	state.configPathExplicit = false
 	state.baselinePathExplicit = false
@@ -608,6 +549,10 @@ func resetFlagStateDefaults(state *flagState) {
 	state.configCache = sync.Map{}
 	state.baselineCache = sync.Map{}
 	state.calleeSummaryCache = sync.Map{}
+	state.ssaBuilder = buildSSAForPass
+	state.protocolControlFactory = nil
+	state.protocolFeasibilityBackend = nil
+	state.semanticEvidenceObserver = nil
 }
 
 // runConfig holds the resolved flag values for a single run() invocation.
@@ -622,19 +567,11 @@ type runConfig struct {
 	emitFindingsPathExplicit      bool
 	includePackages               string
 	includePackagesExplicit       bool
-	ubvMode                       string
-	cfgBackend                    string
-	cfgInterprocEngine            string
 	cfgMaxStates                  int
-	cfgMaxDepth                   int
-	cfgInconclusivePolicy         string
 	cfgWitnessMaxSteps            int
-	cfgFeasibilityEngine          string
-	cfgRefinementMode             string
 	cfgRefinementMaxIterations    int
 	cfgFeasibilityMaxQueries      int
 	cfgFeasibilityTimeoutMS       int
-	cfgAliasMode                  string
 	auditExceptions               bool
 	checkAll                      bool
 	checkValidate                 bool
@@ -666,6 +603,9 @@ type runConfig struct {
 	checkVolumeMountHostToSlash   bool
 	checkCobraCommandContext      bool
 	checkPathDomainNativeFilepath bool
+	protocolControlFactory        func(time.Duration) protocolAnalysisControl
+	protocolFeasibilityBackend    cfgFeasibilityBackend
+	semanticEvidenceObserver      semanticEvidenceObserver
 }
 
 func newRunConfigForState(state *flagState) runConfig {
@@ -678,19 +618,14 @@ func newRunConfigForState(state *flagState) runConfig {
 		emitFindingsPathExplicit:   state.emitFindingsPathExplicit,
 		includePackages:            state.includePackages,
 		includePackagesExplicit:    state.includePackagesExplicit,
-		ubvMode:                    state.ubvMode,
-		cfgBackend:                 state.cfgBackend,
-		cfgInterprocEngine:         state.cfgInterprocEngine,
 		cfgMaxStates:               state.cfgMaxStates,
-		cfgMaxDepth:                state.cfgMaxDepth,
-		cfgInconclusivePolicy:      state.cfgInconclusivePolicy,
 		cfgWitnessMaxSteps:         state.cfgWitnessMaxSteps,
-		cfgFeasibilityEngine:       state.cfgFeasibilityEngine,
-		cfgRefinementMode:          state.cfgRefinementMode,
 		cfgRefinementMaxIterations: state.cfgRefinementMaxIterations,
 		cfgFeasibilityMaxQueries:   state.cfgFeasibilityMaxQueries,
 		cfgFeasibilityTimeoutMS:    state.cfgFeasibilityTimeoutMS,
-		cfgAliasMode:               state.cfgAliasMode,
+		protocolControlFactory:     state.protocolControlFactory,
+		protocolFeasibilityBackend: state.protocolFeasibilityBackend,
+		semanticEvidenceObserver:   state.semanticEvidenceObserver,
 	}
 	for _, spec := range modeFlagSpecs() {
 		*spec.runConfigBoolField(&rc) = *spec.stateBoolField(state)
@@ -713,50 +648,22 @@ func expandCheckAllModes(rc *runConfig) {
 		}
 		*spec.runConfigBoolField(rc) = true
 	}
-	// Phase D SSA alias tracking is NOT auto-enabled by --check-all.
-	// It requires explicit --cfg-alias-mode=ssa because the on-demand
-	// SSA builder may recover from panics on standard library packages.
 }
 
 func normalizeRunConfig(rc *runConfig) {
 	if rc == nil {
 		return
 	}
-	// UBV checks are CFA-only extensions of cast-validation. Auto-enable cast
+	// UBV extends cast validation with temporal use checks. Auto-enable cast
 	// validation so explicit UBV flags are never silently inert.
 	if rc.checkUseBeforeValidate {
 		rc.checkCastValidation = true
 	}
-	if rc.ubvMode == "" {
-		rc.ubvMode = defaultUBVMode
-	}
-	if rc.cfgBackend == "" {
-		rc.cfgBackend = defaultCFGBackend
-	}
-	rc.cfgInterprocEngine = strings.TrimSpace(strings.ToLower(rc.cfgInterprocEngine))
-	if rc.cfgInterprocEngine == "" {
-		rc.cfgInterprocEngine = defaultCFGInterprocEngine
-	}
 	if rc.cfgMaxStates == 0 {
 		rc.cfgMaxStates = defaultCFGMaxStates
 	}
-	if rc.cfgMaxDepth == 0 {
-		rc.cfgMaxDepth = defaultCFGMaxDepth
-	}
-	rc.cfgInconclusivePolicy = strings.TrimSpace(strings.ToLower(rc.cfgInconclusivePolicy))
-	if rc.cfgInconclusivePolicy == "" {
-		rc.cfgInconclusivePolicy = defaultCFGInconclusivePolicy
-	}
 	if rc.cfgWitnessMaxSteps == 0 {
 		rc.cfgWitnessMaxSteps = defaultCFGWitnessMaxSteps
-	}
-	rc.cfgFeasibilityEngine = strings.TrimSpace(strings.ToLower(rc.cfgFeasibilityEngine))
-	if rc.cfgFeasibilityEngine == "" {
-		rc.cfgFeasibilityEngine = defaultCFGFeasibilityEngine
-	}
-	rc.cfgRefinementMode = strings.TrimSpace(strings.ToLower(rc.cfgRefinementMode))
-	if rc.cfgRefinementMode == "" {
-		rc.cfgRefinementMode = defaultCFGRefinementMode
 	}
 	if rc.cfgRefinementMaxIterations == 0 {
 		rc.cfgRefinementMaxIterations = defaultCFGRefinementMaxIterations
@@ -766,9 +673,5 @@ func normalizeRunConfig(rc *runConfig) {
 	}
 	if rc.cfgFeasibilityTimeoutMS == 0 {
 		rc.cfgFeasibilityTimeoutMS = defaultCFGFeasibilityTimeoutMS
-	}
-	rc.cfgAliasMode = strings.TrimSpace(strings.ToLower(rc.cfgAliasMode))
-	if rc.cfgAliasMode == "" {
-		rc.cfgAliasMode = defaultCFGAliasMode
 	}
 }

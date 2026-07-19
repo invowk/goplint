@@ -13,7 +13,7 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-func buildTypedPassFromSource(t *testing.T, src string) (*analysis.Pass, *ast.File) {
+func buildTypedPassFromSource(t testing.TB, src string) (*analysis.Pass, *ast.File) {
 	t.Helper()
 
 	fset := token.NewFileSet()
@@ -27,6 +27,7 @@ func buildTypedPassFromSource(t *testing.T, src string) (*analysis.Pass, *ast.Fi
 		Defs:       make(map[*ast.Ident]types.Object),
 		Uses:       make(map[*ast.Ident]types.Object),
 		Selections: make(map[*ast.SelectorExpr]*types.Selection),
+		Instances:  make(map[*ast.Ident]types.Instance),
 	}
 
 	cfg := &types.Config{Importer: importer.Default()}
@@ -44,7 +45,7 @@ func buildTypedPassFromSource(t *testing.T, src string) (*analysis.Pass, *ast.Fi
 	return pass, file
 }
 
-func findFuncDecl(t *testing.T, file *ast.File, name string) *ast.FuncDecl {
+func findFuncDecl(t testing.TB, file *ast.File, name string) *ast.FuncDecl {
 	t.Helper()
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)

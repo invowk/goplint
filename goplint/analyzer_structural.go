@@ -237,7 +237,7 @@ func inspectConstructorReturnError(
 			msg := fmt.Sprintf(
 				"constructor %s returns %s.%s which has Validate() but constructor does not return error",
 				qualName, returnTypePkg, returnType)
-			findingID := StableFindingID(CategoryMissingConstructorErrorReturn, qualName, returnType)
+			findingID := PackageScopedFindingID(pass, CategoryMissingConstructorErrorReturn, qualName, returnType)
 			if bl.ContainsFinding(CategoryMissingConstructorErrorReturn, findingID, msg) {
 				continue
 			}
@@ -337,6 +337,9 @@ func collectExportedStructsWithFields(pass *analysis.Pass, node *ast.GenDecl, ou
 		if !ok {
 			continue
 		}
+		if hasIgnoreDirective(node.Doc, ts.Doc) {
+			continue
+		}
 
 		st, ok := ts.Type.(*ast.StructType)
 		if !ok {
@@ -428,7 +431,7 @@ func reportWrongConstructorSig(pass *analysis.Pass, structs []exportedStructInfo
 					ctorName, qualName, ctorInfo.returnTypeName, s.name)
 			}
 
-			findingID := StableFindingID(CategoryWrongConstructorSig, qualName, ctorName)
+			findingID := PackageScopedFindingID(pass, CategoryWrongConstructorSig, qualName, ctorName)
 			if bl.ContainsFinding(CategoryWrongConstructorSig, findingID, msg) {
 				continue
 			}
@@ -480,7 +483,7 @@ func reportMissingFuncOptions(
 		if exactCtor != nil && !hasOptType && exactCtor.paramCount > funcOptionsParamThreshold {
 			msg := fmt.Sprintf("constructor %s() for %s has %d non-option parameters; consider using functional options",
 				ctorName, qualName, exactCtor.paramCount)
-			findingID := StableFindingID(CategoryMissingFuncOptions, qualName, ctorName, "detection")
+			findingID := PackageScopedFindingID(pass, CategoryMissingFuncOptions, qualName, ctorName, "detection")
 			if !bl.ContainsFinding(CategoryMissingFuncOptions, findingID, msg) {
 				reportDiagnostic(pass, exactCtor.pos, CategoryMissingFuncOptions, findingID, msg)
 			}
@@ -499,7 +502,7 @@ func reportMissingFuncOptions(
 		if exactCtor != nil && !exactCtorHasMatchingVariadic {
 			msg := fmt.Sprintf("constructor %s() for %s does not accept variadic ...%s",
 				ctorName, qualName, optTypeName)
-			findingID := StableFindingID(CategoryMissingFuncOptions, qualName, ctorName, "variadic")
+			findingID := PackageScopedFindingID(pass, CategoryMissingFuncOptions, qualName, ctorName, "variadic")
 			if !bl.ContainsFinding(CategoryMissingFuncOptions, findingID, msg) {
 				reportDiagnostic(pass, exactCtor.pos, CategoryMissingFuncOptions, findingID, msg)
 			}
@@ -513,7 +516,7 @@ func reportMissingFuncOptions(
 		if exactCtor == nil && anyCtor != nil && !anyCtorHasMatchingVariadic {
 			msg := fmt.Sprintf("constructor %s() for %s does not accept variadic ...%s",
 				ctorName, qualName, optTypeName)
-			findingID := StableFindingID(CategoryMissingFuncOptions, qualName, ctorName, "variadic")
+			findingID := PackageScopedFindingID(pass, CategoryMissingFuncOptions, qualName, ctorName, "variadic")
 			if !bl.ContainsFinding(CategoryMissingFuncOptions, findingID, msg) {
 				reportDiagnostic(pass, anyCtor.pos, CategoryMissingFuncOptions, findingID, msg)
 			}
@@ -538,7 +541,7 @@ func reportMissingFuncOptions(
 			if !found {
 				msg := fmt.Sprintf("struct %s has %s type but field %q has no %s() function",
 					qualName, optTypeName, f.name, expectedWith)
-				findingID := StableFindingID(CategoryMissingFuncOptions, qualName, f.name, "missing-with")
+				findingID := PackageScopedFindingID(pass, CategoryMissingFuncOptions, qualName, f.name, "missing-with")
 				if !bl.ContainsFinding(CategoryMissingFuncOptions, findingID, msg) {
 					reportDiagnostic(pass, f.pos, CategoryMissingFuncOptions, findingID, msg)
 				}
@@ -549,7 +552,7 @@ func reportMissingFuncOptions(
 			if wfi.paramCount != 1 {
 				msg := fmt.Sprintf("%s() should accept exactly one parameter matching field %s.%s, got %d parameters",
 					expectedWith, s.name, f.name, wfi.paramCount)
-				findingID := StableFindingID(CategoryWrongFuncOptionType, qualName, f.name, expectedWith, "arity")
+				findingID := PackageScopedFindingID(pass, CategoryWrongFuncOptionType, qualName, f.name, expectedWith, "arity")
 				if !bl.ContainsFinding(CategoryWrongFuncOptionType, findingID, msg) {
 					reportDiagnostic(pass, f.pos, CategoryWrongFuncOptionType, findingID, msg)
 				}
@@ -563,7 +566,7 @@ func reportMissingFuncOptions(
 						types.TypeString(wfi.paramType, nil),
 						s.name, f.name,
 						types.TypeString(fieldType, nil))
-					findingID := StableFindingID(CategoryWrongFuncOptionType, qualName, f.name, expectedWith)
+					findingID := PackageScopedFindingID(pass, CategoryWrongFuncOptionType, qualName, f.name, expectedWith)
 					if !bl.ContainsFinding(CategoryWrongFuncOptionType, findingID, msg) {
 						reportDiagnostic(pass, f.pos, CategoryWrongFuncOptionType, findingID, msg)
 					}
@@ -603,7 +606,7 @@ func reportMissingImmutability(pass *analysis.Pass, structs []exportedStructInfo
 
 			msg := fmt.Sprintf("struct %s has %s() constructor but field %s is exported",
 				qualName, ctorName, f.name)
-			findingID := StableFindingID(CategoryMissingImmutability, qualName, f.name)
+			findingID := PackageScopedFindingID(pass, CategoryMissingImmutability, qualName, f.name)
 			if bl.ContainsFinding(CategoryMissingImmutability, findingID, msg) {
 				continue
 			}
@@ -647,7 +650,7 @@ func reportMissingStructValidate(
 			// Method exists — verify its signature matches the contract.
 			if mi.paramCount != 0 || mi.resultTypes != expectedValidateSig {
 				msg := fmt.Sprintf("struct %s has Validate() but wrong signature (want func() error)", qualName)
-				findingID := StableFindingID(CategoryWrongStructValidateSig, qualName, "Validate")
+				findingID := PackageScopedFindingID(pass, CategoryWrongStructValidateSig, qualName, "Validate")
 				if bl.ContainsFinding(CategoryWrongStructValidateSig, findingID, msg) {
 					continue
 				}
@@ -657,7 +660,7 @@ func reportMissingStructValidate(
 		}
 
 		msg := fmt.Sprintf("struct %s has constructor but no Validate() method", qualName)
-		findingID := StableFindingID(CategoryMissingStructValidate, qualName, "Validate")
+		findingID := PackageScopedFindingID(pass, CategoryMissingStructValidate, qualName, "Validate")
 		if bl.ContainsFinding(CategoryMissingStructValidate, findingID, msg) {
 			continue
 		}

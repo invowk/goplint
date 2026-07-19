@@ -56,7 +56,6 @@ func refineAssignedCastPathResult(
 		ac.typeName,
 		"assigned",
 		castInput.OriginKey,
-		ac.target.key(),
 	)
 	pathResult = refiner.Refine(cfgRefinementRequest{
 		Pass:          pass,
@@ -68,71 +67,76 @@ func refineAssignedCastPathResult(
 		CallChain:     scope.callChain,
 		OriginAnchors: pathAnchors,
 		SyntheticPath: []int32{castInput.DefBlock.Index},
+		Control:       solver.control,
 		Rerun: func(override cfgRefinementOverride) interprocPathResult {
 			next := castInput
 			if override.MaxStates > 0 {
 				next.MaxStates = override.MaxStates
-			}
-			if override.MaxDepth > 0 {
-				next.MaxDepth = override.MaxDepth
 			}
 			next.DischargedWitnesses = override.DischargedWitnesses
 			next.AllowSafe = override.AllowSafe
 			if override.ResolveTargets {
 				next.ResolveCFGCalls = true
 			}
-			refined := solver.EvaluateCastPath(next)
-			if override.ResolveTargets &&
-				refined.Class == interprocOutcomeInconclusive &&
-				refined.Reason == pathOutcomeReasonUnresolvedTarget {
-				refined = mergeResolvedTargetRefinement(refined, solver.EvaluateCastPathLegacy(next))
-			}
-			return refined
+			return solver.EvaluateCastPath(next)
 		},
 	})
 	writeRefinementTraceToSink(pass, ac.pos.Pos(), pathResult)
 	return pathFindingID, pathResult
 }
 
-func refineUBVInBlockResult(
+type ubvFindingScope string
+
+const (
+	ubvFindingScopeSameBlock  ubvFindingScope = "same-block"
+	ubvFindingScopeCrossBlock ubvFindingScope = "cross-block"
+)
+
+func classifyUBVFindingScope(result interprocPathResult, input interprocUBVCrossBlockInput) ubvFindingScope {
+	if input.DefBlock == nil {
+		return ubvFindingScopeCrossBlock
+	}
+	rootFunction := "cfg.ubv." + input.OriginKey
+	if rootFunction == "cfg.ubv." {
+		rootFunction = "cfg.ubv"
+	}
+	hazardNode := result.WitnessTerminal
+	for _, edge := range result.WitnessEdges {
+		if edge.StateBefore == ideStateNeedsValidate &&
+			(edge.StateAfter == ideStateEscapedBeforeValidate || edge.StateAfter == ideStateConsumedBeforeValidate) {
+			hazardNode = edge.From
+			break
+		}
+	}
+	if hazardNode.FuncKey == rootFunction && hazardNode.BlockIndex == input.DefBlock.Index {
+		return ubvFindingScopeSameBlock
+	}
+	return ubvFindingScopeCrossBlock
+}
+
+func ubvRefinementIdentity(
 	pass *analysis.Pass,
 	scope cfaCastFindingScope,
-	refiner cfgRefinementController,
-	solver interprocSolver,
-	cfg *gocfg.CFG,
 	ac cfaAssignedCast,
-	inBlockInput interprocUBVInBlockInput,
-	inBlockResult interprocPathResult,
-	pathAnchors map[string]string,
-) (string, interprocPathResult) {
-	inBlockFindingID := scope.findingID(
+	input interprocUBVCrossBlockInput,
+	result interprocPathResult,
+) (string, string) {
+	if classifyUBVFindingScope(result, input) == ubvFindingScopeSameBlock {
+		return CategoryUseBeforeValidateSameBlock, scope.findingID(
+			pass,
+			CategoryUseBeforeValidateSameBlock,
+			ac.typeName,
+			"ubv",
+			input.OriginKey,
+		)
+	}
+	return CategoryUseBeforeValidateCrossBlock, scope.findingID(
 		pass,
-		CategoryUseBeforeValidateSameBlock,
+		CategoryUseBeforeValidateCrossBlock,
 		ac.typeName,
-		"ubv",
-		inBlockInput.OriginKey,
-		ac.target.key(),
+		"ubv-xblock",
+		input.OriginKey,
 	)
-	inBlockResult = refiner.Refine(cfgRefinementRequest{
-		Pass:          pass,
-		Position:      ac.pos.Pos(),
-		CFG:           cfg,
-		Result:        inBlockResult,
-		Category:      CategoryUseBeforeValidateSameBlock,
-		FindingID:     inBlockFindingID,
-		CallChain:     scope.callChain,
-		OriginAnchors: pathAnchors,
-		SyntheticPath: []int32{inBlockInput.DefBlockIndex},
-		Rerun: func(override cfgRefinementOverride) interprocPathResult {
-			next := inBlockInput
-			if override.RefineRecursion {
-				next.SummaryStack = summaryStackWithRecursionFallback(next.SummaryStack)
-			}
-			return solver.EvaluateUBVInBlock(next)
-		},
-	})
-	writeRefinementTraceToSink(pass, ac.pos.Pos(), inBlockResult)
-	return inBlockFindingID, inBlockResult
 }
 
 func reportSameBlockUBVUnsafe(
@@ -142,13 +146,11 @@ func reportSameBlockUBVUnsafe(
 	ac cfaAssignedCast,
 	inBlockResult interprocPathResult,
 	originKey string,
-	ubvMode string,
 	defBlock *gocfg.Block,
 ) {
 	ubvMsg := useBeforeValidateMessage(ac.target.displayName, ac.typeName, false)
-	ubvID := scope.findingID(pass, CategoryUseBeforeValidateSameBlock, ac.typeName, "ubv", originKey, ac.target.key())
-	meta := appendPhaseCMeta(map[string]string{
-		"ubv_mode":         ubvMode,
+	ubvID := scope.findingID(pass, CategoryUseBeforeValidateSameBlock, ac.typeName, "ubv", originKey)
+	meta := appendProtocolRefinementMeta(map[string]string{
 		"ubv_scope":        "same-block",
 		"witness_cast_pos": originKey,
 		"witness_def_block": strconv.FormatInt(
@@ -163,15 +165,12 @@ func reportSameBlockUBVInconclusive(
 	pass *analysis.Pass,
 	scope cfaCastFindingScope,
 	bl *BaselineConfig,
-	cfgBackend string,
 	effectiveBudget blockVisitBudget,
-	cfgInconclusivePolicy string,
 	cfgWitnessMaxSteps int,
 	ac cfaAssignedCast,
 	inBlockReason pathOutcomeReason,
 	inBlockResult interprocPathResult,
 	originKey string,
-	ubvMode string,
 	defBlock *gocfg.Block,
 ) {
 	ubvMsg := useBeforeValidateInconclusiveMessage(ac.target.displayName, ac.typeName)
@@ -182,27 +181,22 @@ func reportSameBlockUBVInconclusive(
 		"ubv-inconclusive",
 		"same-block",
 		originKey,
-		ac.target.key(),
 		string(inBlockReason),
 	)
 	meta := cfgOutcomeMetaWithWitness(
-		cfgBackend,
 		effectiveBudget.maxStates,
-		effectiveBudget.maxDepth,
 		inBlockReason,
 		[]int32{defBlock.Index},
 		cfgWitnessMaxSteps,
 	)
-	meta["ubv_mode"] = ubvMode
 	meta["ubv_scope"] = "same-block"
 	meta["witness_cast_pos"] = originKey
 	meta["witness_def_block"] = strconv.FormatInt(int64(defBlock.Index), 10)
 	addCFGWitnessCallChainMeta(meta, scope.callChain, cfgWitnessMaxSteps)
-	meta = appendPhaseCMeta(meta, inBlockResult)
+	meta = appendProtocolRefinementMeta(meta, inBlockResult)
 	reportInconclusiveFindingWithMetaIfNotBaselined(
 		pass,
 		bl,
-		cfgInconclusivePolicy,
 		ac.pos.Pos(),
 		CategoryUseBeforeValidateInconclusive,
 		ubvID,
@@ -211,61 +205,114 @@ func reportSameBlockUBVInconclusive(
 	)
 }
 
-func refineUBVCrossBlockResult(
+func refineUBVResult(
 	pass *analysis.Pass,
 	scope cfaCastFindingScope,
 	refiner cfgRefinementController,
 	solver interprocSolver,
 	cfg *gocfg.CFG,
 	ac cfaAssignedCast,
-	crossInput interprocUBVCrossBlockInput,
-	crossResult interprocPathResult,
+	input interprocUBVCrossBlockInput,
+	result interprocPathResult,
 	pathAnchors map[string]string,
 ) (string, interprocPathResult) {
-	crossFindingID := scope.findingID(
-		pass,
-		CategoryUseBeforeValidateCrossBlock,
-		ac.typeName,
-		"ubv-xblock",
-		crossInput.OriginKey,
-		ac.target.key(),
-	)
-	crossResult = refiner.Refine(cfgRefinementRequest{
+	category, findingID := ubvRefinementIdentity(pass, scope, ac, input, result)
+	result = refiner.Refine(cfgRefinementRequest{
 		Pass:          pass,
 		Position:      ac.pos.Pos(),
 		CFG:           cfg,
-		Result:        crossResult,
-		Category:      CategoryUseBeforeValidateCrossBlock,
-		FindingID:     crossFindingID,
+		Result:        result,
+		Category:      category,
+		FindingID:     findingID,
 		CallChain:     scope.callChain,
 		OriginAnchors: pathAnchors,
-		SyntheticPath: []int32{crossInput.DefBlock.Index},
+		SyntheticPath: []int32{input.DefBlock.Index},
+		Control:       solver.control,
+		WitnessIdentity: func(candidate interprocPathResult) cfgRefinementWitnessIdentity {
+			candidateCategory, candidateFindingID := ubvRefinementIdentity(pass, scope, ac, input, candidate)
+			return cfgRefinementWitnessIdentity{
+				Category:      candidateCategory,
+				FindingID:     candidateFindingID,
+				OriginAnchors: pathAnchors,
+				SyntheticPath: []int32{input.DefBlock.Index},
+			}
+		},
 		Rerun: func(override cfgRefinementOverride) interprocPathResult {
-			next := crossInput
+			next := input
 			if override.MaxStates > 0 {
 				next.MaxStates = override.MaxStates
-			}
-			if override.MaxDepth > 0 {
-				next.MaxDepth = override.MaxDepth
 			}
 			next.DischargedWitnesses = override.DischargedWitnesses
 			if override.ResolveTargets {
 				next.ResolveCFGCalls = true
 			}
-			if override.RefineRecursion {
-				next.SummaryStack = summaryStackWithRecursionFallback(next.SummaryStack)
-			}
-			refined := solver.EvaluateUBVCrossBlock(next)
-			if override.ResolveTargets &&
-				refined.Class == interprocOutcomeInconclusive &&
-				refined.Reason == pathOutcomeReasonUnresolvedTarget {
-				refined = mergeResolvedTargetRefinement(refined, solver.EvaluateUBVCrossBlockLegacy(next))
-			}
-			return refined
+			return solver.EvaluateUBVCrossBlock(next)
 		},
 	})
-	writeRefinementTraceToSink(pass, ac.pos.Pos(), crossResult)
-	return crossFindingID, crossResult
+	writeRefinementTraceToSink(pass, ac.pos.Pos(), result)
+	_, findingID = ubvRefinementIdentity(pass, scope, ac, input, result)
+	return findingID, result
+}
+
+func reportUBVResult(
+	pass *analysis.Pass,
+	scope cfaCastFindingScope,
+	bl *BaselineConfig,
+	effectiveBudget blockVisitBudget,
+	cfgWitnessMaxSteps int,
+	ac cfaAssignedCast,
+	result interprocPathResult,
+	input interprocUBVCrossBlockInput,
+) {
+	resultScope := classifyUBVFindingScope(result, input)
+	switch result.toPathOutcome() {
+	case pathOutcomeUnsafe:
+		if resultScope == ubvFindingScopeSameBlock {
+			reportSameBlockUBVUnsafe(pass, scope, bl, ac, result, input.OriginKey, input.DefBlock)
+			return
+		}
+		reportCrossBlockUBVUnsafe(
+			pass,
+			scope,
+			bl,
+			cfgWitnessMaxSteps,
+			ac,
+			result,
+			result.Witness,
+			input.OriginKey,
+			input.DefBlock,
+		)
+	case pathOutcomeInconclusive:
+		if resultScope == ubvFindingScopeSameBlock {
+			reportSameBlockUBVInconclusive(
+				pass,
+				scope,
+				bl,
+				effectiveBudget,
+				cfgWitnessMaxSteps,
+				ac,
+				result.Reason,
+				result,
+				input.OriginKey,
+				input.DefBlock,
+			)
+			return
+		}
+		reportCrossBlockUBVInconclusive(
+			pass,
+			scope,
+			bl,
+			effectiveBudget,
+			cfgWitnessMaxSteps,
+			ac,
+			result.Reason,
+			result.Witness,
+			result,
+			input.OriginKey,
+			input.DefBlock,
+		)
+	case pathOutcomeSafe:
+	}
 }
 
 func reportCrossBlockUBVUnsafe(
@@ -277,13 +324,11 @@ func reportCrossBlockUBVUnsafe(
 	crossResult interprocPathResult,
 	ubvWitness []int32,
 	originKey string,
-	ubvMode string,
 	defBlock *gocfg.Block,
 ) {
 	ubvMsg := useBeforeValidateMessage(ac.target.displayName, ac.typeName, true)
-	ubvID := scope.findingID(pass, CategoryUseBeforeValidateCrossBlock, ac.typeName, "ubv-xblock", originKey, ac.target.key())
+	ubvID := scope.findingID(pass, CategoryUseBeforeValidateCrossBlock, ac.typeName, "ubv-xblock", originKey)
 	meta := map[string]string{
-		"ubv_mode":         ubvMode,
 		"ubv_scope":        "cross-block",
 		"witness_cast_pos": originKey,
 		"witness_def_block": strconv.FormatInt(
@@ -293,7 +338,7 @@ func reportCrossBlockUBVUnsafe(
 	}
 	addCFGWitnessMeta(meta, ubvWitness, cfgWitnessMaxSteps)
 	addCFGWitnessCallChainMeta(meta, scope.callChain, cfgWitnessMaxSteps)
-	meta = appendPhaseCMeta(meta, crossResult)
+	meta = appendProtocolRefinementMeta(meta, crossResult)
 	reportFindingWithMetaIfNotBaselined(
 		pass,
 		bl,
@@ -309,16 +354,13 @@ func reportCrossBlockUBVInconclusive(
 	pass *analysis.Pass,
 	scope cfaCastFindingScope,
 	bl *BaselineConfig,
-	cfgBackend string,
 	effectiveBudget blockVisitBudget,
-	cfgInconclusivePolicy string,
 	cfgWitnessMaxSteps int,
 	ac cfaAssignedCast,
 	ubvReason pathOutcomeReason,
 	ubvWitness []int32,
 	crossResult interprocPathResult,
 	originKey string,
-	ubvMode string,
 	defBlock *gocfg.Block,
 ) {
 	ubvMsg := useBeforeValidateInconclusiveMessage(ac.target.displayName, ac.typeName)
@@ -329,27 +371,66 @@ func reportCrossBlockUBVInconclusive(
 		"ubv-inconclusive",
 		"cross-block",
 		originKey,
-		ac.target.key(),
 		string(ubvReason),
 	)
 	meta := cfgOutcomeMetaWithWitness(
-		cfgBackend,
 		effectiveBudget.maxStates,
-		effectiveBudget.maxDepth,
 		ubvReason,
 		ubvWitness,
 		cfgWitnessMaxSteps,
 	)
-	meta["ubv_mode"] = ubvMode
 	meta["ubv_scope"] = "cross-block"
 	meta["witness_cast_pos"] = originKey
 	meta["witness_def_block"] = strconv.FormatInt(int64(defBlock.Index), 10)
 	addCFGWitnessCallChainMeta(meta, scope.callChain, cfgWitnessMaxSteps)
-	meta = appendPhaseCMeta(meta, crossResult)
+	meta = appendProtocolRefinementMeta(meta, crossResult)
 	reportInconclusiveFindingWithMetaIfNotBaselined(
 		pass,
 		bl,
-		cfgInconclusivePolicy,
+		ac.pos.Pos(),
+		CategoryUseBeforeValidateInconclusive,
+		ubvID,
+		ubvMsg,
+		meta,
+	)
+}
+
+func reportSSAUnavailableUBVInconclusive(
+	pass *analysis.Pass,
+	scope cfaCastFindingScope,
+	bl *BaselineConfig,
+	effectiveBudget blockVisitBudget,
+	cfgWitnessMaxSteps int,
+	ac cfaAssignedCast,
+	pathResult interprocPathResult,
+	originKey string,
+	defBlock *gocfg.Block,
+) {
+	ubvMsg := useBeforeValidateInconclusiveMessage(ac.target.displayName, ac.typeName)
+	ubvID := scope.findingID(
+		pass,
+		CategoryUseBeforeValidateInconclusive,
+		ac.typeName,
+		"ubv-inconclusive",
+		"ssa-unavailable",
+		originKey,
+		string(pathResult.Reason),
+		string(pathResult.SSAAvailability.Status),
+	)
+	meta := cfgOutcomeMetaWithWitness(
+		effectiveBudget.maxStates,
+		pathResult.Reason,
+		pathResult.Witness,
+		cfgWitnessMaxSteps,
+	)
+	meta["ubv_scope"] = "ssa-unavailable"
+	meta["witness_cast_pos"] = originKey
+	meta["witness_def_block"] = strconv.FormatInt(int64(defBlock.Index), 10)
+	addCFGWitnessCallChainMeta(meta, scope.callChain, cfgWitnessMaxSteps)
+	meta = appendProtocolRefinementMeta(meta, pathResult)
+	reportInconclusiveFindingWithMetaIfNotBaselined(
+		pass,
+		bl,
 		ac.pos.Pos(),
 		CategoryUseBeforeValidateInconclusive,
 		ubvID,
@@ -362,9 +443,7 @@ func reportAssignedCastInconclusive(
 	pass *analysis.Pass,
 	scope cfaCastFindingScope,
 	bl *BaselineConfig,
-	cfgBackend string,
 	effectiveBudget blockVisitBudget,
-	cfgInconclusivePolicy string,
 	cfgWitnessMaxSteps int,
 	ac cfaAssignedCast,
 	pathReason pathOutcomeReason,
@@ -382,12 +461,9 @@ func reportAssignedCastInconclusive(
 		"inconclusive",
 		string(pathReason),
 		originKey,
-		ac.target.key(),
 	)
 	meta := cfgOutcomeMetaWithWitness(
-		cfgBackend,
 		effectiveBudget.maxStates,
-		effectiveBudget.maxDepth,
 		pathReason,
 		pathWitness,
 		cfgWitnessMaxSteps,
@@ -395,15 +471,45 @@ func reportAssignedCastInconclusive(
 	meta["witness_cast_pos"] = originKey
 	meta["witness_def_block"] = strconv.FormatInt(int64(defBlock.Index), 10)
 	addCFGWitnessCallChainMeta(meta, scope.callChain, cfgWitnessMaxSteps)
-	meta = appendPhaseCMeta(meta, pathResult)
+	meta = appendProtocolRefinementMeta(meta, pathResult)
 	reportInconclusiveFindingWithMetaIfNotBaselined(
 		pass,
 		bl,
-		cfgInconclusivePolicy,
 		ac.pos.Pos(),
 		CategoryUnvalidatedCastInconclusive,
 		findingID,
 		msg,
+		meta,
+	)
+}
+
+func reportUnassignedCastInconclusive(
+	pass *analysis.Pass,
+	scope cfaCastFindingScope,
+	bl *BaselineConfig,
+	effectiveBudget blockVisitBudget,
+	uc cfaUnassignedCast,
+) {
+	reason := pathOutcomeReasonUnsupportedInstr
+	originKey := semanticNodeKey(pass, uc.pos.Pos())
+	findingID := scope.findingID(
+		pass,
+		CategoryUnvalidatedCastInconclusive,
+		uc.typeName,
+		"unassigned",
+		"inconclusive",
+		string(reason),
+		originKey,
+	)
+	meta := cfgOutcomeMeta(effectiveBudget.maxStates, reason)
+	meta["witness_cast_pos"] = originKey
+	reportInconclusiveFindingWithMetaIfNotBaselined(
+		pass,
+		bl,
+		uc.pos.Pos(),
+		CategoryUnvalidatedCastInconclusive,
+		findingID,
+		unvalidatedCastInconclusiveMessage(uc.typeName),
 		meta,
 	)
 }

@@ -1,27 +1,793 @@
 {
   "version": "v1",
+  "category_catalog": [
+    {
+      "category": "primitive",
+      "kind": "structural",
+      "owner_key": "primitive-detection",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-validate",
+      "kind": "structural",
+      "owner_key": "type-method-contract",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-stringer",
+      "kind": "structural",
+      "owner_key": "type-method-contract",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-constructor",
+      "kind": "structural",
+      "owner_key": "constructor-shape",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "wrong-constructor-sig",
+      "kind": "structural",
+      "owner_key": "constructor-shape",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-func-options",
+      "kind": "structural",
+      "owner_key": "constructor-shape",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-immutability",
+      "kind": "structural",
+      "owner_key": "constructor-shape",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "wrong-validate-sig",
+      "kind": "structural",
+      "owner_key": "type-method-contract",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "wrong-stringer-sig",
+      "kind": "structural",
+      "owner_key": "type-method-contract",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-struct-validate",
+      "kind": "structural",
+      "owner_key": "constructor-shape",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "wrong-struct-validate-sig",
+      "kind": "structural",
+      "owner_key": "constructor-shape",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "unvalidated-cast",
+      "kind": "protocol",
+      "owner_key": "protocol-cfa",
+      "oracle_strategy": "layered-protocol",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "production-integration",
+        "generated",
+        "metamorphic",
+        "fuzz",
+        "mutation",
+        "determinism"
+      ]
+    },
+    {
+      "category": "unvalidated-cast-inconclusive",
+      "kind": "protocol",
+      "owner_key": "protocol-cfa",
+      "oracle_strategy": "layered-protocol",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "production-integration",
+        "generated",
+        "metamorphic",
+        "fuzz",
+        "mutation",
+        "determinism"
+      ]
+    },
+    {
+      "category": "unused-validate-result",
+      "kind": "structural",
+      "owner_key": "validate-result-usage",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "unused-constructor-error",
+      "kind": "structural",
+      "owner_key": "constructor-error-usage",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-constructor-validate",
+      "kind": "protocol",
+      "owner_key": "constructor-validation",
+      "oracle_strategy": "layered-protocol",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "production-integration",
+        "generated",
+        "metamorphic",
+        "fuzz",
+        "mutation",
+        "determinism"
+      ]
+    },
+    {
+      "category": "missing-constructor-validate-inconclusive",
+      "kind": "protocol",
+      "owner_key": "constructor-validation",
+      "oracle_strategy": "layered-protocol",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "production-integration",
+        "generated",
+        "metamorphic",
+        "fuzz",
+        "mutation",
+        "determinism"
+      ]
+    },
+    {
+      "category": "incomplete-validate-delegation",
+      "kind": "structural",
+      "owner_key": "validate-delegation",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "nonzero-value-field",
+      "kind": "structural",
+      "owner_key": "nonzero-field",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "wrong-func-option-type",
+      "kind": "structural",
+      "owner_key": "constructor-shape",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "enum-cue-missing-go",
+      "kind": "cross-artifact",
+      "owner_key": "enum-cue-sync",
+      "oracle_strategy": "artifact-parity",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "artifact-parity"
+      ]
+    },
+    {
+      "category": "enum-cue-extra-go",
+      "kind": "cross-artifact",
+      "owner_key": "enum-cue-sync",
+      "oracle_strategy": "artifact-parity",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "artifact-parity"
+      ]
+    },
+    {
+      "category": "use-before-validate-same-block",
+      "kind": "protocol",
+      "owner_key": "protocol-cfa",
+      "oracle_strategy": "layered-protocol",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "production-integration",
+        "generated",
+        "metamorphic",
+        "fuzz",
+        "mutation",
+        "determinism"
+      ]
+    },
+    {
+      "category": "use-before-validate-cross-block",
+      "kind": "protocol",
+      "owner_key": "protocol-cfa",
+      "oracle_strategy": "layered-protocol",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "production-integration",
+        "generated",
+        "metamorphic",
+        "fuzz",
+        "mutation",
+        "determinism"
+      ]
+    },
+    {
+      "category": "use-before-validate-inconclusive",
+      "kind": "protocol",
+      "owner_key": "protocol-cfa",
+      "oracle_strategy": "layered-protocol",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "production-integration",
+        "generated",
+        "metamorphic",
+        "fuzz",
+        "mutation",
+        "determinism"
+      ]
+    },
+    {
+      "category": "suggest-validate-all",
+      "kind": "structural",
+      "owner_key": "validate-delegation",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-constructor-error-return",
+      "kind": "structural",
+      "owner_key": "constructor-shape",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "redundant-conversion",
+      "kind": "structural",
+      "owner_key": "redundant-conversion",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-struct-validate-fields",
+      "kind": "structural",
+      "owner_key": "validate-delegation",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "unvalidated-boundary-request",
+      "kind": "protocol",
+      "owner_key": "boundary-request-validation",
+      "oracle_strategy": "layered-protocol",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "production-integration",
+        "generated",
+        "metamorphic",
+        "fuzz",
+        "mutation",
+        "determinism"
+      ]
+    },
+    {
+      "category": "cross-platform-path",
+      "kind": "structural",
+      "owner_key": "cross-platform-path",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "pathmatrix-divergent-pass-relative",
+      "kind": "structural",
+      "owner_key": "pathmatrix-divergence",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "test-home-env-platform",
+      "kind": "structural",
+      "owner_key": "test-home-environment",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "missing-command-waitdelay",
+      "kind": "structural",
+      "owner_key": "windows-pitfalls",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "cue-fed-path-native-clean",
+      "kind": "structural",
+      "owner_key": "windows-pitfalls",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "path-boundary-prefix",
+      "kind": "structural",
+      "owner_key": "windows-pitfalls",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "volume-mount-host-toslash",
+      "kind": "structural",
+      "owner_key": "windows-pitfalls",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "cobra-command-context",
+      "kind": "structural",
+      "owner_key": "windows-pitfalls",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "path-domain-native-filepath",
+      "kind": "structural",
+      "owner_key": "path-domain",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "unknown-directive",
+      "kind": "structural",
+      "owner_key": "directive-validation",
+      "oracle_strategy": "boundary-fixture",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report"
+      ]
+    },
+    {
+      "category": "stale-exception",
+      "kind": "cross-artifact",
+      "owner_key": "exception-governance",
+      "oracle_strategy": "artifact-parity",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "artifact-parity"
+      ]
+    },
+    {
+      "category": "overdue-review",
+      "kind": "cross-artifact",
+      "owner_key": "exception-governance",
+      "oracle_strategy": "artifact-parity",
+      "required_layers": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "artifact-parity"
+      ]
+    }
+  ],
   "rules": [
+    {
+      "category": "primitive",
+      "family": "primitive-detection",
+      "enabled_by_flags": [
+        "check-all"
+      ],
+      "run_controls": [
+        "check-all"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "missing-validate",
+      "family": "type-method-contract",
+      "enabled_by_flags": [
+        "check-validate"
+      ],
+      "run_controls": [
+        "check-validate"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "missing-stringer",
+      "family": "type-method-contract",
+      "enabled_by_flags": [
+        "check-stringer"
+      ],
+      "run_controls": [
+        "check-stringer"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "missing-constructor",
+      "family": "constructor-shape",
+      "enabled_by_flags": [
+        "check-constructors"
+      ],
+      "run_controls": [
+        "check-constructors"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "wrong-constructor-sig",
+      "family": "constructor-shape",
+      "enabled_by_flags": [
+        "check-constructor-sig"
+      ],
+      "run_controls": [
+        "check-constructor-sig"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "missing-func-options",
+      "family": "constructor-shape",
+      "enabled_by_flags": [
+        "check-func-options"
+      ],
+      "run_controls": [
+        "check-func-options"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "missing-immutability",
+      "family": "constructor-shape",
+      "enabled_by_flags": [
+        "check-immutability"
+      ],
+      "run_controls": [
+        "check-immutability"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "wrong-validate-sig",
+      "family": "type-method-contract",
+      "enabled_by_flags": [
+        "check-validate"
+      ],
+      "run_controls": [
+        "check-validate"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "wrong-stringer-sig",
+      "family": "type-method-contract",
+      "enabled_by_flags": [
+        "check-stringer"
+      ],
+      "run_controls": [
+        "check-stringer"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "missing-struct-validate",
+      "family": "constructor-shape",
+      "enabled_by_flags": [
+        "check-struct-validate"
+      ],
+      "run_controls": [
+        "check-struct-validate"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "wrong-struct-validate-sig",
+      "family": "constructor-shape",
+      "enabled_by_flags": [
+        "check-struct-validate"
+      ],
+      "run_controls": [
+        "check-struct-validate"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
     {
       "category": "unvalidated-cast",
       "family": "cfa-cast",
-      "entrypoints": [
-        "inspectUnvalidatedCastsCFA",
-        "inspectClosureCastsCFA"
-      ],
       "enabled_by_flags": [
         "check-cast-validation"
       ],
       "run_controls": [
-        "cfg-alias-mode",
-        "cfg-backend",
-        "cfg-interproc-engine",
-        "cfg-feasibility-engine",
-        "cfg-refinement-mode",
-        "cfg-refinement-max-iterations",
-        "cfg-feasibility-max-queries",
-        "cfg-feasibility-timeout-ms",
-        "cfg-max-depth",
-        "cfg-max-states"
+        "protocol-refinement-max-iterations",
+        "protocol-feasibility-max-queries",
+        "protocol-feasibility-timeout-ms",
+        "cfg-max-states",
+        "cfg-witness-max-steps"
       ],
       "traversal_mode": "cast-path",
       "state_domain": [
@@ -32,22 +798,19 @@
         "unsafe"
       ],
       "refinement_statuses": [
-        "unsafe"
+        "violation"
       ],
       "required_meta_on_refinement": [
         "cfg_feasibility_engine",
         "cfg_feasibility_result",
-        "cfg_refinement_status",
         "cfg_refinement_iterations",
+        "cfg_refinement_ssa_subjects",
+        "cfg_refinement_status",
         "cfg_refinement_trigger",
         "cfg_refinement_witness_hash"
       ],
       "baseline_policy": "suppressible",
-      "interproc_engine_modes": [
-        "legacy",
-        "ifds",
-        "compare"
-      ],
+      "interproc_engine": "canonical-ifds",
       "fact_families": [
         "cast-needs-validate"
       ],
@@ -59,24 +822,13 @@
     {
       "category": "unvalidated-cast-inconclusive",
       "family": "cfa-cast",
-      "entrypoints": [
-        "inspectUnvalidatedCastsCFA",
-        "inspectClosureCastsCFA"
-      ],
       "enabled_by_flags": [
         "check-cast-validation"
       ],
       "run_controls": [
-        "cfg-alias-mode",
-        "cfg-backend",
-        "cfg-inconclusive-policy",
-        "cfg-interproc-engine",
-        "cfg-feasibility-engine",
-        "cfg-refinement-mode",
-        "cfg-refinement-max-iterations",
-        "cfg-feasibility-max-queries",
-        "cfg-feasibility-timeout-ms",
-        "cfg-max-depth",
+        "protocol-refinement-max-iterations",
+        "protocol-feasibility-max-queries",
+        "protocol-feasibility-timeout-ms",
         "cfg-max-states",
         "cfg-witness-max-steps"
       ],
@@ -90,39 +842,38 @@
       ],
       "inconclusive_reasons": [
         "state-budget",
-        "depth-budget",
+        "timeout",
         "recursion-cycle",
-        "unresolved-target"
+        "unresolved-target",
+        "feasibility-unknown",
+        "missing-ssa",
+        "unsupported-instruction",
+        "concurrent-mutation",
+        "escaped-heap-mutation",
+        "reflection",
+        "unsafe"
       ],
       "required_meta_on_inconclusive": [
-        "cfg_backend",
         "cfg_budget_states",
-        "cfg_budget_depth",
         "cfg_inconclusive_reason",
-        "cfg_inconclusive_policy",
-        "cfg_witness_kind",
+        "cfg_outcome_status",
         "cfg_witness_blocks",
-        "witness_cfg_path",
-        "witness_cfg_steps"
+        "cfg_witness_kind"
       ],
       "refinement_statuses": [
-        "inconclusive-refined",
-        "inconclusive-unrefined"
+        "inconclusive"
       ],
       "required_meta_on_refinement": [
         "cfg_feasibility_engine",
         "cfg_feasibility_result",
-        "cfg_refinement_status",
         "cfg_refinement_iterations",
+        "cfg_refinement_ssa_subjects",
+        "cfg_refinement_status",
         "cfg_refinement_trigger",
         "cfg_refinement_witness_hash"
       ],
-      "baseline_policy": "suppressible",
-      "interproc_engine_modes": [
-        "legacy",
-        "ifds",
-        "compare"
-      ],
+      "baseline_policy": "always-visible",
+      "interproc_engine": "canonical-ifds",
       "fact_families": [
         "cast-needs-validate"
       ],
@@ -132,26 +883,255 @@
       ]
     },
     {
+      "category": "unused-validate-result",
+      "family": "validate-result-usage",
+      "enabled_by_flags": [
+        "check-validate-usage"
+      ],
+      "run_controls": [
+        "check-validate-usage"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "unused-constructor-error",
+      "family": "constructor-error-usage",
+      "enabled_by_flags": [
+        "check-constructor-error-usage"
+      ],
+      "run_controls": [
+        "check-constructor-error-usage"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "missing-constructor-validate",
+      "family": "cfa-constructor-validates",
+      "enabled_by_flags": [
+        "check-constructor-validates"
+      ],
+      "run_controls": [
+        "protocol-refinement-max-iterations",
+        "protocol-feasibility-max-queries",
+        "protocol-feasibility-timeout-ms",
+        "cfg-max-states",
+        "cfg-witness-max-steps"
+      ],
+      "traversal_mode": "constructor-return-path",
+      "state_domain": [
+        "returns-validatable",
+        "validated-before-return"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "refinement_statuses": [
+        "violation"
+      ],
+      "required_meta_on_refinement": [
+        "cfg_feasibility_engine",
+        "cfg_feasibility_result",
+        "cfg_refinement_iterations",
+        "cfg_refinement_ssa_subjects",
+        "cfg_refinement_status",
+        "cfg_refinement_trigger",
+        "cfg_refinement_witness_hash"
+      ],
+      "baseline_policy": "suppressible",
+      "interproc_engine": "canonical-ifds",
+      "fact_families": [
+        "ctor-return-needs-validate"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated"
+      ]
+    },
+    {
+      "category": "missing-constructor-validate-inconclusive",
+      "family": "cfa-constructor-validates",
+      "enabled_by_flags": [
+        "check-constructor-validates"
+      ],
+      "run_controls": [
+        "protocol-refinement-max-iterations",
+        "protocol-feasibility-max-queries",
+        "protocol-feasibility-timeout-ms",
+        "cfg-max-states",
+        "cfg-witness-max-steps"
+      ],
+      "traversal_mode": "constructor-return-path",
+      "state_domain": [
+        "returns-validatable",
+        "validated-before-return"
+      ],
+      "outcome_domain": [
+        "inconclusive"
+      ],
+      "inconclusive_reasons": [
+        "state-budget",
+        "timeout",
+        "recursion-cycle",
+        "unresolved-target",
+        "feasibility-unknown",
+        "missing-ssa",
+        "unsupported-instruction",
+        "concurrent-mutation",
+        "escaped-heap-mutation",
+        "reflection",
+        "unsafe"
+      ],
+      "required_meta_on_inconclusive": [
+        "cfg_budget_states",
+        "cfg_inconclusive_reason",
+        "cfg_outcome_status",
+        "cfg_witness_blocks",
+        "cfg_witness_kind"
+      ],
+      "refinement_statuses": [
+        "inconclusive"
+      ],
+      "required_meta_on_refinement": [
+        "cfg_feasibility_engine",
+        "cfg_feasibility_result",
+        "cfg_refinement_iterations",
+        "cfg_refinement_ssa_subjects",
+        "cfg_refinement_status",
+        "cfg_refinement_trigger",
+        "cfg_refinement_witness_hash"
+      ],
+      "baseline_policy": "always-visible",
+      "interproc_engine": "canonical-ifds",
+      "fact_families": [
+        "ctor-return-needs-validate"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated"
+      ]
+    },
+    {
+      "category": "incomplete-validate-delegation",
+      "family": "validate-delegation",
+      "enabled_by_flags": [
+        "check-validate-delegation"
+      ],
+      "run_controls": [
+        "check-validate-delegation"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "nonzero-value-field",
+      "family": "nonzero-field",
+      "enabled_by_flags": [
+        "check-nonzero"
+      ],
+      "run_controls": [
+        "check-nonzero"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "wrong-func-option-type",
+      "family": "constructor-shape",
+      "enabled_by_flags": [
+        "check-func-options"
+      ],
+      "run_controls": [
+        "check-func-options"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "enum-cue-missing-go",
+      "family": "enum-cue-sync",
+      "enabled_by_flags": [
+        "check-enum-sync"
+      ],
+      "run_controls": [
+        "check-enum-sync"
+      ],
+      "traversal_mode": "artifact-parity",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "enum-cue-extra-go",
+      "family": "enum-cue-sync",
+      "enabled_by_flags": [
+        "check-enum-sync"
+      ],
+      "run_controls": [
+        "check-enum-sync"
+      ],
+      "traversal_mode": "artifact-parity",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
       "category": "use-before-validate-same-block",
       "family": "cfa-ubv",
-      "entrypoints": [
-        "inspectUseBeforeValidateCFA"
-      ],
       "enabled_by_flags": [
         "check-use-before-validate"
       ],
       "run_controls": [
-        "cfg-alias-mode",
-        "cfg-backend",
-        "cfg-interproc-engine",
-        "cfg-feasibility-engine",
-        "cfg-refinement-mode",
-        "cfg-refinement-max-iterations",
-        "cfg-feasibility-max-queries",
-        "cfg-feasibility-timeout-ms",
-        "cfg-max-depth",
-        "cfg-max-states",
-        "ubv-mode"
+        "protocol-refinement-max-iterations",
+        "protocol-feasibility-max-queries",
+        "protocol-feasibility-timeout-ms",
+        "cfg-max-states"
       ],
       "traversal_mode": "ubv-same-block",
       "state_domain": [
@@ -163,22 +1143,19 @@
         "unsafe"
       ],
       "refinement_statuses": [
-        "unsafe"
+        "violation"
       ],
       "required_meta_on_refinement": [
         "cfg_feasibility_engine",
         "cfg_feasibility_result",
-        "cfg_refinement_status",
         "cfg_refinement_iterations",
+        "cfg_refinement_ssa_subjects",
+        "cfg_refinement_status",
         "cfg_refinement_trigger",
         "cfg_refinement_witness_hash"
       ],
       "baseline_policy": "suppressible",
-      "interproc_engine_modes": [
-        "legacy",
-        "ifds",
-        "compare"
-      ],
+      "interproc_engine": "canonical-ifds",
       "fact_families": [
         "ubv-needs-validate-before-use"
       ],
@@ -192,24 +1169,14 @@
     {
       "category": "use-before-validate-cross-block",
       "family": "cfa-ubv",
-      "entrypoints": [
-        "inspectUseBeforeValidateCFA"
-      ],
       "enabled_by_flags": [
         "check-use-before-validate"
       ],
       "run_controls": [
-        "cfg-alias-mode",
-        "cfg-backend",
-        "cfg-interproc-engine",
-        "cfg-feasibility-engine",
-        "cfg-refinement-mode",
-        "cfg-refinement-max-iterations",
-        "cfg-feasibility-max-queries",
-        "cfg-feasibility-timeout-ms",
-        "cfg-max-depth",
-        "cfg-max-states",
-        "ubv-mode"
+        "protocol-refinement-max-iterations",
+        "protocol-feasibility-max-queries",
+        "protocol-feasibility-timeout-ms",
+        "cfg-max-states"
       ],
       "traversal_mode": "ubv-cross-block",
       "state_domain": [
@@ -221,22 +1188,19 @@
         "unsafe"
       ],
       "refinement_statuses": [
-        "unsafe"
+        "violation"
       ],
       "required_meta_on_refinement": [
         "cfg_feasibility_engine",
         "cfg_feasibility_result",
-        "cfg_refinement_status",
         "cfg_refinement_iterations",
+        "cfg_refinement_ssa_subjects",
+        "cfg_refinement_status",
         "cfg_refinement_trigger",
         "cfg_refinement_witness_hash"
       ],
       "baseline_policy": "suppressible",
-      "interproc_engine_modes": [
-        "legacy",
-        "ifds",
-        "compare"
-      ],
+      "interproc_engine": "canonical-ifds",
       "fact_families": [
         "ubv-needs-validate-before-use"
       ],
@@ -250,26 +1214,15 @@
     {
       "category": "use-before-validate-inconclusive",
       "family": "cfa-ubv",
-      "entrypoints": [
-        "inspectUseBeforeValidateCFA"
-      ],
       "enabled_by_flags": [
         "check-use-before-validate"
       ],
       "run_controls": [
-        "cfg-alias-mode",
-        "cfg-backend",
-        "cfg-inconclusive-policy",
-        "cfg-interproc-engine",
-        "cfg-feasibility-engine",
-        "cfg-refinement-mode",
-        "cfg-refinement-max-iterations",
-        "cfg-feasibility-max-queries",
-        "cfg-feasibility-timeout-ms",
-        "cfg-max-depth",
+        "protocol-refinement-max-iterations",
+        "protocol-feasibility-max-queries",
+        "protocol-feasibility-timeout-ms",
         "cfg-max-states",
-        "cfg-witness-max-steps",
-        "ubv-mode"
+        "cfg-witness-max-steps"
       ],
       "traversal_mode": "ubv-cross-block",
       "state_domain": [
@@ -282,39 +1235,38 @@
       ],
       "inconclusive_reasons": [
         "state-budget",
-        "depth-budget",
+        "timeout",
         "recursion-cycle",
-        "unresolved-target"
+        "unresolved-target",
+        "feasibility-unknown",
+        "missing-ssa",
+        "unsupported-instruction",
+        "concurrent-mutation",
+        "escaped-heap-mutation",
+        "reflection",
+        "unsafe"
       ],
       "required_meta_on_inconclusive": [
-        "cfg_backend",
         "cfg_budget_states",
-        "cfg_budget_depth",
         "cfg_inconclusive_reason",
-        "cfg_inconclusive_policy",
-        "cfg_witness_kind",
+        "cfg_outcome_status",
         "cfg_witness_blocks",
-        "witness_cfg_path",
-        "witness_cfg_steps"
+        "cfg_witness_kind"
       ],
       "refinement_statuses": [
-        "inconclusive-refined",
-        "inconclusive-unrefined"
+        "inconclusive"
       ],
       "required_meta_on_refinement": [
         "cfg_feasibility_engine",
         "cfg_feasibility_result",
-        "cfg_refinement_status",
         "cfg_refinement_iterations",
+        "cfg_refinement_ssa_subjects",
+        "cfg_refinement_status",
         "cfg_refinement_trigger",
         "cfg_refinement_witness_hash"
       ],
-      "baseline_policy": "suppressible",
-      "interproc_engine_modes": [
-        "legacy",
-        "ifds",
-        "compare"
-      ],
+      "baseline_policy": "always-visible",
+      "interproc_engine": "canonical-ifds",
       "fact_families": [
         "ubv-needs-validate-before-use"
       ],
@@ -326,133 +1278,541 @@
       ]
     },
     {
-      "category": "missing-constructor-validate",
-      "family": "cfa-constructor-validates",
-      "entrypoints": [
-        "inspectConstructorValidateCalls"
-      ],
+      "category": "suggest-validate-all",
+      "family": "validate-delegation",
       "enabled_by_flags": [
-        "check-constructor-validates"
+        "suggest-validate-all"
       ],
       "run_controls": [
-        "cfg-backend",
-        "cfg-interproc-engine",
-        "cfg-feasibility-engine",
-        "cfg-refinement-mode",
-        "cfg-refinement-max-iterations",
-        "cfg-feasibility-max-queries",
-        "cfg-feasibility-timeout-ms",
-        "cfg-max-depth",
-        "cfg-max-states"
+        "suggest-validate-all"
       ],
-      "traversal_mode": "constructor-return-path",
+      "traversal_mode": "boundary-fixture",
       "state_domain": [
-        "returns-validatable",
-        "validated-before-return"
+        "applicable",
+        "not-applicable"
       ],
       "outcome_domain": [
         "unsafe"
       ],
-      "refinement_statuses": [
-        "unsafe"
-      ],
-      "required_meta_on_refinement": [
-        "cfg_feasibility_engine",
-        "cfg_feasibility_result",
-        "cfg_refinement_status",
-        "cfg_refinement_iterations",
-        "cfg_refinement_trigger",
-        "cfg_refinement_witness_hash"
-      ],
-      "baseline_policy": "suppressible",
-      "interproc_engine_modes": [
-        "legacy",
-        "ifds",
-        "compare"
-      ],
-      "fact_families": [
-        "ctor-return-needs-validate"
-      ],
-      "edge_function_tags": [
-        "identity",
-        "needs-to-validated"
-      ]
+      "baseline_policy": "suppressible"
     },
     {
-      "category": "missing-constructor-validate-inconclusive",
-      "family": "cfa-constructor-validates",
-      "entrypoints": [
-        "inspectConstructorValidateCalls"
-      ],
+      "category": "missing-constructor-error-return",
+      "family": "constructor-shape",
       "enabled_by_flags": [
-        "check-constructor-validates"
+        "check-constructor-return-error"
       ],
       "run_controls": [
-        "cfg-backend",
-        "cfg-inconclusive-policy",
-        "cfg-interproc-engine",
-        "cfg-feasibility-engine",
-        "cfg-refinement-mode",
-        "cfg-refinement-max-iterations",
-        "cfg-feasibility-max-queries",
-        "cfg-feasibility-timeout-ms",
-        "cfg-max-depth",
+        "check-constructor-return-error"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "redundant-conversion",
+      "family": "redundant-conversion",
+      "enabled_by_flags": [
+        "check-redundant-conversion"
+      ],
+      "run_controls": [
+        "check-redundant-conversion"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "missing-struct-validate-fields",
+      "family": "validate-delegation",
+      "enabled_by_flags": [
+        "check-validate-delegation"
+      ],
+      "run_controls": [
+        "check-validate-delegation"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "unvalidated-boundary-request",
+      "family": "cfa-boundary-request",
+      "enabled_by_flags": [
+        "check-boundary-request-validation"
+      ],
+      "run_controls": [
+        "protocol-refinement-max-iterations",
+        "protocol-feasibility-max-queries",
+        "protocol-feasibility-timeout-ms",
         "cfg-max-states",
         "cfg-witness-max-steps"
       ],
-      "traversal_mode": "constructor-return-path",
+      "traversal_mode": "boundary-parameter-path",
       "state_domain": [
-        "returns-validatable",
-        "validated-before-return"
+        "needs-validate",
+        "validated",
+        "consumed-before-validate"
       ],
       "outcome_domain": [
+        "unsafe",
         "inconclusive"
+      ],
+      "interproc_engine": "canonical-ifds",
+      "fact_families": [
+        "ubv-needs-validate-before-use"
+      ],
+      "edge_function_tags": [
+        "identity",
+        "needs-to-validated",
+        "needs-to-escaped-before-validate",
+        "needs-to-consumed-before-validate"
       ],
       "inconclusive_reasons": [
         "state-budget",
-        "depth-budget",
+        "timeout",
         "recursion-cycle",
-        "unresolved-target"
+        "unresolved-target",
+        "feasibility-unknown",
+        "missing-ssa",
+        "unsupported-instruction",
+        "concurrent-mutation",
+        "escaped-heap-mutation",
+        "reflection",
+        "unsafe"
       ],
       "required_meta_on_inconclusive": [
-        "cfg_backend",
-        "cfg_budget_states",
-        "cfg_budget_depth",
         "cfg_inconclusive_reason",
-        "cfg_inconclusive_policy",
-        "cfg_witness_kind",
-        "cfg_witness_blocks",
-        "witness_cfg_path",
-        "witness_cfg_steps"
+        "cfg_outcome_status"
       ],
       "refinement_statuses": [
-        "inconclusive-refined",
-        "inconclusive-unrefined"
+        "violation",
+        "inconclusive",
+        "discharged-infeasible"
       ],
       "required_meta_on_refinement": [
         "cfg_feasibility_engine",
         "cfg_feasibility_result",
-        "cfg_refinement_status",
         "cfg_refinement_iterations",
+        "cfg_refinement_status",
         "cfg_refinement_trigger",
         "cfg_refinement_witness_hash"
       ],
-      "baseline_policy": "suppressible",
-      "interproc_engine_modes": [
-        "legacy",
-        "ifds",
-        "compare"
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "cross-platform-path",
+      "family": "cross-platform-path",
+      "enabled_by_flags": [
+        "check-cross-platform-paths"
       ],
-      "fact_families": [
-        "ctor-return-needs-validate"
+      "run_controls": [
+        "check-cross-platform-paths"
       ],
-      "edge_function_tags": [
-        "identity",
-        "needs-to-validated"
-      ]
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "pathmatrix-divergent-pass-relative",
+      "family": "pathmatrix-divergence",
+      "enabled_by_flags": [
+        "check-pathmatrix-divergent"
+      ],
+      "run_controls": [
+        "check-pathmatrix-divergent"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "test-home-env-platform",
+      "family": "test-home-environment",
+      "enabled_by_flags": [
+        "check-test-home-env"
+      ],
+      "run_controls": [
+        "check-test-home-env"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "missing-command-waitdelay",
+      "family": "windows-pitfalls",
+      "enabled_by_flags": [
+        "check-command-waitdelay"
+      ],
+      "run_controls": [
+        "check-command-waitdelay"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "cue-fed-path-native-clean",
+      "family": "windows-pitfalls",
+      "enabled_by_flags": [
+        "check-cue-fed-path-native-clean"
+      ],
+      "run_controls": [
+        "check-cue-fed-path-native-clean"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "path-boundary-prefix",
+      "family": "windows-pitfalls",
+      "enabled_by_flags": [
+        "check-path-boundary-prefix"
+      ],
+      "run_controls": [
+        "check-path-boundary-prefix"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "volume-mount-host-toslash",
+      "family": "windows-pitfalls",
+      "enabled_by_flags": [
+        "check-volume-mount-host-toslash"
+      ],
+      "run_controls": [
+        "check-volume-mount-host-toslash"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "cobra-command-context",
+      "family": "windows-pitfalls",
+      "enabled_by_flags": [
+        "check-cobra-command-context"
+      ],
+      "run_controls": [
+        "check-cobra-command-context"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "path-domain-native-filepath",
+      "family": "path-domain",
+      "enabled_by_flags": [
+        "check-path-domain-native-filepath"
+      ],
+      "run_controls": [
+        "check-path-domain-native-filepath"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "suppressible"
+    },
+    {
+      "category": "unknown-directive",
+      "family": "directive-validation",
+      "enabled_by_flags": [
+        "check-all"
+      ],
+      "run_controls": [
+        "check-all"
+      ],
+      "traversal_mode": "boundary-fixture",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "always-visible"
+    },
+    {
+      "category": "stale-exception",
+      "family": "exception-governance",
+      "enabled_by_flags": [
+        "audit-exceptions"
+      ],
+      "run_controls": [
+        "audit-exceptions"
+      ],
+      "traversal_mode": "artifact-parity",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "audit-only"
+    },
+    {
+      "category": "overdue-review",
+      "family": "exception-governance",
+      "enabled_by_flags": [
+        "audit-review-dates"
+      ],
+      "run_controls": [
+        "audit-review-dates"
+      ],
+      "traversal_mode": "artifact-parity",
+      "state_domain": [
+        "applicable",
+        "not-applicable"
+      ],
+      "outcome_domain": [
+        "unsafe"
+      ],
+      "baseline_policy": "audit-only"
     }
   ],
   "oracle_matrix": [
+    {
+      "category": "primitive",
+      "must_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Server"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Mode"
+        }
+      ]
+    },
+    {
+      "category": "missing-validate",
+      "must_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "MissingAll"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Mode"
+        }
+      ]
+    },
+    {
+      "category": "missing-stringer",
+      "must_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "MissingAll"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Mode"
+        }
+      ]
+    },
+    {
+      "category": "missing-constructor",
+      "must_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Server"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Client"
+        }
+      ]
+    },
+    {
+      "category": "wrong-constructor-sig",
+      "must_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "NewWrongSig"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "NewClient"
+        }
+      ]
+    },
+    {
+      "category": "missing-func-options",
+      "must_report": [
+        {
+          "fixture": "funcoptions",
+          "symbol": "NewTooManyParams"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "funcoptions",
+          "symbol": "NewHasOptions"
+        }
+      ]
+    },
+    {
+      "category": "missing-immutability",
+      "must_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Mutable"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Client"
+        }
+      ]
+    },
+    {
+      "category": "wrong-validate-sig",
+      "must_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "WrongSigType"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Mode"
+        }
+      ]
+    },
+    {
+      "category": "wrong-stringer-sig",
+      "must_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "WrongSigType"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "checkall",
+          "symbol": "Mode"
+        }
+      ]
+    },
+    {
+      "category": "missing-struct-validate",
+      "must_report": [
+        {
+          "fixture": "structvalidate",
+          "symbol": "MissingValidate"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "structvalidate",
+          "symbol": "GoodStruct"
+        }
+      ]
+    },
+    {
+      "category": "wrong-struct-validate-sig",
+      "must_report": [
+        {
+          "fixture": "structvalidate",
+          "symbol": "WrongSigStruct"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "structvalidate",
+          "symbol": "GoodStruct"
+        }
+      ]
+    },
     {
       "category": "unvalidated-cast",
       "must_report": [
@@ -463,6 +1823,18 @@
         {
           "fixture": "cfa_castvalidation",
           "symbol": "ValidateOnOneBranch"
+        },
+        {
+          "fixture": "cfa_castvalidation",
+          "symbol": "AliasReboundBeforeValidation"
+        },
+        {
+          "fixture": "protocol_validation_counterexamples",
+          "symbol": "SuccessBranchTerminates"
+        },
+        {
+          "fixture": "protocol_validation_counterexamples",
+          "symbol": "DiscardedHelperResult"
         }
       ],
       "must_not_report": [
@@ -473,6 +1845,20 @@
         {
           "fixture": "cfa_castvalidation",
           "symbol": "ValidateBeforeUse"
+        },
+        {
+          "fixture": "cfa_castvalidation",
+          "symbol": "AliasReboundAfterValidation"
+        },
+        {
+          "fixture": "protocol_validation_counterexamples",
+          "symbol": "CheckedHelperResult"
+        }
+      ],
+      "must_be_inconclusive": [
+        {
+          "fixture": "cfa_cast_inconclusive",
+          "symbol": "Inconclusive"
         }
       ]
     },
@@ -489,6 +1875,179 @@
           "fixture": "cfa_castvalidation",
           "symbol": "ValidateBeforeUse"
         }
+      ],
+      "must_be_inconclusive": [
+        {
+          "fixture": "cfa_cast_inconclusive",
+          "symbol": "Inconclusive"
+        }
+      ]
+    },
+    {
+      "category": "unused-validate-result",
+      "must_report": [
+        {
+          "fixture": "validateusage",
+          "symbol": "discardedResult"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "validateusage",
+          "symbol": "correctUsageCheckErr"
+        }
+      ]
+    },
+    {
+      "category": "unused-constructor-error",
+      "must_report": [
+        {
+          "fixture": "constructorusage",
+          "symbol": "errorBlankedShortDecl"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "constructorusage",
+          "symbol": "errorCaptured"
+        }
+      ]
+    },
+    {
+      "category": "missing-constructor-validate",
+      "must_report": [
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewServer"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewWidget"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewDiscardedHelperResult"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewConfig"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewSession"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewCheckedHelperResult"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewInverseValidationGuard"
+        }
+      ],
+      "must_be_inconclusive": [
+        {
+          "fixture": "constructorvalidates_inconclusive",
+          "symbol": "NewServer"
+        }
+      ]
+    },
+    {
+      "category": "missing-constructor-validate-inconclusive",
+      "must_report": [
+        {
+          "fixture": "constructorvalidates_inconclusive",
+          "symbol": "NewServer"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewConfig"
+        }
+      ],
+      "must_be_inconclusive": [
+        {
+          "fixture": "constructorvalidates_inconclusive",
+          "symbol": "NewServer"
+        }
+      ]
+    },
+    {
+      "category": "incomplete-validate-delegation",
+      "must_report": [
+        {
+          "fixture": "validatedelegation",
+          "symbol": "IncompleteConfig"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "validatedelegation",
+          "symbol": "CompleteConfig"
+        }
+      ]
+    },
+    {
+      "category": "nonzero-value-field",
+      "must_report": [
+        {
+          "fixture": "nonzero",
+          "symbol": "ConfigWithNonZero"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "nonzero",
+          "symbol": "ConfigWithPointers"
+        }
+      ]
+    },
+    {
+      "category": "wrong-func-option-type",
+      "must_report": [
+        {
+          "fixture": "funcoptions",
+          "symbol": "TypeMismatch"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "funcoptions",
+          "symbol": "TypeMatch"
+        }
+      ]
+    },
+    {
+      "category": "enum-cue-missing-go",
+      "must_report": [
+        {
+          "fixture": "enumsync",
+          "symbol": "ColorScheme"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "enumsync",
+          "symbol": "RuntimeMode"
+        }
+      ]
+    },
+    {
+      "category": "enum-cue-extra-go",
+      "must_report": [
+        {
+          "fixture": "enumsync",
+          "symbol": "RuntimeModeExtra"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "enumsync",
+          "symbol": "RuntimeMode"
+        }
       ]
     },
     {
@@ -501,6 +2060,10 @@
         {
           "fixture": "use_before_validate",
           "symbol": "UseInFuncArgBeforeValidate"
+        },
+        {
+          "fixture": "use_before_validate_escape",
+          "symbol": "RecursiveCycleConservative"
         }
       ],
       "must_not_report": [
@@ -511,6 +2074,12 @@
         {
           "fixture": "use_before_validate",
           "symbol": "NoUseAtAll"
+        }
+      ],
+      "must_be_inconclusive": [
+        {
+          "fixture": "use_before_validate_escape",
+          "symbol": "UnresolvedRelevantCall"
         }
       ]
     },
@@ -535,6 +2104,12 @@
           "fixture": "use_before_validate_cross",
           "symbol": "CrossBlockNoUse"
         }
+      ],
+      "must_be_inconclusive": [
+        {
+          "fixture": "use_before_validate_escape",
+          "symbol": "UnresolvedRelevantCall"
+        }
       ]
     },
     {
@@ -542,7 +2117,7 @@
       "must_report": [
         {
           "fixture": "use_before_validate_escape",
-          "symbol": "RecursiveCycleConservative"
+          "symbol": "UnresolvedRelevantCall"
         }
       ],
       "must_not_report": [
@@ -550,140 +2125,369 @@
           "fixture": "use_before_validate_escape",
           "symbol": "DelegatedValidationCoversPath"
         }
+      ],
+      "must_be_inconclusive": [
+        {
+          "fixture": "use_before_validate_escape",
+          "symbol": "UnresolvedRelevantCall"
+        }
       ]
     },
     {
-      "category": "missing-constructor-validate",
+      "category": "suggest-validate-all",
       "must_report": [
         {
-          "fixture": "constructorvalidates",
-          "symbol": "NewServer"
-        },
+          "fixture": "suggestvalidateall",
+          "symbol": "Config"
+        }
+      ],
+      "must_not_report": [
         {
-          "fixture": "constructorvalidates",
+          "fixture": "suggestvalidateall",
+          "symbol": "Simple"
+        }
+      ]
+    },
+    {
+      "category": "missing-constructor-error-return",
+      "must_report": [
+        {
+          "fixture": "constructorreturn",
           "symbol": "NewWidget"
         }
       ],
       "must_not_report": [
         {
-          "fixture": "constructorvalidates",
-          "symbol": "NewConfig"
-        },
-        {
-          "fixture": "constructorvalidates",
-          "symbol": "NewSession"
+          "fixture": "constructorreturn",
+          "symbol": "NewServer"
         }
       ]
     },
     {
-      "category": "missing-constructor-validate-inconclusive",
+      "category": "redundant-conversion",
       "must_report": [
         {
-          "fixture": "constructorvalidates_inconclusive",
-          "symbol": "NewServer"
+          "fixture": "redundantconversion",
+          "symbol": "stringHop"
         }
       ],
       "must_not_report": [
         {
-          "fixture": "constructorvalidates",
-          "symbol": "NewConfig"
+          "fixture": "redundantconversion",
+          "symbol": "directConversion"
+        }
+      ]
+    },
+    {
+      "category": "missing-struct-validate-fields",
+      "must_report": [
+        {
+          "fixture": "validatedelegationall",
+          "symbol": "MissingValidateStruct"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "validatedelegationall",
+          "symbol": "NoValidatableFields"
+        }
+      ]
+    },
+    {
+      "category": "unvalidated-boundary-request",
+      "must_report": [
+        {
+          "fixture": "boundaryrequest",
+          "symbol": "Unsafe"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "boundaryrequest",
+          "symbol": "Safe"
+        }
+      ],
+      "must_be_inconclusive": [
+        {
+          "fixture": "boundaryrequest",
+          "symbol": "UnknownEffect"
+        }
+      ]
+    },
+    {
+      "category": "cross-platform-path",
+      "must_report": [
+        {
+          "fixture": "crossplatformpath",
+          "symbol": "multiLineBug"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "crossplatformpath",
+          "symbol": "properGuard"
+        }
+      ]
+    },
+    {
+      "category": "pathmatrix-divergent-pass-relative",
+      "must_report": [
+        {
+          "fixture": "pathmatrixdivergent",
+          "symbol": "divergentUNCMissingOverride"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "pathmatrixdivergent",
+          "symbol": "divergentUNCWithOverride"
+        }
+      ]
+    },
+    {
+      "category": "test-home-env-platform",
+      "must_report": [
+        {
+          "fixture": "testhomeenv",
+          "symbol": "TestDirectTestingHome"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "testhomeenv",
+          "symbol": "TestOtherEnv"
+        }
+      ]
+    },
+    {
+      "category": "missing-command-waitdelay",
+      "must_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "missingWaitDelay"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "waitDelaySet"
+        }
+      ]
+    },
+    {
+      "category": "cue-fed-path-native-clean",
+      "must_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "ValidateWorkDirPath"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "ValidateWorkDirPathSlashClean"
+        }
+      ]
+    },
+    {
+      "category": "path-boundary-prefix",
+      "must_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "badRelBoundary"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "goodRelBoundary"
+        }
+      ]
+    },
+    {
+      "category": "volume-mount-host-toslash",
+      "must_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "badVolumeMount"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "goodVolumeMount"
+        }
+      ]
+    },
+    {
+      "category": "cobra-command-context",
+      "must_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "cobraBackground"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "cobraCommandContext"
+        }
+      ]
+    },
+    {
+      "category": "path-domain-native-filepath",
+      "must_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "badContainerJoin"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "windowspitfalls",
+          "symbol": "goodContainerJoin"
+        }
+      ]
+    },
+    {
+      "category": "unknown-directive",
+      "must_report": [
+        {
+          "fixture": "exceptions",
+          "symbol": "UnknownDirectiveStruct"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "exceptions",
+          "symbol": "CombinedDirectiveStruct"
+        }
+      ]
+    },
+    {
+      "category": "stale-exception",
+      "must_report": [
+        {
+          "fixture": "auditexceptions",
+          "symbol": "package"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "auditexceptions",
+          "symbol": "Server"
+        }
+      ]
+    },
+    {
+      "category": "overdue-review",
+      "must_report": [
+        {
+          "fixture": "auditreviewdates",
+          "symbol": "package"
+        }
+      ],
+      "must_not_report": [
+        {
+          "fixture": "auditreviewdates",
+          "symbol": "Example"
         }
       ]
     }
   ],
   "historical_miss_fixtures": [
-    "castvalidation_nocfa_dead_branch",
-    "castvalidation_nocfa_dotimport_compare",
-    "castvalidation_nocfa_errors_noncomparison",
-    "castvalidation_nocfa_suppression",
-    "castvalidation_nocfa_validate_before_cast",
-    "constructorvalidates_nocfa_ast"
+    "castvalidation_dead_branch",
+    "castvalidation_dotimport_compare",
+    "castvalidation_errors_noncomparison",
+    "castvalidation_suppression",
+    "castvalidation_validate_before_cast",
+    "constructorvalidates_historical"
   ],
   "historical_miss_oracles": [
     {
-      "fixture": "castvalidation_nocfa_dead_branch",
+      "fixture": "castvalidation_dead_branch",
       "category": "unvalidated-cast",
       "must_report": [
         {
-          "fixture": "castvalidation_nocfa_dead_branch",
+          "fixture": "castvalidation_dead_branch",
           "symbol": "DeadBranchValidate"
         }
       ]
     },
     {
-      "fixture": "castvalidation_nocfa_dotimport_compare",
+      "fixture": "castvalidation_dotimport_compare",
       "category": "unvalidated-cast",
       "must_report": [
         {
-          "fixture": "castvalidation_nocfa_dotimport_compare",
+          "fixture": "castvalidation_dotimport_compare",
           "symbol": "DotImportNonComparatorFinding"
         }
       ],
       "must_not_report": [
         {
-          "fixture": "castvalidation_nocfa_dotimport_compare",
+          "fixture": "castvalidation_dotimport_compare",
           "symbol": "DotImportComparatorNoFinding"
         }
       ]
     },
     {
-      "fixture": "castvalidation_nocfa_errors_noncomparison",
+      "fixture": "castvalidation_errors_noncomparison",
       "category": "unvalidated-cast",
       "must_report": [
         {
-          "fixture": "castvalidation_nocfa_errors_noncomparison",
+          "fixture": "castvalidation_errors_noncomparison",
           "symbol": "ErrorsJoinReports"
         }
       ],
       "must_not_report": [
         {
-          "fixture": "castvalidation_nocfa_errors_noncomparison",
+          "fixture": "castvalidation_errors_noncomparison",
           "symbol": "ErrorsComparisonNoFinding"
         }
       ]
     },
     {
-      "fixture": "castvalidation_nocfa_suppression",
+      "fixture": "castvalidation_suppression",
       "category": "unvalidated-cast",
       "must_report": [
         {
-          "fixture": "castvalidation_nocfa_suppression",
+          "fixture": "castvalidation_suppression",
           "symbol": "Reported"
         }
       ],
       "must_not_report": [
         {
-          "fixture": "castvalidation_nocfa_suppression",
+          "fixture": "castvalidation_suppression",
           "symbol": "ConfigSuppressed"
         }
       ]
     },
     {
-      "fixture": "castvalidation_nocfa_validate_before_cast",
+      "fixture": "castvalidation_validate_before_cast",
       "category": "unvalidated-cast",
       "must_report": [
         {
-          "fixture": "castvalidation_nocfa_validate_before_cast",
+          "fixture": "castvalidation_validate_before_cast",
           "symbol": "ValidateBeforeCast"
         }
       ]
     },
     {
-      "fixture": "constructorvalidates_nocfa_ast",
+      "fixture": "constructorvalidates_historical",
       "category": "missing-constructor-validate",
       "must_report": [
         {
-          "fixture": "constructorvalidates_nocfa_ast",
+          "fixture": "constructorvalidates_historical",
           "symbol": "NewMissing"
         }
       ],
       "must_not_report": [
         {
-          "fixture": "constructorvalidates_nocfa_ast",
+          "fixture": "constructorvalidates_historical",
           "symbol": "NewDirect"
         },
         {
-          "fixture": "constructorvalidates_nocfa_ast",
+          "fixture": "constructorvalidates_historical",
           "symbol": "NewTransitive"
         }
       ]

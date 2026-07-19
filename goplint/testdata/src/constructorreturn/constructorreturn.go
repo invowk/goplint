@@ -68,7 +68,7 @@ type engineImpl struct {
 	name string // want `struct field constructorreturn\.engineImpl\.name uses primitive type string`
 }
 
-func (e *engineImpl) Run() error     { return nil }
+func (e *engineImpl) Run() error      { return nil }
 func (e *engineImpl) Validate() error { return nil }
 
 func NewEngine(name string) Engine { // want `parameter "name" of constructorreturn\.NewEngine uses primitive type string`

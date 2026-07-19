@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://invowk.dev/schemas/goplint/semantic-evidence.v2.schema.json",
+  "title": "goplint executable semantic evidence registry v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "registrations"
+  ],
+  "properties": {
+    "format_version": {
+      "const": 2
+    },
+    "registrations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/registration"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\S(?:.*\\S)?$"
+    },
+    "layer": {
+      "enum": [
+        "rule-contract",
+        "owner-route",
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "artifact-parity",
+        "production-integration",
+        "generated",
+        "metamorphic",
+        "fuzz",
+        "mutation",
+        "determinism"
+      ]
+    },
+    "boundary": {
+      "enum": [
+        "catalog-validation",
+        "production-analyzer",
+        "independent-model",
+        "independent-boundary-oracle",
+        "metamorphic-analyzer",
+        "fuzz-decoder",
+        "mutation-runner",
+        "determinism-analyzer",
+        "aggregate-adversarial"
+      ]
+    },
+    "outcome": {
+      "enum": [
+        "must-report",
+        "must-not-report",
+        "must-be-inconclusive",
+        "model-agrees",
+        "relation-preserved",
+        "property-detected",
+        "mutant-killed",
+        "deterministic",
+        "route-executed",
+        "gate-rejected"
+      ]
+    },
+    "stage": {
+      "enum": [
+        "source-extraction",
+        "identity",
+        "graph-construction",
+        "propagation",
+        "refinement",
+        "aggregation",
+        "reporting"
+      ]
+    },
+    "count_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimum"
+      ],
+      "properties": {
+        "minimum": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maximum": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome",
+        "minimum_cases",
+        "diagnostics",
+        "required_stages",
+        "required_properties",
+        "required_dimensions"
+      ],
+      "properties": {
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "minimum_cases": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "diagnostics": {
+          "$ref": "#/$defs/count_range"
+        },
+        "required_stages": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/stage"
+          }
+        },
+        "required_properties": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "required_dimensions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      }
+    },
+    "registration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "category",
+        "layer",
+        "feature_id",
+        "producer_id",
+        "test_id",
+        "boundary",
+        "expected"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "category": {
+          "$ref": "#/$defs/identifier"
+        },
+        "layer": {
+          "$ref": "#/$defs/layer"
+        },
+        "feature_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "producer_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "test_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "boundary": {
+          "$ref": "#/$defs/boundary"
+        },
+        "expected": {
+          "$ref": "#/$defs/expectation"
+        }
+      }
+    }
+  }
+}

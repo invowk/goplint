@@ -1,0 +1,53 @@
+{
+  "format_version": 1,
+  "runs": [
+    {
+      "id": "production-tests",
+      "packages": ["./goplint"],
+      "tests": [
+        "TestRealAnalyzerDeterminismAcrossPackageFileAndScheduleOrder",
+        "TestProtocolProductionDomainReachability",
+        "TestProtocolValidationCounterexamplesUseConditionalSuccessEdges",
+        "TestProtocolUnknownEffectsAfterValidation",
+        "TestTypedSSAAvailabilityDistinguishesFailureClasses",
+        "TestRecursiveSummaryCFA",
+        "TestGenericConstraintCastCFA",
+        "TestSemanticEvidenceProduction",
+        "TestProtocolProductionRoutingEvidence"
+      ],
+      "count": 1,
+      "timeout_seconds": 600
+    }
+  ],
+  "populations": [
+    {
+      "id": "production-tests",
+      "selectors": [
+        {
+          "run": "production-tests",
+          "scope": "roots"
+        }
+      ]
+    },
+    {
+      "id": "protocol-categories",
+      "selectors": [
+        {
+          "run": "production-tests",
+          "scope": "immediate-subtests",
+          "root": "TestProtocolProductionRoutingEvidence",
+          "members": [
+            "missing-constructor-validate-inconclusive",
+            "missing-constructor-validate",
+            "unvalidated-boundary-request",
+            "unvalidated-cast-inconclusive",
+            "unvalidated-cast",
+            "use-before-validate-cross-block",
+            "use-before-validate-inconclusive",
+            "use-before-validate-same-block"
+          ]
+        }
+      ]
+    }
+  ]
+}

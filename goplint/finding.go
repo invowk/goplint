@@ -3,11 +3,17 @@
 package goplint
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
+	"go/ast"
+	"go/format"
 	"go/token"
+	"go/types"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -18,7 +24,7 @@ import (
 const (
 	// findingIDVersion is part of the canonical ID preimage. Bump only
 	// for intentional, incompatible ID schema changes.
-	findingIDVersion = "3"
+	findingIDVersion = "4"
 
 	// DiagnosticURLPrefix is the prefix used in analysis.Diagnostic.URL to
 	// encode stable finding IDs in -json output.
@@ -43,26 +49,200 @@ func StableFindingID(category string, parts ...string) string {
 // precise.
 func PackageScopedFindingID(pass *analysis.Pass, category string, parts ...string) string {
 	pkgPath := ""
+	pkgName := ""
 	if pass != nil && pass.Pkg != nil {
 		pkgPath = pass.Pkg.Path()
+		pkgName = pass.Pkg.Name()
 	}
 	scopedParts := make([]string, 0, len(parts)+1)
 	scopedParts = append(scopedParts, pkgPath)
-	scopedParts = append(scopedParts, parts...)
+	for _, part := range parts {
+		// Human-facing analyzer names commonly begin with the package leaf
+		// (for example, "goplint.Type.Method"). The full import path above is
+		// the package identity; retaining the leaf as a second identity input
+		// makes harmless package-clause renames churn otherwise identical IDs.
+		scopedParts = append(scopedParts, strings.TrimPrefix(part, pkgName+"."))
+	}
 	return StableFindingID(category, scopedParts...)
 }
 
-func stablePosKey(pass *analysis.Pass, pos token.Pos) string {
+func semanticNodeKey(pass *analysis.Pass, pos token.Pos) string {
 	if pass == nil || pass.Fset == nil || !pos.IsValid() {
-		return "unknown-pos"
+		return "unknown-semantic-node"
 	}
-	position := pass.Fset.Position(pos)
-	if position.Filename == "" {
-		return "unknown-pos"
+	owner, ownerKey, candidate := semanticFindingNodes(pass, pos)
+	if candidate == nil {
+		return ownerKey + "|unknown-node"
 	}
-	return filepath.Base(position.Filename) + ":" +
-		strconv.Itoa(position.Line) + ":" +
-		strconv.Itoa(position.Column)
+	return ownerKey + "|" + semanticASTNodeKey(owner, candidate)
+}
+
+func semanticASTNodeKey(owner, candidate ast.Node) string {
+	if candidate == nil {
+		return "unknown-node"
+	}
+	candidateText := canonicalASTNode(nil, candidate)
+	digest := sha256.Sum256([]byte(candidateText))
+	ordinal := semanticNodeOrdinal(nil, owner, candidate, candidateText)
+	return strings.Join([]string{
+		reflect.TypeOf(candidate).String(),
+		hex.EncodeToString(digest[:]),
+		strconv.Itoa(ordinal),
+	}, "|")
+}
+
+func semanticFindingNodes(pass *analysis.Pass, pos token.Pos) (ast.Node, string, ast.Node) {
+	packagePath := "<unknown-package>"
+	if pass.Pkg != nil {
+		packagePath = pass.Pkg.Path()
+	}
+	var owner ast.Node
+	ownerKey := packagePath + "|package"
+	ownerSpan := int(^uint(0) >> 1)
+	var site ast.Node
+	siteSpan := ownerSpan
+	var statement ast.Node
+	statementSpan := ownerSpan
+	var fallback ast.Node
+	fallbackSpan := ownerSpan
+	for _, file := range pass.Files {
+		if file == nil || pos < file.Pos() || pos >= file.End() {
+			continue
+		}
+		if owner == nil {
+			owner = file
+			filename := pass.Fset.Position(file.Pos()).Filename
+			ownerKey = packagePath + "|file:" + filepath.Base(filename)
+		}
+		ast.Inspect(file, func(node ast.Node) bool {
+			if node == nil || pos < node.Pos() || pos >= node.End() {
+				return false
+			}
+			span := int(node.End() - node.Pos())
+			switch typed := node.(type) {
+			case *ast.FuncDecl:
+				if span < ownerSpan {
+					owner = typed
+					ownerSpan = span
+					if object := pass.TypesInfo.Defs[typed.Name]; object != nil {
+						ownerKey = semanticObjectKey(object)
+					} else {
+						ownerKey = packagePath + "|func:" + typed.Name.Name
+					}
+				}
+			case *ast.TypeSpec:
+				if ownerSpan == int(^uint(0)>>1) && span < ownerSpan {
+					owner = typed
+					ownerSpan = span
+					if object := pass.TypesInfo.Defs[typed.Name]; object != nil {
+						ownerKey = semanticObjectKey(object)
+					} else {
+						ownerKey = packagePath + "|type:" + typed.Name.Name
+					}
+				}
+			}
+			if isSemanticSiteNode(node) && span < siteSpan {
+				site = node
+				siteSpan = span
+			}
+			if _, ok := node.(ast.Stmt); ok && span < statementSpan {
+				statement = node
+				statementSpan = span
+			}
+			switch node.(type) {
+			case ast.Expr, *ast.Field, ast.Spec, ast.Decl:
+				if span < fallbackSpan {
+					fallback = node
+					fallbackSpan = span
+				}
+			}
+			return true
+		})
+		break
+	}
+	if site != nil {
+		return owner, ownerKey, site
+	}
+	if statement != nil {
+		return owner, ownerKey, statement
+	}
+	if fallback != nil {
+		return owner, ownerKey, fallback
+	}
+	return owner, ownerKey, owner
+}
+
+func isSemanticSiteNode(node ast.Node) bool {
+	switch node.(type) {
+	case *ast.Ident, *ast.BasicLit, *ast.FuncType:
+		return false
+	case ast.Expr, *ast.Field, ast.Spec:
+		return true
+	default:
+		return false
+	}
+}
+
+func semanticObjectKey(object types.Object) string {
+	if object == nil {
+		return "unknown-object"
+	}
+	packagePath := ""
+	if object.Pkg() != nil {
+		packagePath = object.Pkg().Path()
+	}
+	parts := []string{"object", objectKind(object), packagePath, object.Name()}
+	if function, ok := object.(*types.Func); ok {
+		if signature, signatureOK := function.Type().(*types.Signature); signatureOK && signature.Recv() != nil {
+			parts = append(parts, types.TypeString(signature.Recv().Type(), func(pkg *types.Package) string {
+				if pkg == nil {
+					return ""
+				}
+				return pkg.Path()
+			}))
+		}
+	}
+	return strings.Join(parts, "|")
+}
+
+func semanticNodeOrdinal(pass *analysis.Pass, owner, candidate ast.Node, candidateText string) int {
+	if owner == nil || candidate == nil {
+		return 0
+	}
+	wantType := reflect.TypeOf(candidate)
+	ordinal := 0
+	found := false
+	ast.Inspect(owner, func(node ast.Node) bool {
+		if found || node == nil {
+			return false
+		}
+		if reflect.TypeOf(node) != wantType || canonicalASTNode(pass, node) != candidateText {
+			return true
+		}
+		if node == candidate {
+			found = true
+			return false
+		}
+		ordinal++
+		return true
+	})
+	return ordinal
+}
+
+func canonicalASTNode(pass *analysis.Pass, node ast.Node) string {
+	if node == nil {
+		return "<nil>"
+	}
+	var buffer bytes.Buffer
+	// Deliberately use a fresh empty file set. The AST structure carries the
+	// semantic syntax, while the analysis file set also carries original line
+	// layout that can make go/format preserve irrelevant one-line/multiline
+	// choices. Stable IDs must not inherit that layout.
+	if err := format.Node(&buffer, token.NewFileSet(), node); err == nil {
+		return buffer.String()
+	}
+	_ = pass
+	return fmt.Sprintf("%T", node)
 }
 
 // DiagnosticURLForFinding formats a finding ID for analysis.Diagnostic.URL.

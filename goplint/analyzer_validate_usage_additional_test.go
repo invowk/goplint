@@ -7,7 +7,6 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
-	"strconv"
 	"testing"
 
 	"golang.org/x/tools/go/analysis"
@@ -79,7 +78,12 @@ func TestReportValidateUsageFinding(t *testing.T) {
 			},
 		}
 
-		findingID := StableFindingID(CategoryUnusedValidateResult, qualFuncName, message, strconv.Itoa(int(pos)))
+		findingID := PackageScopedFindingID(
+			pass,
+			CategoryUnusedValidateResult,
+			qualFuncName,
+			"unknown-semantic-node",
+		)
 		bl := &BaselineConfig{
 			lookupByID: map[string]map[string]bool{
 				CategoryUnusedValidateResult: {findingID: true},

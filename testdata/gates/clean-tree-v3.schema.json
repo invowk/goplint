@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/invowk/invowk/tools/goplint/testdata/gates/clean-tree-v3.schema.json",
+  "title": "goplint clean-tree evidence plan v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "inputs",
+    "toolchain",
+    "task_ledgers",
+    "diff_review",
+    "counterexamples",
+    "commands",
+    "aggregate_report",
+    "mutation_proofs"
+  ],
+  "properties": {
+    "format_version": {"const": 3},
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/named_path"}
+    },
+    "toolchain": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "command", "required_version_re"],
+        "properties": {
+          "name": {"$ref": "#/$defs/nonempty"},
+          "command": {"$ref": "#/$defs/command_vector"},
+          "required_version_re": {"$ref": "#/$defs/nonempty"}
+        }
+      }
+    },
+    "task_ledgers": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/complete_hardening_ledger"
+        },
+        {
+          "$ref": "#/$defs/review_gaps_ledger"
+        },
+        {
+          "$ref": "#/$defs/residual_gaps_ledger"
+        }
+      ],
+      "items": false
+    },
+    "diff_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewed_exclusions"],
+      "properties": {
+        "reviewed_exclusions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "reason"],
+            "properties": {
+              "path": {"$ref": "#/$defs/repository_path"},
+              "reason": {"$ref": "#/$defs/nonempty"}
+            }
+          }
+        }
+      }
+    },
+    "counterexamples": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "required"],
+      "properties": {
+        "path": {"$ref": "#/$defs/repository_path"},
+        "required": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "observation"],
+            "properties": {
+              "id": {"$ref": "#/$defs/nonempty"},
+              "observation": {"$ref": "#/$defs/nonempty"}
+            }
+          }
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "args", "timeout_minutes"],
+        "properties": {
+          "name": {"$ref": "#/$defs/nonempty"},
+          "directory": {"$ref": "#/$defs/repository_path"},
+          "args": {"$ref": "#/$defs/command_vector"},
+          "timeout_minutes": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "aggregate_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command_name", "output_file", "manifest_path", "registry_path", "profile"],
+      "properties": {
+        "command_name": {"$ref": "#/$defs/nonempty"},
+        "output_file": {"type": "string", "minLength": 6, "pattern": "^[^/\\\\]+\\.json$"},
+        "manifest_path": {"$ref": "#/$defs/repository_path"},
+        "registry_path": {"$ref": "#/$defs/repository_path"},
+        "profile": {"const": "core"}
+      }
+    },
+    "mutation_proofs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "observation"],
+        "properties": {
+          "name": {"$ref": "#/$defs/nonempty"},
+          "observation": {"$ref": "#/$defs/nonempty"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonempty": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\S(?:.*\\S)?$"
+    },
+    "repository_path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^/\\\\][^\\\\]*$"
+    },
+    "named_path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path"],
+      "properties": {
+        "name": {"$ref": "#/$defs/nonempty"},
+        "path": {"$ref": "#/$defs/repository_path"}
+      }
+    },
+    "command_vector": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/nonempty"}
+    },
+    "complete_hardening_ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "expected_pending"],
+      "properties": {
+        "name": {"const": "complete-goplint-soundness-hardening"},
+        "path": {"const": "openspec/changes/complete-goplint-soundness-hardening/tasks.md"},
+        "expected_pending": {"const": ["12.10"]}
+      }
+    },
+    "review_gaps_ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "expected_pending"],
+      "properties": {
+        "name": {"const": "close-goplint-soundness-review-gaps"},
+        "path": {"const": "openspec/changes/close-goplint-soundness-review-gaps/tasks.md"},
+        "expected_pending": {"const": ["10.8"]}
+      }
+    },
+    "residual_gaps_ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "expected_pending"],
+      "properties": {
+        "name": {"const": "close-residual-goplint-soundness-gaps"},
+        "path": {"const": "openspec/changes/close-residual-goplint-soundness-gaps/tasks.md"},
+        "expected_pending": {"const": []}
+      }
+    }
+  }
+}

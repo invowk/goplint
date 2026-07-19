@@ -7,22 +7,12 @@ import (
 	"testing"
 )
 
-// TestDepthConstantsAligned verifies that the depth limits for
-// constructor-validates and validate-delegation are aligned and
-// have the expected value. This regression test ensures an
-// accidental decrement would be caught immediately.
-func TestDepthConstantsAligned(t *testing.T) {
+// TestHelperMethodDepth verifies the bounded validate-delegation helper walk.
+func TestHelperMethodDepth(t *testing.T) {
 	t.Parallel()
 
-	if maxTransitiveDepth != 5 {
-		t.Errorf("maxTransitiveDepth = %d, want 5", maxTransitiveDepth)
-	}
 	if maxHelperMethodDepth != 5 {
 		t.Errorf("maxHelperMethodDepth = %d, want 5", maxHelperMethodDepth)
-	}
-	if maxTransitiveDepth != maxHelperMethodDepth {
-		t.Errorf("maxTransitiveDepth (%d) != maxHelperMethodDepth (%d): depth limits should be aligned",
-			maxTransitiveDepth, maxHelperMethodDepth)
 	}
 }
 

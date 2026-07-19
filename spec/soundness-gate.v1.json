@@ -1,0 +1,540 @@
+{
+  "format_version": 1,
+  "registry_path": "tools/goplint/spec/semantic-evidence.v2.json",
+  "profiles": [
+    {
+      "id": "core",
+      "subgate_ids": [
+        "aggregate-contract",
+        "architecture",
+        "baseline",
+        "benchmarks",
+        "catalog",
+        "cfg-refinement",
+        "counterexamples",
+        "determinism",
+        "end-to-end-oracle",
+        "full-scan",
+        "fuzz-seeds",
+        "inconclusive-suppression",
+        "mutation-kernel-coverage",
+        "production-integration",
+        "protocol-oracle",
+        "race-repeat",
+        "scheduled-oracle",
+        "targeted-mutation"
+      ]
+    },
+    {
+      "id": "complete",
+      "subgate_ids": [
+        "aggregate-contract",
+        "architecture",
+        "baseline",
+        "benchmarks",
+        "catalog",
+        "cfg-refinement",
+        "clean-tree-freshness",
+        "counterexamples",
+        "determinism",
+        "end-to-end-oracle",
+        "full-scan",
+        "fuzz-seeds",
+        "inconclusive-suppression",
+        "mutation-kernel-coverage",
+        "production-integration",
+        "protocol-oracle",
+        "race-repeat",
+        "scheduled-oracle",
+        "targeted-mutation"
+      ]
+    }
+  ],
+  "subgates": [
+    {
+      "id": "aggregate-contract",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-aggregate-contract.sh"
+      ],
+      "timeout_seconds": 120,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "contract-packages",
+          "minimum": 4
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-production-architecture.sh"
+      ],
+      "timeout_seconds": 120,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "architecture-guards",
+          "minimum": 3
+        }
+      ]
+    },
+    {
+      "id": "baseline",
+      "working_directory": ".",
+      "command": [
+        "make",
+        "check-baseline"
+      ],
+      "timeout_seconds": 900,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "repository-scans",
+          "minimum": 1
+        }
+      ]
+    },
+    {
+      "id": "benchmarks",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-cfg-bench-thresholds.sh"
+      ],
+      "timeout_seconds": 3600,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "analyzer-benchmarks",
+          "minimum": 1
+        },
+        {
+          "id": "generated-programs",
+          "minimum": 42
+        }
+      ]
+    },
+    {
+      "id": "catalog",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-semantic-spec.sh"
+      ],
+      "timeout_seconds": 300,
+      "report_file": "report.json",
+      "required_registration_ids": [
+        "missing-constructor-validate-inconclusive.must-be-inconclusive",
+        "missing-constructor-validate-inconclusive.must-not-report",
+        "missing-constructor-validate-inconclusive.must-report",
+        "missing-constructor-validate-inconclusive.rule-contract",
+        "missing-constructor-validate.must-be-inconclusive",
+        "missing-constructor-validate.must-not-report",
+        "missing-constructor-validate.must-report",
+        "missing-constructor-validate.rule-contract",
+        "unvalidated-boundary-request.must-be-inconclusive",
+        "unvalidated-boundary-request.must-not-report",
+        "unvalidated-boundary-request.must-report",
+        "unvalidated-boundary-request.rule-contract",
+        "unvalidated-cast-inconclusive.must-be-inconclusive",
+        "unvalidated-cast-inconclusive.must-not-report",
+        "unvalidated-cast-inconclusive.must-report",
+        "unvalidated-cast-inconclusive.rule-contract",
+        "unvalidated-cast.must-be-inconclusive",
+        "unvalidated-cast.must-not-report",
+        "unvalidated-cast.must-report",
+        "unvalidated-cast.rule-contract",
+        "use-before-validate-cross-block.must-be-inconclusive",
+        "use-before-validate-cross-block.must-not-report",
+        "use-before-validate-cross-block.must-report",
+        "use-before-validate-cross-block.rule-contract",
+        "use-before-validate-inconclusive.must-be-inconclusive",
+        "use-before-validate-inconclusive.must-not-report",
+        "use-before-validate-inconclusive.must-report",
+        "use-before-validate-inconclusive.rule-contract",
+        "use-before-validate-same-block.must-be-inconclusive",
+        "use-before-validate-same-block.must-not-report",
+        "use-before-validate-same-block.must-report",
+        "use-before-validate-same-block.rule-contract"
+      ],
+      "required_populations": [
+        {
+          "id": "protocol-categories",
+          "minimum": 8
+        },
+        {
+          "id": "semantic-registrations",
+          "minimum": 88
+        }
+      ]
+    },
+    {
+      "id": "cfg-refinement",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-cfg-refinement.sh"
+      ],
+      "timeout_seconds": 300,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "refinement-tests",
+          "minimum": 11
+        }
+      ]
+    },
+    {
+      "id": "clean-tree-freshness",
+      "working_directory": "tools/goplint",
+      "command": [
+        "go",
+        "run",
+        "./cmd/check-clean-tree-evidence",
+        "-root",
+        "../..",
+        "-paths",
+        "tools/goplint/testdata/gates/clean-tree-v3.paths",
+        "-plan",
+        "tools/goplint/testdata/gates/clean-tree-v3.json",
+        "-evidence",
+        "tools/goplint/testdata/gates/clean-tree-run.v3.json"
+      ],
+      "timeout_seconds": 3600,
+      "report_file": "clean-tree-freshness.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "verified-clean-tree-records",
+          "minimum": 1
+        }
+      ]
+    },
+    {
+      "id": "counterexamples",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-counterexamples.sh"
+      ],
+      "timeout_seconds": 300,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "counterexamples",
+          "minimum": 12
+        }
+      ]
+    },
+    {
+      "id": "determinism",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-protocol-determinism.sh"
+      ],
+      "timeout_seconds": 900,
+      "report_file": "report.json",
+      "required_registration_ids": [
+        "missing-constructor-validate-inconclusive.determinism",
+        "missing-constructor-validate.determinism",
+        "unvalidated-boundary-request.determinism",
+        "unvalidated-cast-inconclusive.determinism",
+        "unvalidated-cast.determinism",
+        "use-before-validate-cross-block.determinism",
+        "use-before-validate-inconclusive.determinism",
+        "use-before-validate-same-block.determinism"
+      ],
+      "required_populations": [
+        {
+          "id": "determinism-runs",
+          "minimum": 34
+        },
+        {
+          "id": "protocol-categories",
+          "minimum": 8
+        }
+      ]
+    },
+    {
+      "id": "end-to-end-oracle",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-protocol-oracle-e2e.sh"
+      ],
+      "timeout_seconds": 600,
+      "report_file": "report.json",
+      "required_registration_ids": [
+        "missing-constructor-validate-inconclusive.generated",
+        "missing-constructor-validate.generated",
+        "unvalidated-boundary-request.generated",
+        "unvalidated-cast-inconclusive.generated",
+        "unvalidated-cast.generated",
+        "use-before-validate-cross-block.generated",
+        "use-before-validate-inconclusive.generated",
+        "use-before-validate-same-block.generated"
+      ],
+      "required_populations": [
+        {
+          "id": "generated-programs",
+          "minimum": 42
+        },
+        {
+          "id": "perturbations",
+          "minimum": 7
+        }
+      ]
+    },
+    {
+      "id": "full-scan",
+      "working_directory": ".",
+      "command": [
+        "make",
+        "check-goplint-full-scan"
+      ],
+      "timeout_seconds": 900,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "repository-scans",
+          "minimum": 1
+        }
+      ]
+    },
+    {
+      "id": "fuzz-seeds",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-fuzz-seeds.sh"
+      ],
+      "timeout_seconds": 600,
+      "report_file": "report.json",
+      "required_registration_ids": [
+        "missing-constructor-validate-inconclusive.fuzz",
+        "missing-constructor-validate.fuzz",
+        "unvalidated-boundary-request.fuzz",
+        "unvalidated-cast-inconclusive.fuzz",
+        "unvalidated-cast.fuzz",
+        "use-before-validate-cross-block.fuzz",
+        "use-before-validate-inconclusive.fuzz",
+        "use-before-validate-same-block.fuzz"
+      ],
+      "required_populations": [
+        {
+          "id": "decoded-seeds",
+          "minimum": 35
+        },
+        {
+          "id": "historical-counterexamples",
+          "minimum": 24
+        },
+        {
+          "id": "protocol-categories",
+          "minimum": 8
+        }
+      ]
+    },
+    {
+      "id": "inconclusive-suppression",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-inconclusive-suppression.sh"
+      ],
+      "timeout_seconds": 180,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "suppression-surfaces",
+          "minimum": 5
+        }
+      ]
+    },
+    {
+      "id": "mutation-kernel-coverage",
+      "working_directory": "tools/goplint",
+      "command": [
+        "go",
+        "run",
+        "./cmd/mutation-kernel-coverage",
+        "-root",
+        ".",
+        "-manifest",
+        "testdata/subgates/mutation-kernel-coverage.v1.json"
+      ],
+      "timeout_seconds": 120,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "mutation-kernel-bindings",
+          "minimum": 110
+        },
+        {
+          "id": "mutation-kernel-categories",
+          "minimum": 8
+        },
+        {
+          "id": "mutation-kernel-mutants",
+          "minimum": 27
+        }
+      ]
+    },
+    {
+      "id": "production-integration",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-production-integration.sh"
+      ],
+      "timeout_seconds": 600,
+      "report_file": "report.json",
+      "required_registration_ids": [
+        "missing-constructor-validate-inconclusive.owner-route",
+        "missing-constructor-validate-inconclusive.production-integration",
+        "missing-constructor-validate.owner-route",
+        "missing-constructor-validate.production-integration",
+        "unvalidated-boundary-request.owner-route",
+        "unvalidated-boundary-request.production-integration",
+        "unvalidated-cast-inconclusive.owner-route",
+        "unvalidated-cast-inconclusive.production-integration",
+        "unvalidated-cast.owner-route",
+        "unvalidated-cast.production-integration",
+        "use-before-validate-cross-block.owner-route",
+        "use-before-validate-cross-block.production-integration",
+        "use-before-validate-inconclusive.owner-route",
+        "use-before-validate-inconclusive.production-integration",
+        "use-before-validate-same-block.owner-route",
+        "use-before-validate-same-block.production-integration"
+      ],
+      "required_populations": [
+        {
+          "id": "production-tests",
+          "minimum": 9
+        },
+        {
+          "id": "protocol-categories",
+          "minimum": 8
+        }
+      ]
+    },
+    {
+      "id": "protocol-oracle",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-protocol-oracle.sh"
+      ],
+      "timeout_seconds": 300,
+      "report_file": "report.json",
+      "required_registration_ids": [
+        "missing-constructor-validate-inconclusive.metamorphic",
+        "missing-constructor-validate.metamorphic",
+        "unvalidated-boundary-request.metamorphic",
+        "unvalidated-cast-inconclusive.metamorphic",
+        "unvalidated-cast.metamorphic",
+        "use-before-validate-cross-block.metamorphic",
+        "use-before-validate-inconclusive.metamorphic",
+        "use-before-validate-same-block.metamorphic"
+      ],
+      "required_populations": [
+        {
+          "id": "independent-cases",
+          "minimum": 42
+        },
+        {
+          "id": "metamorphic-relations",
+          "minimum": 8
+        }
+      ]
+    },
+    {
+      "id": "race-repeat",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-race-repeat.sh"
+      ],
+      "timeout_seconds": 3600,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "race-runs",
+          "minimum": 1
+        },
+        {
+          "id": "repeat-runs",
+          "minimum": 3
+        }
+      ]
+    },
+    {
+      "id": "scheduled-oracle",
+      "working_directory": "tools/goplint",
+      "command": [
+        "./scripts/check-protocol-oracle-scheduled.sh"
+      ],
+      "timeout_seconds": 3600,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "generated-programs",
+          "minimum": 2058
+        },
+        {
+          "id": "protocol-categories",
+          "minimum": 2
+        }
+      ]
+    },
+    {
+      "id": "targeted-mutation",
+      "working_directory": "tools/goplint",
+      "command": [
+        "go",
+        "run",
+        "./cmd/targeted-mutation",
+        "-profile",
+        "testdata/mutation/profiles/blocking-v2.json"
+      ],
+      "timeout_seconds": 1800,
+      "report_file": "report.json",
+      "required_registration_ids": [
+        "missing-constructor-validate-inconclusive.mutation",
+        "missing-constructor-validate.mutation",
+        "unvalidated-boundary-request.mutation",
+        "unvalidated-cast-inconclusive.mutation",
+        "unvalidated-cast.mutation",
+        "use-before-validate-cross-block.mutation",
+        "use-before-validate-inconclusive.mutation",
+        "use-before-validate-same-block.mutation"
+      ],
+      "required_populations": [
+        {
+          "id": "causal-mutants",
+          "minimum": 27
+        },
+        {
+          "id": "clean-controls",
+          "minimum": 54
+        },
+        {
+          "id": "intended-mismatches",
+          "minimum": 27
+        },
+        {
+          "id": "restorations",
+          "minimum": 27
+        },
+        {
+          "id": "selected-guards",
+          "minimum": 27
+        }
+      ]
+    }
+  ]
+}

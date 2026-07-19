@@ -31,7 +31,6 @@ type ifdsUBVNeedsValidateBeforeUseFact struct {
 	OriginKey string
 	TargetKey string
 	TypeKey   string
-	Mode      string
 }
 
 func (f ifdsUBVNeedsValidateBeforeUseFact) Family() ifdsFactFamily {
@@ -39,12 +38,13 @@ func (f ifdsUBVNeedsValidateBeforeUseFact) Family() ifdsFactFamily {
 }
 
 func (f ifdsUBVNeedsValidateBeforeUseFact) Key() string {
-	return joinIFDSFactKey(string(f.Family()), f.OriginKey, f.TargetKey, f.TypeKey, f.Mode)
+	return joinIFDSFactKey(string(f.Family()), f.OriginKey, f.TargetKey, f.TypeKey)
 }
 
 type ifdsCtorReturnNeedsValidateFact struct {
 	ConstructorKey string
 	ReturnTypeKey  string
+	ReturnIdentity string
 }
 
 func (f ifdsCtorReturnNeedsValidateFact) Family() ifdsFactFamily {
@@ -52,7 +52,7 @@ func (f ifdsCtorReturnNeedsValidateFact) Family() ifdsFactFamily {
 }
 
 func (f ifdsCtorReturnNeedsValidateFact) Key() string {
-	return joinIFDSFactKey(string(f.Family()), f.ConstructorKey, f.ReturnTypeKey)
+	return joinIFDSFactKey(string(f.Family()), f.ConstructorKey, f.ReturnTypeKey, f.ReturnIdentity)
 }
 
 func joinIFDSFactKey(parts ...string) string {

@@ -16,7 +16,7 @@ func (c CommandName) Validate() error {
 func useCmd(_ CommandName) {}
 
 // AliasClosureCallAnalyzed verifies closure-variable aliasing is tracked:
-// g := f; g() should execute f's closure body in CFA analysis.
+// g := f; g() should execute f's closure body in protocol analysis.
 func AliasClosureCallAnalyzed(raw string) { // want `parameter "raw" of cfa_closure_var_alias\.AliasClosureCallAnalyzed uses primitive type string`
 	f := func() {
 		x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`

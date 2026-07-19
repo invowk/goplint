@@ -17,16 +17,11 @@ func (s *Server) Validate() error {
 }
 
 // ValidateServer validates a Server on behalf of a constructor.
-// The directive tells goplint that this function satisfies the
-// Validate() call requirement for the Server type.
-//
-//goplint:validates-type=Server
-func ValidateServer(s *Server) error { // want ValidateServer:"validates-type\\(Server\\)"
+func ValidateServer(s *Server) error { // want ValidateServer:"protocol-summary:v5:constructorvalidates_cross/util:constructorvalidates_cross/util.ValidateServer:1"
 	return s.Validate()
 }
 
-// HelperNoDirective also calls Validate but lacks the directive.
-// Constructors delegating to this should still be flagged.
-func HelperNoDirective(s *Server) error {
+// HelperNoDirective proves summary extraction does not require annotations.
+func HelperNoDirective(s *Server) error { // want HelperNoDirective:"protocol-summary:v5:constructorvalidates_cross/util:constructorvalidates_cross/util.HelperNoDirective:1"
 	return s.Validate()
 }

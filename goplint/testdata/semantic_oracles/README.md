@@ -1,11 +1,13 @@
-# goplint Semantic Oracles (Phase A)
+# goplint Semantic Oracles
 
-This index maps CFA-backed categories to fixture symbols that serve as property oracles.
+This index maps path-sensitive protocol categories to fixture symbols that serve as property oracles.
 
 Conventions:
 
 - `must-report`: symbol is expected to produce a finding for the category.
 - `must-not-report`: symbol is expected not to produce that category.
+- `must-be-inconclusive`: symbol must produce the category with a blocking,
+  stable inconclusive reason.
 
 ## unvalidated-cast
 
@@ -69,9 +71,9 @@ Conventions:
 - Historical replay expectations are defined in `semantic-rules.v1.json` under
   `historical_miss_oracles` and are enforced with symbol-level checks
   (`must_report`/`must_not_report`) in addition to category-level checks.
-- `castvalidation_nocfa_dead_branch`
-- `castvalidation_nocfa_dotimport_compare`
-- `castvalidation_nocfa_errors_noncomparison`
-- `castvalidation_nocfa_suppression`
-- `castvalidation_nocfa_validate_before_cast`
-- `constructorvalidates_nocfa_ast`
+- `castvalidation_dead_branch`
+- `castvalidation_dotimport_compare`
+- `castvalidation_errors_noncomparison`
+- `castvalidation_suppression`
+- `castvalidation_validate_before_cast`
+- `constructorvalidates_historical`

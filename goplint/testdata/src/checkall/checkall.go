@@ -184,9 +184,9 @@ func NewWidget(label string) (*Widget, error) { // want `parameter "label" of ch
 
 // --- Incomplete validate delegation (--check-validate-delegation) ---
 
-//goplint:validate-all
-//
 // Composite has validate-all but doesn't delegate to its Mode field.
+//
+//goplint:validate-all
 type Composite struct { // want `exported struct checkall\.Composite has no NewComposite\(\) constructor` `checkall\.Composite\.Validate\(\) does not delegate to field Name which has Validate\(\)`
 	Name Mode
 	Tag  MissingAll
@@ -198,9 +198,9 @@ func (c Composite) Validate() error {
 
 // --- Nonzero value field (--check-nonzero) ---
 
-//goplint:nonzero
-//
 // NonZeroID must not be zero-valued.
+//
+//goplint:nonzero
 type NonZeroID int // want NonZeroID:"nonzero"
 
 func (n NonZeroID) Validate() error {

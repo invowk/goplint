@@ -13,10 +13,18 @@ func TestSemanticSpecInconclusiveReasonContract(t *testing.T) {
 
 	catalog := mustLoadSemanticRuleCatalog(t)
 	knownReasons := map[string]struct{}{
-		string(pathOutcomeReasonStateBudget):      {},
-		string(pathOutcomeReasonDepthBudget):      {},
-		string(pathOutcomeReasonRecursionCycle):   {},
-		string(pathOutcomeReasonUnresolvedTarget): {},
+		string(pathOutcomeReasonStateBudget):         {},
+		string(pathOutcomeReasonWitnessBudget):       {},
+		string(pathOutcomeReasonTimeout):             {},
+		string(pathOutcomeReasonRecursionCycle):      {},
+		string(pathOutcomeReasonUnresolvedTarget):    {},
+		string(pathOutcomeReasonFeasibilityUnknown):  {},
+		string(pathOutcomeReasonMissingSSA):          {},
+		string(pathOutcomeReasonUnsupportedInstr):    {},
+		string(pathOutcomeReasonConcurrentMutation):  {},
+		string(pathOutcomeReasonEscapedHeapMutation): {},
+		string(pathOutcomeReasonReflection):          {},
+		string(pathOutcomeReasonUnsafe):              {},
 	}
 
 	for _, rule := range catalog.Rules {
@@ -39,16 +47,13 @@ func TestSemanticSpecInconclusiveMetaContract(t *testing.T) {
 
 	catalog := mustLoadSemanticRuleCatalog(t)
 	meta := cfgOutcomeMetaWithWitness(
-		cfgBackendSSA,
 		defaultCFGMaxStates,
-		defaultCFGMaxDepth,
 		pathOutcomeReasonStateBudget,
 		[]int32{0, 1, 2},
 		defaultCFGWitnessMaxSteps,
 	)
 	addCFGWitnessCallChainMeta(meta, []string{"pkg.Func", "pkg.helper"}, defaultCFGWitnessMaxSteps)
-	meta["cfg_inconclusive_policy"] = cfgInconclusivePolicyWarn
-	meta["cfg_inconclusive_severity"] = "warning"
+	meta["cfg_outcome_status"] = cfgRefinementStatusInconclusive
 	available := map[string]struct{}{}
 	maps.Copy(available, mapKeys(meta))
 
@@ -69,10 +74,9 @@ func TestSemanticSpecRefinementStatusContract(t *testing.T) {
 
 	catalog := mustLoadSemanticRuleCatalog(t)
 	knownStatuses := map[string]struct{}{
-		cfgRefinementStatusUnsafe:              {},
-		cfgRefinementStatusInconclusiveRefined: {},
-		cfgRefinementStatusInconclusiveRaw:     {},
-		cfgRefinementStatusProvenSafe:          {},
+		cfgRefinementStatusViolation:            {},
+		cfgRefinementStatusInconclusive:         {},
+		cfgRefinementStatusDischargedInfeasible: {},
 	}
 
 	for _, rule := range catalog.Rules {
@@ -92,22 +96,21 @@ func TestSemanticSpecRefinementMetaContract(t *testing.T) {
 
 	catalog := mustLoadSemanticRuleCatalog(t)
 	meta := cfgOutcomeMetaWithWitness(
-		cfgBackendSSA,
 		defaultCFGMaxStates,
-		defaultCFGMaxDepth,
 		pathOutcomeReasonStateBudget,
 		[]int32{0, 1, 2},
 		defaultCFGWitnessMaxSteps,
 	)
-	meta = appendPhaseCMeta(meta, interprocPathResult{
-		PhaseC: cfgPhaseCResult{
+	meta = appendProtocolRefinementMeta(meta, interprocPathResult{
+		Refinement: cfgProtocolRefinementResult{
 			Enabled:              true,
-			FeasibilityEngine:    cfgFeasibilityEngineSMT,
+			FeasibilityEngine:    cfgSSAConstraintsEngine,
 			FeasibilityResult:    cfgFeasibilityResultSAT,
-			RefinementStatus:     cfgRefinementStatusUnsafe,
+			RefinementStatus:     cfgRefinementStatusViolation,
 			RefinementIterations: 1,
 			RefinementTrigger:    cfgRefinementTriggerUnsafeCandidate,
 			WitnessHash:          "cfgw1_deadbeef",
+			SSASubjects:          []string{"testpkg.sample|*ssa.Parameter|raw|1"},
 		},
 	})
 	available := mapKeys(meta)

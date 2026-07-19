@@ -1,7 +1,83 @@
 # SPDX-License-Identifier: MPL-2.0
 
-# Simple ns/op guardrails for CFG-heavy traversal benchmarks.
-# Keys are benchmark names with `_ns_per_op` suffix.
+format_version = 2
+samples = 5
+go_toolchain = "go1.26"
+runner_class = "fedora-44-x86_64-24cpu-reviewed"
+calibrated_on = "2026-07-18"
 
-BenchmarkCFGTraversalCastPath_ns_per_op = 600000
-BenchmarkCFGTraversalUBVCrossBlock_ns_per_op = 600000
+[benchmarks.BenchmarkProtocolCanonicalSolver]
+observed_ns_per_op_samples = [49718, 50642, 50856, 49215, 50637]
+observed_bytes_per_op_samples = [40926, 40926, 40925, 40926, 40925]
+observed_allocs_per_op_samples = [510, 510, 510, 510, 510]
+observed_median_ns_per_op = 50637
+observed_median_bytes_per_op = 40926
+observed_median_allocs_per_op = 510
+max_ns_per_op = 60000
+max_bytes_per_op = 45000
+max_allocs_per_op = 600
+
+[benchmarks.BenchmarkProtocolRecursiveTabulation]
+max_ns_per_op = 100000
+max_bytes_per_op = 75000
+max_allocs_per_op = 1500
+max_path_edges_per_op = 32
+min_summary_reuses_per_op = 1
+
+[benchmarks.BenchmarkProtocolAliasJoin]
+max_ns_per_op = 30000
+max_bytes_per_op = 20000
+max_allocs_per_op = 100
+
+[benchmarks.BenchmarkProtocolRefinementEvidence]
+max_ns_per_op = 50000
+max_bytes_per_op = 50000
+max_allocs_per_op = 100
+
+[benchmarks.BenchmarkProtocolReferenceInterpreter]
+observed_ns_per_op_samples = [980628, 1003609, 940971, 929305, 936704]
+observed_bytes_per_op_samples = [378854, 378877, 378864, 378886, 378864]
+observed_allocs_per_op_samples = [10437, 10437, 10437, 10437, 10437]
+observed_median_ns_per_op = 940971
+observed_median_bytes_per_op = 378864
+observed_median_allocs_per_op = 10437
+max_ns_per_op = 1300000
+max_bytes_per_op = 500000
+max_allocs_per_op = 13000
+
+[benchmarks.BenchmarkProtocolGeneratedAnalyzer]
+observed_ns_per_op_samples = [151152856, 155561143, 138770098, 155964972, 130835962]
+observed_bytes_per_op_samples = [113468306, 113549294, 113539965, 113388173, 113605643]
+observed_allocs_per_op_samples = [978774, 978825, 978775, 978567, 978820]
+observed_median_ns_per_op = 151152856
+observed_median_bytes_per_op = 113539965
+observed_median_allocs_per_op = 978775
+max_ns_per_op = 175000000
+max_bytes_per_op = 140000000
+max_allocs_per_op = 1250000
+
+[benchmarks.BenchmarkConstructorSuccessfulReturnClassification]
+observed_ns_per_op_samples = [347386, 348671, 347650, 344504, 346983]
+observed_bytes_per_op_samples = [246629, 246374, 246137, 246623, 246551]
+observed_allocs_per_op_samples = [3313, 3313, 3313, 3313, 3313]
+observed_median_ns_per_op = 347386
+observed_median_bytes_per_op = 246551
+observed_median_allocs_per_op = 3313
+max_ns_per_op = 400000
+max_bytes_per_op = 300000
+max_allocs_per_op = 4200
+
+[benchmarks.BenchmarkProtocolPackageProcedureInventory]
+observed_ns_per_op_samples = [34.57, 34.08, 34.41, 32.94, 33.54]
+observed_bytes_per_op_samples = [48, 48, 48, 48, 48]
+observed_allocs_per_op_samples = [1, 1, 1, 1, 1]
+observed_median_ns_per_op = 34.08
+observed_median_bytes_per_op = 48
+observed_median_allocs_per_op = 1
+max_ns_per_op = 100
+max_bytes_per_op = 128
+max_allocs_per_op = 4
+
+[repository_full_scan]
+max_wall_ms = 300000
+max_peak_bytes = 6442450944

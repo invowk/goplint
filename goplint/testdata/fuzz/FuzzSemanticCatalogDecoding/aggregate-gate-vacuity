@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("aggregate-gate-vacuity")

@@ -1,6 +1,81 @@
 # SPDX-License-Identifier: MPL-2.0
 #
 # goplint baseline — accepted DDD compliance findings
-# Generated: 2026-06-06
 # Regenerate: make update-baseline
-# Total: 0 findings
+# Total: 66 findings
+
+# Constructors returning validatable types without calling Validate()
+[missing-constructor-validate]
+entries = [
+    { id = "gpl4_1b656c48be217af2a2ac180570f361f1d84e1644e7d42cd78022a1570a6dec70", message = "constructor audit.NewScanner returns audit.Scanner which has Validate() but never calls it" },
+]
+
+# Struct fields using nonzero types as value (non-pointer)
+[nonzero-value-field]
+entries = [
+    { id = "gpl4_0216b63a59cbce2c61ccd7c5508974864cde92b57ce1b28b96a521026a39bbd2", message = "struct field invowkmod.lockedModuleCUE.ContentHash uses nonzero type ContentHash as value; use *ContentHash for optional fields" },
+    { id = "gpl4_0fb773fe27b992cb67d31594b8621ec24f5eba97e50e946ef3ea0319d8401225", message = "struct field invowkmod.CommandTarget.ModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_1af9707afc3df3e5ae8d2db435a537e06f9597bc8832b36982baaffea28b8195", message = "struct field provision.ModuleEntry.CommandNamespace uses nonzero type ModuleNamespace as value; use *ModuleNamespace for optional fields" },
+    { id = "gpl4_1bbba5c7bd0a20b8176a1eafb0660f987c971c94ea829803ffc61467a80504e9", message = "struct field invowkmod.InvalidModuleDirectoryNameError.Value uses nonzero type ModuleDirectoryName as value; use *ModuleDirectoryName for optional fields" },
+    { id = "gpl4_1df168d9c3718f44c8e029d5656eb1688457f4140c9d5e76f98e9bc5bd05f37a", message = "struct field discovery.ProvisionedModuleEntry.CommandNamespace uses nonzero type ModuleNamespace as value; use *ModuleNamespace for optional fields" },
+    { id = "gpl4_1eb06bba600850cf5e6906917fded83c53bc8c9fcce0c32e4579f520cc780d23", message = "struct field invowkmod.LockedModule.GitCommit uses nonzero type GitCommit as value; use *GitCommit for optional fields" },
+    { id = "gpl4_20521b80d3366c1df6b32fe46711b22de7a3e22adf8c64d47eddc199d347ee7b", message = "struct field invowkmod.lockedModuleCUE.GitURL uses nonzero type GitURL as value; use *GitURL for optional fields" },
+    { id = "gpl4_241c5d812ff08eec3cb9bc26a75db381154433ad9f96a7dadddbdc854dc355f5", message = "struct field invowkmod.InvalidGitCommitError.Value uses nonzero type GitCommit as value; use *GitCommit for optional fields" },
+    { id = "gpl4_2498d8eef3546cabbecdea0510a2ddd1733549159fd888f5e5b27a70d496c8d7", message = "struct field invowkmod.AmbiguousMatch.LockKey uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_2771a7417c6b0225b6c3c68dc9388d4d63f96848d876b2eac630764041054efb", message = "struct field invowkmod.LockedModule.Namespace uses nonzero type ModuleNamespace as value; use *ModuleNamespace for optional fields" },
+    { id = "gpl4_290007d29fd6d9a7ce1a9a3b9ada561dc3572c4976f221e11082156c670898b8", message = "struct field invowkmod.ResolvedModule.ResolvedVersion uses nonzero type SemVer as value; use *SemVer for optional fields" },
+    { id = "gpl4_2e9476c61ac43597330a87b6f756b17d36eeddfe465d06bcdcfaf02a5e8f79d8", message = "struct field invowkmod.VendoredHashEvaluation.Actual uses nonzero type ContentHash as value; use *ContentHash for optional fields" },
+    { id = "gpl4_2f629d0752a223d74e3f46127c1b2cc0c8b2c3fa53f062b4bbf286633b1db208", message = "struct field invowkmod.CommandScope.ModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_43dac3ea09e0519a8a3ad1cf08f4da43f7550193cdc6105ca08fd2dfe292393a", message = "struct field invowkmod.VendoredHashEvaluation.ModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_4649ce6c44da11a9a6f766ec91b978768a8b54c82f7511914d86255fe8c958e1", message = "struct field invowkmod.RemoveResult.LockKey uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_49b588c70a732e2fe5c22f9d5189211d2976af812bf3bd4aa7f7efced4a55c52", message = "struct field discovery.commandSourceIdentity.ModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_4b2c5b604b8314f51be267ce1e330ee3b0257de3549143bdd3f75620020623d5", message = "struct field invowkmod.InvalidModuleIDError.Value uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_538325f947b6b26b1213942b058dea33c92b668764fe0001eff9c1eb8b9f8cdc", message = "struct field invowkmod.InvalidContentHashError.Value uses nonzero type ContentHash as value; use *ContentHash for optional fields" },
+    { id = "gpl4_5b97b0f536311199f1eee30262cd1b56009aa511f8e205b53d49a98dc2b3bbd7", message = "struct field invowkmod.ResolvedModule.ModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_5ba3cc63ca41dc7debd22021c87f7286e2db38303036f3dd3b8c0d8a4aeeda1b", message = "struct field modulesync.moduleSubpathIdentityMismatchError.dirModule uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_5c7009d498dbd97f060dca5eb3a80951e218d0ab01f94e21a7e2e95d4d41e0ad", message = "struct field invowkmod.LockedModule.ResolvedVersion uses nonzero type SemVer as value; use *SemVer for optional fields" },
+    { id = "gpl4_60a8fbcd17c767e061638a76fc2bbfb31206c14c29e879bd723ca8e261542445", message = "struct field invowkmod.AmbiguousMatch.GitURL uses nonzero type GitURL as value; use *GitURL for optional fields" },
+    { id = "gpl4_634d516b4ba64453b4526197b644215d27c00c9183c0156c94049d3c31375b63", message = "struct field invowkmod.InvalidSemVerError.Value uses nonzero type SemVer as value; use *SemVer for optional fields" },
+    { id = "gpl4_6382ec3a318077dedca9f3ad414addf209591c308fca94bcce28c61930bd786d", message = "struct field invowkfile.ModuleMetadata.module uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_65bf4a8b45cb7aa2aed4ee57e17ff1fa0472c99f43a49d3fa9444f182c244923", message = "struct field invowkmod.InvalidModuleNamespaceError.Value uses nonzero type ModuleNamespace as value; use *ModuleNamespace for optional fields" },
+    { id = "gpl4_74f0c42f16456f4655df07a9c4fa9ed367913434fcae53ffb50761190b7e1c97", message = "struct field modulesync.CanonicalModuleCollisionError.IncomingKey uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_75893a587597b0e7283dfa4f4c34f0c75a0fda7864182e8b483338ecd61cc841", message = "struct field invowkmod.LockedModule.GitURL uses nonzero type GitURL as value; use *GitURL for optional fields" },
+    { id = "gpl4_7776516e80cccbc4aa2f06622675523cccbaa108e087e744156d388bda3a5ac8", message = "struct field invowkmod.ModuleRequirement.GitURL uses nonzero type GitURL as value; use *GitURL for optional fields" },
+    { id = "gpl4_82bdbb0bd8adb957f811f49d8f0cb4907c526a3f58e06bddba603b7877e1612b", message = "struct field invowkmod.ResolvedModule.ModuleName uses nonzero type ModuleShortName as value; use *ModuleShortName for optional fields" },
+    { id = "gpl4_82d4fad376745780a09e298c7f6e8ed345f77c9737197fdf3173c4f0e007acde", message = "struct field modulesync.CanonicalModuleCollisionError.ModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_8cec0ebfc3800c2a086b61eb6b8fbe40fb0c5b623fa30489a73b2e5918c63d76", message = "struct field invowkmod.MissingTransitiveDepDiagnostic.RequiringURL uses nonzero type GitURL as value; use *GitURL for optional fields" },
+    { id = "gpl4_900629f66260b23b4f51147729be9fc08ec156aaa3d1f781791c35f1013b146d", message = "struct field invowkmod.LockedModule.ModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_923a7cae078db5c1891511baaa3325e5969f09b3a1f9ce21b916d58dfe35227b", message = "struct field invowkmod.CreateOptions.Module uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_93d08cd836071f96b267bda3f8559fcb864e5108a7ec57e0203c17838411960e", message = "struct field invowkmod.CreateOptions.Name uses nonzero type ModuleDirectoryName as value; use *ModuleDirectoryName for optional fields" },
+    { id = "gpl4_94ecc4bb3344ef3e49dc445fb4111d32d386592447cf0dbb1f432657998d5f9c", message = "struct field discovery.DiscoveredFile.CommandNamespace uses nonzero type ModuleNamespace as value; use *ModuleNamespace for optional fields" },
+    { id = "gpl4_99fa216a8d54566beece41ac5e23bd6f59079e71d898d278b0da0a1d7be86225", message = "struct field invowkmod.InvalidModuleRefKeyError.Value uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_9be7449f06dbd9ece289d45adf3ac2a832b2bec1e0b6a17a4f70f6dc45bcbbc0", message = "struct field invowkfile.ModuleMetadata.version uses nonzero type SemVer as value; use *SemVer for optional fields" },
+    { id = "gpl4_9c83fd194ca340f3cce5286b239dbacbad8aefb4563fc87c6d80d7b7ca703fac", message = "struct field invowkmod.lockedModuleCUE.ModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_9d019e9eb62665bc6106ebbf19e5277d9cf382de9e550cf4fbb5610ab7112ff6", message = "struct field invowkmod.InvalidModuleShortNameError.Value uses nonzero type ModuleShortName as value; use *ModuleShortName for optional fields" },
+    { id = "gpl4_9d5920788176e5a0d66f3d0efbe8df105dca28caa9a3c35b4ac20d09fff33a8b", message = "struct field modulesync.moduleSubpathIdentityMismatchError.metaModule uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_9da0a8b5d9513afde9478f467883ca26e367f99f0b9eb8f590f636ac8acb6776", message = "struct field invowkmod.lockHashEntry.hash uses nonzero type ContentHash as value; use *ContentHash for optional fields" },
+    { id = "gpl4_aac0cac4c596999e9045ee40457dfb41d497084948cb276450611e550af34243", message = "struct field invowkmod.MissingTransitiveDepDiagnostic.RequiringModule uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_addba17e99578f9c741ea131e017f83c4cca10bcfbd86f6cb9521e01b6267ad7", message = "struct field invowkmod.ResolvedModule.ContentHash uses nonzero type ContentHash as value; use *ContentHash for optional fields" },
+    { id = "gpl4_aeac4e099d71ba9293c619cdba83b164e84ff47cb5d12686a920366a50eb734e", message = "struct field invowkmod.lockedModuleCUE.GitCommit uses nonzero type GitCommit as value; use *GitCommit for optional fields" },
+    { id = "gpl4_b04c22f399a929e2bb6e04beaf27d19a2c4240bdcdca95ea8e825d69412007e9", message = "struct field invowkmod.ValidationResult.ModuleName uses nonzero type ModuleDirectoryName as value; use *ModuleDirectoryName for optional fields" },
+    { id = "gpl4_b430d088cc19b0cd1d30ab6869bc9797bb90f8e0e329b9fc704daec8cdf6bb77", message = "struct field invowkmod.lockHashEntry.key uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_b9acc3e6e3e9a73858e920ab80fe1da269948fe2793f0d53b2a0f6014ce8e8d6", message = "struct field invowkmod.InvalidGitURLError.Value uses nonzero type GitURL as value; use *GitURL for optional fields" },
+    { id = "gpl4_bc16f868e561411a76fd245d2757046a9f6a2b4d99e8879a21113171e0f291b3", message = "struct field invowkmod.InvalidLockedModuleError.ModuleKey uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_beba226113801e63222a16b2e8a8cb4ef014a7e64b692a4ba5cf3c29774f62fc", message = "struct field invowkmod.ResolvedModule.GitCommit uses nonzero type GitCommit as value; use *GitCommit for optional fields" },
+    { id = "gpl4_c8ad135189eab33d708e995cb12b38e03aa3acdc9475ef9dd6e5261266cdb652", message = "struct field invowkmod.ContentHashMismatchError.Actual uses nonzero type ContentHash as value; use *ContentHash for optional fields" },
+    { id = "gpl4_c9ff83d93f6408aaa2b8e29ce988f2de8c90b42e925e0e001c5beb48b5e61167", message = "struct field invowkmod.LockedModuleAmbiguity.ModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_d1facbd6cccaddc73ea3509f10f551399d0c13f3e781d047e89d803eb5f5ff7f", message = "struct field invowkmod.lockedModuleCUE.ResolvedVersion uses nonzero type SemVer as value; use *SemVer for optional fields" },
+    { id = "gpl4_d20e48bda085b586204820e14f97e947f35c6e4c874256ce58a81c8411590420", message = "struct field provision.provisionedModuleCopy.CommandNamespace uses nonzero type ModuleNamespace as value; use *ModuleNamespace for optional fields" },
+    { id = "gpl4_d4b782b0cbb06964eb52bb79de9e6dac08732e2db678a46d069eb36fe711108d", message = "struct field invowkmod.LockedModule.ContentHash uses nonzero type ContentHash as value; use *ContentHash for optional fields" },
+    { id = "gpl4_dcc7c93998ff580a73f2799ae96a2700e97dcd358dbd3e5c0bf982dbc0f41776", message = "struct field invowkmod.ModuleRef.GitURL uses nonzero type GitURL as value; use *GitURL for optional fields" },
+    { id = "gpl4_dfd168eb6c65df60c7f6fb2c52d10692f403880592b1702f0a24c540fefb8c45", message = "struct field modulesync.tagInfo.Commit uses nonzero type GitCommit as value; use *GitCommit for optional fields" },
+    { id = "gpl4_e71960a61159fb4dab7272507dfde41f96d85eaba9c03bbdccd5671531827c6e", message = "struct field invowkmod.CommandScopeDecision.TargetModuleID uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_ebaf72a5ef36ad52a70380a5a694aa4f821cdaa6b47130dc031a508953c3059a", message = "struct field invowkmod.VendoredHashEvaluation.Expected uses nonzero type ContentHash as value; use *ContentHash for optional fields" },
+    { id = "gpl4_ec316c51ec5c481b8fdc2f8445ffd4fe86ef203fadaa420b20cdd430c683cf5f", message = "struct field invowkmod.ContentHashMismatchError.ModuleKey uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_ef7c7b03f851b7fc86e3ded96c10b151c06175aaa9b5f6617ba1fa02c4d0bc0a", message = "struct field invowkmod.lockedModuleCUE.Namespace uses nonzero type ModuleNamespace as value; use *ModuleNamespace for optional fields" },
+    { id = "gpl4_f0c53669d91c3984ad72f062d7f9d9b3b84f672b5b92b84466f6b0f129a948d5", message = "struct field modulesync.CanonicalModuleCollisionError.ExistingKey uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_f105d3c6f92497d1fc82e543888fb80d17064b8e21a193d09bad36a6473ea67f", message = "struct field invowkmod.declaredLockedModuleEntry.key uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_f6e3ef172af3a2748044e79325196d37358ed3314fb173f6e15e6a584b1f3289", message = "struct field invowkmod.Invowkmod.Module uses nonzero type ModuleID as value; use *ModuleID for optional fields" },
+    { id = "gpl4_fd7309c1cc252be1540985d6825a0df5ade157b3a8c94e865bd9c3185f0922b2", message = "struct field invowkmod.VendoredHashEvaluation.ModuleKey uses nonzero type ModuleRefKey as value; use *ModuleRefKey for optional fields" },
+    { id = "gpl4_ff6acde4bcf55bd11d0f0ab3836ce00307a28045b01c5f0eedb235a09d0d55fe", message = "struct field invowkmod.ContentHashMismatchError.Expected uses nonzero type ContentHash as value; use *ContentHash for optional fields" },
+]

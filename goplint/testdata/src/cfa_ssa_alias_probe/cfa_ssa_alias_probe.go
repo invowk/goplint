@@ -10,6 +10,23 @@ type ProbeTarget string
 
 func (p ProbeTarget) Validate() error { return nil }
 
+func useProbe(ProbeTarget) {}
+
+func ValidateBeforeUse(raw string) {
+	x := ProbeTarget(raw)
+	if err := x.Validate(); err != nil {
+		return
+	}
+	useProbe(x)
+}
+
+type probeHolder struct {
+	value ProbeTarget
+}
+
+func touch(*ProbeTarget)                 {}
+func preservePointer(value *ProbeTarget) { _ = value }
+
 // CopyAlias: y should alias x (both point to same SSA value).
 func CopyAlias(raw string) ProbeTarget {
 	x := ProbeTarget(raw)
@@ -33,6 +50,131 @@ func NestedCallAlias(raw string) ProbeTarget {
 	x := ProbeTarget(strings.TrimSpace(raw))
 	y := x
 	_ = y.Validate()
+	return x
+}
+
+// SamePhiAlias keeps both branch values tied to the cast identity.
+func SamePhiAlias(raw string, choose bool) ProbeTarget {
+	x := ProbeTarget(raw)
+	y := x
+	if choose {
+		y = x
+	} else {
+		y = x
+	}
+	_ = y.Validate()
+	return x
+}
+
+// AmbiguousPhiAlias joins the cast identity with a distinct object.
+func AmbiguousPhiAlias(raw1, raw2 string, choose bool) ProbeTarget {
+	x := ProbeTarget(raw1)
+	other := ProbeTarget(raw2)
+	y := x
+	if choose {
+		y = x
+	} else {
+		y = other
+	}
+	_ = y.Validate()
+	return x
+}
+
+// IrrelevantPhiAlias joins two objects that never alias the tracked cast.
+func IrrelevantPhiAlias(raw1, raw2, raw3 string, choose bool) ProbeTarget {
+	x := ProbeTarget(raw1)
+	left := ProbeTarget(raw2)
+	right := ProbeTarget(raw3)
+	y := left
+	if choose {
+		y = left
+	} else {
+		y = right
+	}
+	_ = y.Validate()
+	_ = x.Validate()
+	return x
+}
+
+// InterfaceAlias round-trips the cast identity through an interface.
+func InterfaceAlias(raw string) ProbeTarget {
+	x := ProbeTarget(raw)
+	var boxed any = x
+	y := boxed.(ProbeTarget)
+	_ = y.Validate()
+	return x
+}
+
+// PointerAlias stores the cast in a unique local cell and loads it through a pointer.
+func PointerAlias(raw string) ProbeTarget {
+	x := ProbeTarget(raw)
+	pointer := &x
+	_ = (*pointer).Validate()
+	return x
+}
+
+// AmbiguousPointerAlias joins two local cells before loading through the pointer.
+func AmbiguousPointerAlias(raw1, raw2 string, choose bool) ProbeTarget {
+	x := ProbeTarget(raw1)
+	other := ProbeTarget(raw2)
+	pointer := &x
+	if choose {
+		pointer = &x
+	} else {
+		pointer = &other
+	}
+	_ = (*pointer).Validate()
+	return x
+}
+
+// AddressAlias passes the address of the tracked local after validation.
+func AddressAlias(raw string) ProbeTarget {
+	x := ProbeTarget(raw)
+	_ = x.Validate()
+	touch(&x)
+	return x
+}
+
+// AddressValidateAlias invokes Validate through an address-of receiver.
+func AddressValidateAlias(raw string) ProbeTarget {
+	x := ProbeTarget(raw)
+	_ = (&x).Validate()
+	return x
+}
+
+// RebasedSelectorAlias validates a field on a definitely different allocation.
+func RebasedSelectorAlias(raw string) ProbeTarget {
+	first := &probeHolder{}
+	second := &probeHolder{}
+	target := first
+	target.value = ProbeTarget(raw)
+	target = second
+	_ = target.value.Validate()
+	return first.value
+}
+
+// RebasedIndexAlias validates a static index on a definitely different slice.
+func RebasedIndexAlias(raw string) ProbeTarget {
+	first := []ProbeTarget{"first"}
+	second := []ProbeTarget{"second"}
+	target := first
+	target[0] = ProbeTarget(raw)
+	target = second
+	_ = target[0].Validate()
+	return first[0]
+}
+
+// AmbiguousPreserveAlias passes a may-alias pointer to a preserving helper.
+func AmbiguousPreserveAlias(raw string, choose bool) ProbeTarget {
+	x := ProbeTarget(raw)
+	other := ProbeTarget("other")
+	pointer := &x
+	if choose {
+		pointer = &x
+	} else {
+		pointer = &other
+	}
+	preservePointer(pointer)
 	return x
 }
 

@@ -103,6 +103,6 @@ func reportTestHomeEnvPlatform(pass *analysis.Pass, call *ast.CallExpr, funcQual
 		"test %s sets HOME directly; use internal/testutil.SetHomeDir(t, dir) so os.UserHomeDir sees USERPROFILE on Windows",
 		funcQualName,
 	)
-	findingID := PackageScopedFindingID(pass, CategoryTestHomeEnvPlatform, funcQualName, stablePosKey(pass, call.Pos()))
+	findingID := PackageScopedFindingID(pass, CategoryTestHomeEnvPlatform, funcQualName, semanticNodeKey(pass, call.Pos()))
 	reportFindingIfNotBaselined(pass, bl, call.Pos(), CategoryTestHomeEnvPlatform, findingID, msg)
 }

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
-// Package cfa_castvalidation provides test fixtures for the CFA-enhanced
-// cast-validation mode. These fixtures target path-reachability-specific
-// behavior where the CFA mode and AST heuristic differ.
+// Package cfa_castvalidation provides fixtures for canonical path-sensitive
+// cast validation.
 package cfa_castvalidation
 
 import (
@@ -44,9 +43,15 @@ func runtimeInt() int       { return 42 }     // want `return value of cfa_castv
 
 func useCmd(_ CommandName) {}
 
-// --- CFA-specific test cases ---
+func mustValidate(value CommandName) {
+	if err := value.Validate(); err != nil {
+		panic(err)
+	}
+}
 
-// ValidateInDeadBranch — CFA flags this because the Validate() call is in
+// --- Path-sensitive test cases ---
+
+// ValidateInDeadBranch is flagged because the Validate() call is in
 // unreachable code (if false). The AST heuristic would miss this because
 // it sees "x.Validate()" anywhere in the function body.
 func ValidateInDeadBranch(raw string) { // want `parameter "raw" of cfa_castvalidation\.ValidateInDeadBranch uses primitive type string`
@@ -57,8 +62,8 @@ func ValidateInDeadBranch(raw string) { // want `parameter "raw" of cfa_castvali
 	}
 }
 
-// ValidateAfterUse — NOT flagged by CFA because x.Validate() is called
-// on the return path. CFA checks "path-to-return-without-validate,"
+// ValidateAfterUse is not a cast-validation finding because x.Validate() is
+// called on the return path. Use-before-validation is checked separately,
 // not "use-before-validate." The fact that useCmd(x) precedes Validate()
 // doesn't matter — all paths to return pass through Validate().
 func ValidateAfterUse(raw string) error { // want `parameter "raw" of cfa_castvalidation\.ValidateAfterUse uses primitive type string`
@@ -67,7 +72,7 @@ func ValidateAfterUse(raw string) error { // want `parameter "raw" of cfa_castva
 	return x.Validate()
 }
 
-// ValidateOnOneBranch — CFA flags this because when !strict, the cast
+// ValidateOnOneBranch is flagged because when !strict, the cast
 // reaches the useCmd call (and then return) without Validate().
 func ValidateOnOneBranch(raw string, strict bool) { // want `parameter "raw" of cfa_castvalidation\.ValidateOnOneBranch uses primitive type string`
 	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
@@ -104,6 +109,16 @@ func ValidateBeforeUse(raw string) { // want `parameter "raw" of cfa_castvalidat
 	useCmd(x)
 }
 
+// ValidateBeforeTypedReturn is safe because the value reaches the successful
+// return only after validation and the failure return propagates the error.
+func ValidateBeforeTypedReturn(raw string) (CommandName, error) { // want `parameter "raw" of cfa_castvalidation\.ValidateBeforeTypedReturn uses primitive type string`
+	x := CommandName(raw)
+	if err := x.Validate(); err != nil {
+		return "", err
+	}
+	return x, nil
+}
+
 // VarDeclValidated — var declaration assignment should be tracked as assigned.
 func VarDeclValidated(raw string) { // want `parameter "raw" of cfa_castvalidation\.VarDeclValidated uses primitive type string`
 	var x CommandName = CommandName(raw)
@@ -136,7 +151,7 @@ func AddressOfValidateReceiver(raw string) { // want `parameter "raw" of cfa_cas
 }
 
 // ParenAssignedValidated — parenthesized RHS should still be tracked as an
-// assigned cast in CFA mode.
+// assigned cast by the canonical protocol analysis.
 func ParenAssignedValidated(raw string) { // want `parameter "raw" of cfa_castvalidation\.ParenAssignedValidated uses primitive type string`
 	x := (CommandName(raw))
 	if err := x.Validate(); err != nil {
@@ -156,10 +171,10 @@ func IndexedLHSParenCanonicalization() {
 	_ = ports
 }
 
-// ValidateInsideIIFE — immediately-invoked closures execute synchronously and
-// should count as validation on the current path.
+// ValidateInsideIIFE executes synchronously, but ignoring its validation error
+// does not establish successful validation.
 func ValidateInsideIIFE(raw string) { // want `parameter "raw" of cfa_castvalidation\.ValidateInsideIIFE uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	func() {
 		_ = x.Validate()
 	}()
@@ -175,7 +190,7 @@ func IIFEWithoutValidate(raw string) { // want `parameter "raw" of cfa_castvalid
 	}()
 }
 
-// SimpleNoValidation — basic case flagged by both AST and CFA.
+// SimpleNoValidation is the basic unvalidated-path case.
 func SimpleNoValidation(raw string) { // want `parameter "raw" of cfa_castvalidation\.SimpleNoValidation uses primitive type string`
 	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	useCmd(x)
@@ -187,6 +202,14 @@ func SimpleWithValidation(raw string) { // want `parameter "raw" of cfa_castvali
 	if err := x.Validate(); err != nil {
 		return
 	}
+	useCmd(x)
+}
+
+// ValidateThroughNoErrorHelper is safe because mustValidate can return only
+// after the exact value has validated successfully.
+func ValidateThroughNoErrorHelper(raw string) { // want `parameter "raw" of cfa_castvalidation\.ValidateThroughNoErrorHelper uses primitive type string`
+	x := CommandName(raw)
+	mustValidate(x)
 	useCmd(x)
 }
 
@@ -265,9 +288,9 @@ func StrconvFormatIntAutoSkipCFA(v int64) { // want `parameter "v" of cfa_castva
 	useCmd(x)
 }
 
-// --- CFA edge case: switch case validation ---
+// --- Path-analysis edge case: switch case validation ---
 
-// ValidateInSwitchCase — CFA flags this because the default branch
+// ValidateInSwitchCase is flagged because the default branch
 // reaches useCmd/return without Validate().
 func ValidateInSwitchCase(raw string, mode int) { // want `parameter "raw" of cfa_castvalidation\.ValidateInSwitchCase uses primitive type string` `parameter "mode" of cfa_castvalidation\.ValidateInSwitchCase uses primitive type int`
 	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
@@ -282,14 +305,13 @@ func ValidateInSwitchCase(raw string, mode int) { // want `parameter "raw" of cf
 	useCmd(x)
 }
 
-// --- CFA edge case: for loop validation ---
+// --- Path-analysis edge case: for loop validation ---
 
-// ValidateInForLoop — CFA correctly flags this because the CFG has a
-// "zero-iteration" path that bypasses the loop body entirely. From
-// the CFG's perspective, the loop condition could be false initially,
-// skipping Validate() and reaching return via ForDone.
+// ValidateInForLoop is inconclusive because proving the zero-iteration path
+// infeasible requires an ordering predicate outside the finite equality
+// refinement fragment.
 func ValidateInForLoop(raw string) { // want `parameter "raw" of cfa_castvalidation\.ValidateInForLoop uses primitive type string`
-	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant has inconclusive Validate\(\) path analysis`
 	for i := 0; i < 3; i++ {
 		if err := x.Validate(); err != nil {
 			return
@@ -298,9 +320,21 @@ func ValidateInForLoop(raw string) { // want `parameter "raw" of cfa_castvalidat
 	useCmd(x)
 }
 
-// --- CFA edge case: variable reassignment ---
+// ValidateFreshInsideRangeLoop is safe because every candidate is created and
+// validated within the same loop iteration before it can reach useCmd.
+func ValidateFreshInsideRangeLoop(raws []string) { // want `parameter "raws" of cfa_castvalidation\.ValidateFreshInsideRangeLoop uses primitive type \[\]string`
+	for _, raw := range raws {
+		x := CommandName(raw)
+		if err := x.Validate(); err != nil {
+			continue
+		}
+		useCmd(x)
+	}
+}
 
-// ReassignedVariable — CFA flags this because after the second assignment,
+// --- Path-analysis edge case: variable reassignment ---
+
+// ReassignedVariable is flagged because after the second assignment,
 // the new cast to x is never validated (only the first had Validate).
 func ReassignedVariable(a, b string) { // want `parameter "a" of cfa_castvalidation\.ReassignedVariable uses primitive type string` `parameter "b" of cfa_castvalidation\.ReassignedVariable uses primitive type string`
 	x := CommandName(a)
@@ -311,17 +345,43 @@ func ReassignedVariable(a, b string) { // want `parameter "a" of cfa_castvalidat
 	useCmd(x)
 }
 
-// --- Inline ignore directive — CFA should respect //goplint:ignore on cast lines ---
+// AliasReboundAfterValidation remains safe because the alias still denotes x
+// at the checked validation call. Its later rebind must not erase that proof.
+func AliasReboundAfterValidation(raw string, replacement CommandName) error { // want `parameter "raw" of cfa_castvalidation\.AliasReboundAfterValidation uses primitive type string`
+	x := CommandName(raw)
+	alias := x
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	alias = replacement
+	useCmd(alias)
+	return nil
+}
+
+// AliasReboundBeforeValidation does not validate x because alias denotes the
+// replacement by the time Validate is called.
+func AliasReboundBeforeValidation(raw string, replacement CommandName) error { // want `parameter "raw" of cfa_castvalidation\.AliasReboundBeforeValidation uses primitive type string`
+	x := CommandName(raw) // want `type conversion to CommandName from non-constant without Validate\(\) check`
+	alias := x
+	alias = replacement
+	if err := alias.Validate(); err != nil {
+		return err
+	}
+	useCmd(x)
+	return nil
+}
+
+// --- Inline ignore directive on cast lines ---
 
 // InlineIgnoredCast — the cast has an inline ignore directive on the same line,
-// so CFA should NOT flag it despite having an unvalidated path to return.
+// so analysis should not flag it despite having an unvalidated path to return.
 func InlineIgnoredCast(s string) CommandName { // want `parameter "s" of cfa_castvalidation\.InlineIgnoredCast uses primitive type string`
-	cmd := CommandName(s) //goplint:ignore -- trusted source, CFA should skip
+	cmd := CommandName(s) //goplint:ignore -- trusted source; protocol analysis should skip
 	return cmd
 }
 
 // InlineIgnoredCastDocComment — the cast has an ignore directive on the line above
-// (doc comment pattern). CFA should NOT flag it.
+// (doc comment pattern). Protocol analysis should not flag it.
 func InlineIgnoredCastDocComment(s string) CommandName { // want `parameter "s" of cfa_castvalidation\.InlineIgnoredCastDocComment uses primitive type string`
 	//goplint:ignore -- trusted source
 	cmd := CommandName(s)
@@ -334,7 +394,7 @@ func NonIgnoredCast(s string) CommandName { // want `parameter "s" of cfa_castva
 	return cmd
 }
 
-// --- CFA edge case: goroutine Validate() does not cover outer path ---
+// --- Path-analysis edge case: goroutine Validate() does not cover outer path ---
 
 // GoroutineValidateDoesNotCoverOuter — FLAGGED because the goroutine's
 // Validate() call does not guarantee execution before the outer function
@@ -347,12 +407,10 @@ func GoroutineValidateDoesNotCoverOuter(raw string) { // want `parameter "raw" o
 	useCmd(x)
 }
 
-// DeferredClosureValidate — NOT flagged. Deferred closures are guaranteed
-// to execute before the enclosing function returns (Go spec), so
-// defer func() { x.Validate() }() validates the outer path. CFA recognizes
-// deferred FuncLit bodies and descends into them when checking for Validate.
+// DeferredClosureValidate remains unvalidated because the deferred closure
+// ignores the validation result.
 func DeferredClosureValidate(raw string) { // want `parameter "raw" of cfa_castvalidation\.DeferredClosureValidate uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw)               // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	defer func() { _ = x.Validate() }() //nolint:errcheck
 	useCmd(x)
 }
@@ -376,17 +434,16 @@ func GoAndDeferMixed(raw string) { // want `parameter "raw" of cfa_castvalidatio
 	defer func() { useCmd(x) }()
 }
 
-// DeferredValidateWithGoRoutine — NOT flagged. The deferred closure calls
-// Validate(), which covers the outer path. The goroutine's Validate() is
-// irrelevant (redundant but harmless).
+// DeferredValidateWithGoRoutine remains unvalidated because both validation
+// results are ignored; scheduling does not change that contract.
 func DeferredValidateWithGoRoutine(raw string) { // want `parameter "raw" of cfa_castvalidation\.DeferredValidateWithGoRoutine uses primitive type string`
-	x := CommandName(raw)
+	x := CommandName(raw)               // want `type conversion to CommandName from non-constant without Validate\(\) check`
 	go func() { _ = x.Validate() }()    //nolint:errcheck
 	defer func() { _ = x.Validate() }() //nolint:errcheck
 	useCmd(x)
 }
 
-// --- CFA edge case: select statement validation ---
+// --- Path-analysis edge case: select statement validation ---
 
 // SelectOneBranchValidated — FLAGGED because the default branch does not
 // call Validate(). Only the channel case validates.
@@ -419,7 +476,7 @@ func SelectAllBranchesValidated(raw string, ch chan string) { // want `parameter
 	useCmd(x)
 }
 
-// --- CFA edge case: panic path ---
+// --- Path-analysis edge case: panic path ---
 
 // ValidateOrPanic — NOT flagged because Validate() is called on the path.
 // When Validate() returns nil, the path continues to useCmd. When it returns
@@ -433,10 +490,10 @@ func ValidateOrPanic(raw string) { // want `parameter "raw" of cfa_castvalidatio
 	useCmd(x)
 }
 
-// --- CFA edge case: branch-specific reassignment ---
+// --- Path-analysis edge case: branch-specific reassignment ---
 
 // BranchReassignmentPartialValidation — the if-branch validates its cast,
-// but the else-branch's cast is NOT validated. CFA correctly flags only the
+// but the else-branch's cast is not validated. Analysis flags only the
 // else-branch cast because from its defining block, there is a path to
 // return without Validate().
 func BranchReassignmentPartialValidation(a, b string, cond bool) { // want `parameter "a" of cfa_castvalidation\.BranchReassignmentPartialValidation uses primitive type string` `parameter "b" of cfa_castvalidation\.BranchReassignmentPartialValidation uses primitive type string`
@@ -452,7 +509,7 @@ func BranchReassignmentPartialValidation(a, b string, cond bool) { // want `para
 	useCmd(x)
 }
 
-// --- CFA: log/slog auto-skip ---
+// --- Path analysis: log/slog auto-skip ---
 
 // LogPrintfAutoSkipCFA — should NOT be flagged (log.Printf is display-only).
 func LogPrintfAutoSkipCFA(input string) { // want `parameter "input" of cfa_castvalidation\.LogPrintfAutoSkipCFA uses primitive type string`
@@ -464,7 +521,7 @@ func SlogInfoAutoSkipCFA(input string) { // want `parameter "input" of cfa_castv
 	Info("cmd", "name", CommandName(input)) // NOT flagged — display only (dot import)
 }
 
-// --- CFA: ancestor depth limit tests (maxAncestorDepth = 5) ---
+// --- Path analysis: ancestor depth limit tests (maxAncestorDepth = 5) ---
 
 // CastAtAncestorDepthWithinLimitCFA — should NOT be flagged because the
 // ancestor walk reaches fmt.Sprintf at hop 4 (within maxAncestorDepth=5).
@@ -483,7 +540,7 @@ func CastBeyondAncestorDepthLimitCFA(input string) string { // want `parameter "
 	return fmt.Sprintf("%v", l3{V: l2{V: l1{V: CommandName(input)}}}) // want `type conversion to CommandName from non-constant without Validate\(\) check`
 }
 
-// --- CFA: strings.* comparison auto-skip ---
+// --- Path analysis: strings.* comparison auto-skip ---
 
 // StringsContainsAutoSkipCFA — should NOT be flagged (comparison context).
 func StringsContainsAutoSkipCFA(input string) bool { // want `parameter "input" of cfa_castvalidation\.StringsContainsAutoSkipCFA uses primitive type string`
@@ -495,7 +552,7 @@ func StringsReplaceNotSkippedCFA(input string) string { // want `parameter "inpu
 	return strings.ReplaceAll(string(CommandName(input)), "-", "_") // want `type conversion to CommandName from non-constant without Validate\(\) check`
 }
 
-// --- CFA: bytes.* comparison auto-skip ---
+// --- Path analysis: bytes.* comparison auto-skip ---
 
 // BytesContainsAutoSkipCFA — should NOT be flagged (comparison context).
 func BytesContainsAutoSkipCFA(input string) bool { // want `parameter "input" of cfa_castvalidation\.BytesContainsAutoSkipCFA uses primitive type string`

@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+
+[settings]
+skip_types = ["bool", "error", "context.Context", "any"]
+exclude_paths = ["excludedprotocol/"]
+include_packages = ["excludedprotocol"]

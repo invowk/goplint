@@ -2,7 +2,11 @@
 
 package goplint
 
-import "testing"
+import (
+	"reflect"
+	"strings"
+	"testing"
+)
 
 func TestDiagnosticCategorySpec(t *testing.T) {
 	t.Parallel()
@@ -29,7 +33,7 @@ func TestDiagnosticCategorySpec(t *testing.T) {
 		if ok {
 			t.Fatal("expected unknown category to report ok=false")
 		}
-		if spec != (CategorySpec{}) {
+		if !reflect.DeepEqual(spec, CategorySpec{}) {
 			t.Fatalf("spec = %+v, want zero value", spec)
 		}
 	})
@@ -69,5 +73,34 @@ func TestIsBaselineSuppressibleCategory(t *testing.T) {
 				t.Fatalf("IsBaselineSuppressibleCategory(%q) = %v, want %v", tt.category, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestProtocolInconclusiveCategoriesAreAlwaysVisible(t *testing.T) {
+	t.Parallel()
+
+	seen := make(map[string]bool)
+	for _, spec := range diagnosticCategoryRegistry() {
+		if spec.SemanticKind != semanticKindProtocol || !strings.Contains(spec.Name, "inconclusive") {
+			continue
+		}
+		seen[spec.Name] = true
+		if spec.BaselinePolicy != BaselineAlwaysVisible {
+			t.Errorf("protocol inconclusive category %q baseline policy = %v, want always visible", spec.Name, spec.BaselinePolicy)
+		}
+		if spec.BaselineLabel != "" {
+			t.Errorf("protocol inconclusive category %q has baseline label %q", spec.Name, spec.BaselineLabel)
+		}
+	}
+
+	want := []string{
+		CategoryUnvalidatedCastInconclusive,
+		CategoryMissingConstructorValidateInc,
+		CategoryUseBeforeValidateInconclusive,
+	}
+	for _, category := range want {
+		if !seen[category] || !IsProtocolInconclusiveCategory(category) {
+			t.Errorf("protocol inconclusive registry omits %q", category)
+		}
 	}
 }

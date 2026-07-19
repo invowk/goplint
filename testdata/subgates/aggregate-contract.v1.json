@@ -1,0 +1,27 @@
+{
+  "format_version": 1,
+  "runs": [
+    {
+      "id": "contract-packages",
+      "packages": [
+        "./internal/soundnessevidence",
+        "./internal/soundnessgate",
+        "./internal/subgatecensus",
+        "./cmd/gate-contract"
+      ],
+      "count": 1,
+      "timeout_seconds": 120
+    }
+  ],
+  "populations": [
+    {
+      "id": "contract-packages",
+      "selectors": [
+        {
+          "run": "contract-packages",
+          "scope": "packages"
+        }
+      ]
+    }
+  ]
+}

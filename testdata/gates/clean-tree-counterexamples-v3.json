@@ -1,0 +1,53 @@
+{
+  "format_version": 3,
+  "counterexamples": [
+    {
+      "id": "conditional-summary-result",
+      "observation": "validation is restored only on the continuation proving the exact aliased helper result nil; discarded, overwritten, or mismatched results remain invalid or inconclusive"
+    },
+    {
+      "id": "constructor-success-edge",
+      "observation": "the else-edge return retains the object obligation and is a violation or blocking inconclusive"
+    },
+    {
+      "id": "directive-validation",
+      "observation": "one deterministic actionable unknown-directive diagnostic is emitted before any directive consumer runs"
+    },
+    {
+      "id": "false-credit-category-evidence",
+      "observation": "credit is accepted only when producer-emitted executed observations contain the claimed category, boundary, stages, dimensions, properties, and populations"
+    },
+    {
+      "id": "hard-coded-subgate-populations",
+      "observation": "the subgate fails before success unless every manifest member exists and is uniquely observed in the current run"
+    },
+    {
+      "id": "imported-fact-shape",
+      "observation": "the entire relevant fact is rejected and dependent analysis becomes blocking inconclusive"
+    },
+    {
+      "id": "incomplete-diff-proof",
+      "observation": "materialization and freshness verification fail until one v3 record binds the complete intended diff, all ledgers, artifacts, observations, and archive order"
+    },
+    {
+      "id": "noncausal-mutation-attribution",
+      "observation": "the mutant is invalid unless a structured observation proves the declared semantic mismatch after clean controls and exact restoration"
+    },
+    {
+      "id": "package-stored-literal",
+      "observation": "the package initializer literal is analyzed exactly once even without a visible call, or emits blocking inconclusive if its procedure identity is unresolved"
+    },
+    {
+      "id": "post-validation-escape",
+      "observation": "mutable escape invalidates proof or is blocking inconclusive; an alias-free immutable copy preserves validation"
+    },
+    {
+      "id": "preclassification-suppression",
+      "observation": "classification occurs first and the inconclusive diagnostic remains always visible"
+    },
+    {
+      "id": "stable-id-global-identity",
+      "observation": "IDs remain layout-stable, differ across full import paths, and collisions or duplicate emissions fail before baseline write"
+    }
+  ]
+}

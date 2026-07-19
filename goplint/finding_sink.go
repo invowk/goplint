@@ -17,6 +17,7 @@ import (
 // by -emit-findings-jsonl / -update-baseline plumbing.
 type FindingStreamRecord struct {
 	Kind     string            `json:"kind,omitempty"`
+	Package  string            `json:"package,omitempty"`
 	Category string            `json:"category,omitempty"`
 	ID       string            `json:"id,omitempty"`
 	Message  string            `json:"message,omitempty"`
@@ -30,6 +31,7 @@ var findingReporters sync.Map // map[*analysis.Pass]*diagnosticReporter
 
 type diagnosticReporter struct {
 	fset   *token.FileSet
+	pkg    string
 	report func(analysis.Diagnostic)
 	stream *findingStreamWriter
 }
@@ -49,6 +51,9 @@ func installDiagnosticReporter(pass *analysis.Pass, findingsPath string) func() 
 	reporter := &diagnosticReporter{
 		fset:   pass.Fset,
 		report: originalReport,
+	}
+	if pass.Pkg != nil {
+		reporter.pkg = pass.Pkg.Path()
 	}
 	if findingsPath != "" {
 		reporter.stream = &findingStreamWriter{
@@ -103,6 +108,7 @@ func (r *diagnosticReporter) writeDiagnostic(d analysis.Diagnostic) {
 	if !ok {
 		return
 	}
+	record.Package = r.pkg
 	r.stream.Write(record)
 }
 
