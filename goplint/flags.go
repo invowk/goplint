@@ -17,7 +17,7 @@ const (
 
 	defaultCFGRefinementMaxIterations = 3
 	defaultCFGFeasibilityMaxQueries   = 16
-	defaultCFGFeasibilityTimeoutMS    = 1000
+	defaultCFGFeasibilityTimeoutMS    = 5000
 )
 
 // flagState contains one analyzer instance's parsed flag values. Keeping this

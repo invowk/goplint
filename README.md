@@ -136,7 +136,7 @@ Resource flags bound work but cannot disable semantic layers:
 | `-cfg-witness-max-steps` | `12` | truncates explanation metadata only |
 | `-protocol-refinement-max-iterations` | `3` | blocking inconclusive |
 | `-protocol-feasibility-max-queries` | `16` | blocking inconclusive |
-| `-protocol-feasibility-timeout-ms` | `1000` | blocking inconclusive |
+| `-protocol-feasibility-timeout-ms` | `5000` | blocking inconclusive |
 
 The analyzer rejects removed compatibility flags as unknown. In particular,
 there is no selectable protocol backend, interprocedural engine, alias mode,
