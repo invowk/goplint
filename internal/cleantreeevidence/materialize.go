@@ -15,6 +15,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/invowk/invowk/tools/goplint/internal/gitenv"
 )
 
 const (
@@ -78,7 +80,7 @@ func materializeFromBase(
 		return nil, fmt.Errorf("resolve clean-tree base revision %q: %w", baseRevision, err)
 	}
 	indexPath := filepath.Join(tempRoot, "index")
-	indexEnv := replaceEnvironmentVariable(os.Environ(), "GIT_INDEX_FILE", indexPath)
+	indexEnv := replaceEnvironmentVariable(gitenv.WithoutRepositoryLocal(os.Environ()), "GIT_INDEX_FILE", indexPath)
 	if _, err := runCommand(ctx, absoluteRoot, indexEnv, nil, "git", "read-tree", baseCommit); err != nil {
 		return nil, fmt.Errorf("initialize temporary index: %w", err)
 	}
@@ -102,7 +104,7 @@ func materializeFromBase(
 	if err != nil {
 		return nil, fmt.Errorf("compute synthetic diff: %w", err)
 	}
-	commitEnv := os.Environ()
+	commitEnv := gitenv.WithoutRepositoryLocal(os.Environ())
 	for key, value := range map[string]string{
 		"GIT_AUTHOR_NAME":     "goplint evidence",
 		"GIT_AUTHOR_EMAIL":    "goplint-evidence@invalid",
@@ -284,9 +286,10 @@ func runCommand(
 	command := exec.CommandContext(ctx, name, args...)
 	command.WaitDelay = 10 * time.Second
 	command.Dir = directory
-	if env != nil {
-		command.Env = env
+	if env == nil {
+		env = gitenv.WithoutRepositoryLocal(os.Environ())
 	}
+	command.Env = env
 	if input != nil {
 		command.Stdin = bytes.NewReader(input)
 	}

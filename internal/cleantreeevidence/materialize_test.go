@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/invowk/invowk/tools/goplint/internal/gitenv"
 )
 
 func TestMaterializeUsesSelectedContentAndPreservesCaller(t *testing.T) {
@@ -146,7 +148,7 @@ func initializeTestRepository(t *testing.T) string {
 	runTestGit(t, root, "add", "tracked.txt")
 	command := exec.CommandContext(t.Context(), "git", "commit", "--quiet", "-m", "initial")
 	command.Dir = root
-	command.Env = append(os.Environ(),
+	command.Env = append(gitenv.WithoutRepositoryLocal(os.Environ()),
 		"GIT_AUTHOR_NAME=test",
 		"GIT_AUTHOR_EMAIL=test@invalid",
 		"GIT_COMMITTER_NAME=test",
@@ -162,6 +164,7 @@ func runTestGit(t *testing.T, root string, args ...string) {
 	t.Helper()
 	command := exec.CommandContext(t.Context(), "git", args...)
 	command.Dir = root
+	command.Env = gitenv.WithoutRepositoryLocal(os.Environ())
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, output)
 	}

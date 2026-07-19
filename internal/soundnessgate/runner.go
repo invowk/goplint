@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/invowk/invowk/tools/goplint/internal/gitenv"
 	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
 )
 
@@ -225,6 +226,7 @@ func run(ctx context.Context, options Options, dependencies runnerDependencies) 
 func WorkspaceDigest(ctx context.Context, root string) (string, error) {
 	command := exec.CommandContext(ctx, "git", "-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
 	command.WaitDelay = commandWaitDelay
+	command.Env = gitenv.WithoutRepositoryLocal(os.Environ())
 	output, err := command.Output()
 	if err != nil {
 		return "", fmt.Errorf("enumerate tracked and untracked workspace files: %w", err)
@@ -408,7 +410,7 @@ func executeCommand(
 ) error {
 	command := exec.CommandContext(ctx, commandVector[0], commandVector[1:]...)
 	command.Dir = workingDirectory
-	command.Env = environment
+	command.Env = gitenv.WithoutRepositoryLocal(environment)
 	command.Stdout = stdout
 	command.Stderr = stderr
 	command.WaitDelay = commandWaitDelay
