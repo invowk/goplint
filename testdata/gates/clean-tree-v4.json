@@ -140,7 +140,7 @@
     },
     {
       "name": "rescope-goplint-soundness-triggers",
-      "path": "openspec/changes/rescope-goplint-soundness-triggers/tasks.md",
+      "path": "openspec/changes/archive/2026-07-24-rescope-goplint-soundness-triggers/tasks.md",
       "expected_pending": []
     }
   ],
