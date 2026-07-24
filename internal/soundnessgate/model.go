@@ -29,10 +29,23 @@ const (
 	EnvReportPath = "GOPLINT_SOUNDNESS_REPORT_PATH"
 	// EnvSubgateReportPath is the aggregate-selected path for a producer report.
 	EnvSubgateReportPath = "GOPLINT_SOUNDNESS_SUBGATE_REPORT_PATH"
+	// EnvRepositoryAuditPath is the run-private shared exact-tree audit artifact.
+	EnvRepositoryAuditPath = "GOPLINT_REPOSITORY_AUDIT_PATH"
 
-	// ProfileCore executes every causal subgate except recursive freshness.
-	ProfileCore ProfileID = "core"
-	// ProfileComplete executes the core profile plus clean-tree freshness.
+	// ProfileDocumentation executes only the static goplint documentation
+	// validator; it never runs any analyzer or repository audit.
+	ProfileDocumentation ProfileID = "documentation"
+	// ProfileConsumer executes the single shared audit and its policy consumers.
+	ProfileConsumer ProfileID = "consumer"
+	// ProfileHarness proves orchestration integrity: module test suites, the
+	// shared repository audit, and fixture-driven serial-versus-parallel
+	// normalized-report parity, without semantic population re-execution.
+	ProfileHarness ProfileID = "harness"
+	// ProfileSemantic executes every canonical analyzer soundness population.
+	ProfileSemantic ProfileID = "semantic"
+	// ProfileCore is the compatibility name for the semantic profile.
+	ProfileCore ProfileID = ProfileSemantic
+	// ProfileComplete executes semantic assurance plus completion-only freshness.
 	ProfileComplete ProfileID = "complete"
 
 	// StatusPassed is the only accepted successful producer report status.
@@ -59,13 +72,19 @@ type (
 
 	// Subgate defines one exact command vector and its required fresh outputs.
 	Subgate struct {
-		ID                      string                  `json:"id"`
-		WorkingDirectory        string                  `json:"working_directory"`
-		Command                 []string                `json:"command"`
-		TimeoutSeconds          int                     `json:"timeout_seconds"`
-		ReportFile              string                  `json:"report_file"`
-		RequiredRegistrationIDs []string                `json:"required_registration_ids"`
-		RequiredPopulations     []PopulationRequirement `json:"required_populations"`
+		ID                       string                  `json:"id"`
+		WorkingDirectory         string                  `json:"working_directory"`
+		Command                  []string                `json:"command"`
+		Dependencies             []string                `json:"dependencies"`
+		CPUUnits                 int                     `json:"cpu_units"`
+		EstimatedPeakMemoryBytes int64                   `json:"estimated_peak_memory_bytes"`
+		ExclusivityGroups        []string                `json:"exclusivity_groups"`
+		Distributable            bool                    `json:"distributable"`
+		ProfileIDs               []ProfileID             `json:"profile_ids"`
+		TimeoutSeconds           int                     `json:"timeout_seconds"`
+		ReportFile               string                  `json:"report_file"`
+		RequiredRegistrationIDs  []string                `json:"required_registration_ids"`
+		RequiredPopulations      []PopulationRequirement `json:"required_populations"`
 	}
 
 	// PopulationRequirement defines one named, minimum nonzero admitted
@@ -175,20 +194,23 @@ func (manifest Manifest) Validate(registry soundnessevidence.Registry) error {
 			return fmt.Errorf("evidence registration %q is missing from its producer subgate", registration.ID)
 		}
 	}
+	if err := manifest.validateDependencies(); err != nil {
+		return err
+	}
 	if err := manifest.validateProfiles(); err != nil {
 		return err
 	}
-	coreSubgates, err := manifest.SubgatesForProfile(ProfileCore)
+	semanticSubgates, err := manifest.SubgatesForProfile(ProfileSemantic)
 	if err != nil {
 		return err
 	}
-	coreIDs := make(map[string]bool, len(coreSubgates))
-	for _, subgate := range coreSubgates {
-		coreIDs[subgate.ID] = true
+	semanticIDs := make(map[string]bool, len(semanticSubgates))
+	for _, subgate := range semanticSubgates {
+		semanticIDs[subgate.ID] = true
 	}
 	for _, registration := range registry.Registrations {
-		if !coreIDs[registration.ProducerID] {
-			return fmt.Errorf("evidence registration %q producer %q is absent from the core profile", registration.ID, registration.ProducerID)
+		if !semanticIDs[registration.ProducerID] {
+			return fmt.Errorf("evidence registration %q producer %q is absent from the semantic profile", registration.ID, registration.ProducerID)
 		}
 	}
 	return nil
@@ -264,11 +286,13 @@ func (report RunReport) Validate() error {
 	if report.FormatVersion != RunReportFormatVersion {
 		return fmt.Errorf("soundness run report format_version = %d, want %d", report.FormatVersion, RunReportFormatVersion)
 	}
-	if report.Profile != ProfileCore && report.Profile != ProfileComplete {
+	if !isKnownProfile(report.Profile) {
 		return fmt.Errorf(
-			"soundness run report profile = %q, want %q or %q",
+			"soundness run report profile = %q, want %q, %q, %q, or %q",
 			report.Profile,
-			ProfileCore,
+			ProfileConsumer,
+			ProfileHarness,
+			ProfileSemantic,
 			ProfileComplete,
 		)
 	}
@@ -451,6 +475,48 @@ func (subgate Subgate) validate(index int) error {
 			return fmt.Errorf("soundness manifest subgates[%d].command[%d] is empty", index, argumentIndex)
 		}
 	}
+	if err := validateCanonicalIdentifiers(
+		fmt.Sprintf("soundness manifest subgates[%d].dependencies", index),
+		subgate.Dependencies,
+	); err != nil {
+		return err
+	}
+	if subgate.CPUUnits <= 0 {
+		return fmt.Errorf("soundness manifest subgates[%d].cpu_units = %d, want positive", index, subgate.CPUUnits)
+	}
+	if subgate.EstimatedPeakMemoryBytes <= 0 {
+		return fmt.Errorf(
+			"soundness manifest subgates[%d].estimated_peak_memory_bytes = %d, want positive",
+			index,
+			subgate.EstimatedPeakMemoryBytes,
+		)
+	}
+	if err := validateCanonicalIdentifiers(
+		fmt.Sprintf("soundness manifest subgates[%d].exclusivity_groups", index),
+		subgate.ExclusivityGroups,
+	); err != nil {
+		return err
+	}
+	profileIDs := make([]string, len(subgate.ProfileIDs))
+	for profileIndex, profileID := range subgate.ProfileIDs {
+		profileIDs[profileIndex] = string(profileID)
+	}
+	if len(subgate.ProfileIDs) == 0 {
+		return fmt.Errorf("soundness manifest subgates[%d].profile_ids is empty", index)
+	}
+	seenProfileIDs := make(map[string]bool, len(profileIDs))
+	for profileIndex, profileID := range profileIDs {
+		if err := validateIdentifier(
+			fmt.Sprintf("soundness manifest subgates[%d].profile_ids[%d]", index, profileIndex),
+			profileID,
+		); err != nil {
+			return err
+		}
+		if seenProfileIDs[profileID] {
+			return fmt.Errorf("soundness manifest subgate %q contains duplicate profile id %q", subgate.ID, profileID)
+		}
+		seenProfileIDs[profileID] = true
+	}
 	if subgate.TimeoutSeconds <= 0 || subgate.TimeoutSeconds > maximumTimeoutSeconds {
 		return fmt.Errorf(
 			"soundness manifest subgates[%d].timeout_seconds = %d, want 1..%d",
@@ -501,10 +567,12 @@ func (subgate Subgate) validate(index int) error {
 }
 
 func (manifest Manifest) validateProfiles() error {
-	if len(manifest.Profiles) != 2 ||
-		manifest.Profiles[0].ID != ProfileCore ||
-		manifest.Profiles[1].ID != ProfileComplete {
-		return errors.New("soundness manifest profiles must be exactly core then complete")
+	if len(manifest.Profiles) != 4 ||
+		manifest.Profiles[0].ID != ProfileComplete ||
+		manifest.Profiles[1].ID != ProfileConsumer ||
+		manifest.Profiles[2].ID != ProfileHarness ||
+		manifest.Profiles[3].ID != ProfileSemantic {
+		return errors.New("soundness manifest profiles must be canonical complete, consumer, harness, then semantic")
 	}
 	allSubgateIDs := make([]string, 0, len(manifest.Subgates))
 	for _, subgate := range manifest.Subgates {
@@ -526,20 +594,48 @@ func (manifest Manifest) validateProfiles() error {
 			}
 		}
 	}
-	completeIDs := manifest.Profiles[1].SubgateIDs
-	if !slices.Equal(completeIDs, allSubgateIDs) {
-		return errors.New("soundness complete profile must contain every subgate")
-	}
+	completeIDs := manifest.Profiles[0].SubgateIDs
+	consumerIDs := manifest.Profiles[1].SubgateIDs
+	harnessIDs := manifest.Profiles[2].SubgateIDs
+	semanticIDs := manifest.Profiles[3].SubgateIDs
 	if !slices.Contains(completeIDs, cleanTreeFreshnessID) {
 		return fmt.Errorf("soundness complete profile omits %q", cleanTreeFreshnessID)
 	}
-	wantCoreIDs := slices.DeleteFunc(slices.Clone(completeIDs), func(subgateID string) bool {
+	wantCompleteIDs := append(slices.Clone(semanticIDs), cleanTreeFreshnessID)
+	slices.Sort(wantCompleteIDs)
+	if !slices.Equal(completeIDs, wantCompleteIDs) {
+		return fmt.Errorf("soundness complete profile must equal semantic plus %q", cleanTreeFreshnessID)
+	}
+	if slices.Contains(semanticIDs, cleanTreeFreshnessID) || slices.Contains(consumerIDs, cleanTreeFreshnessID) ||
+		slices.Contains(harnessIDs, cleanTreeFreshnessID) {
+		return fmt.Errorf("soundness non-completion profile includes %q", cleanTreeFreshnessID)
+	}
+	if len(consumerIDs) == 0 || len(harnessIDs) == 0 || len(semanticIDs) == 0 {
+		return errors.New("soundness consumer, harness, and semantic profiles must be non-empty")
+	}
+	for _, subgateID := range consumerIDs {
+		if !slices.Contains(harnessIDs, subgateID) {
+			return fmt.Errorf("soundness harness profile must cover consumer subgate %q", subgateID)
+		}
+	}
+	unusedIDs := slices.DeleteFunc(slices.Clone(allSubgateIDs), func(subgateID string) bool {
+		return slices.Contains(completeIDs, subgateID) || slices.Contains(consumerIDs, subgateID)
+	})
+	if len(unusedIDs) != 0 {
+		return fmt.Errorf("soundness manifest has subgates absent from all profiles: %v", unusedIDs)
+	}
+	wantSemanticIDs := slices.DeleteFunc(slices.Clone(completeIDs), func(subgateID string) bool {
 		return subgateID == cleanTreeFreshnessID
 	})
-	if !slices.Equal(manifest.Profiles[0].SubgateIDs, wantCoreIDs) {
-		return fmt.Errorf("soundness core profile must contain every subgate except %q", cleanTreeFreshnessID)
+	if !slices.Equal(semanticIDs, wantSemanticIDs) {
+		return fmt.Errorf("soundness semantic profile must contain every completion subgate except %q", cleanTreeFreshnessID)
 	}
-	return nil
+	return manifest.validateSubgateProfileMembership()
+}
+
+func isKnownProfile(profile ProfileID) bool {
+	return profile == ProfileConsumer || profile == ProfileHarness ||
+		profile == ProfileSemantic || profile == ProfileComplete
 }
 
 func (result SubgateResult) validate(index int) error {

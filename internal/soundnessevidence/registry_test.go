@@ -137,11 +137,23 @@ func TestValidateObservationsRejectsCensusDrift(t *testing.T) {
 			wantError: "category",
 		},
 		{
-			name: "missing producer binding",
+			// Removing the producer binding deselects the registration, so its
+			// observation becomes out-of-profile evidence and is rejected.
+			name: "observation outside the selected producers",
 			mutate: func(_ *[]SemanticObservation, bindings map[string]ObservationBinding) {
 				delete(bindings, "semantic-production")
 			},
-			wantError: "has no expected binding",
+			wantError: "extra registration id",
+		},
+		{
+			// A profile that selects none of the registry's producers owes no
+			// registration evidence and must not observe any either.
+			name: "unselected producers owe no evidence",
+			mutate: func(observations *[]SemanticObservation, bindings map[string]ObservationBinding) {
+				delete(bindings, "semantic-production")
+				*observations = nil
+			},
+			wantError: "",
 		},
 		{
 			name: "wrong outcome",

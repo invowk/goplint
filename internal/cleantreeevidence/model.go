@@ -19,37 +19,42 @@ import (
 	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
 )
 
-const FormatVersion = 3
+const FormatVersion = 4
 
-var requiredTaskLedgers = []TaskLedgerPlan{
-	{
-		Name:            "complete-goplint-soundness-hardening",
-		Path:            "openspec/changes/complete-goplint-soundness-hardening/tasks.md",
-		ExpectedPending: []string{"12.10"},
-	},
-	{
-		Name:            "close-goplint-soundness-review-gaps",
-		Path:            "openspec/changes/close-goplint-soundness-review-gaps/tasks.md",
-		ExpectedPending: []string{"10.8"},
-	},
-	{
-		Name:            "close-residual-goplint-soundness-gaps",
-		Path:            "openspec/changes/close-residual-goplint-soundness-gaps/tasks.md",
-		ExpectedPending: []string{},
-	},
-}
+// legacyFormatVersion is the retired single-digest record format. It is
+// rejected with an explicit migration notice rather than silently accepted or
+// reinterpreted.
+const legacyFormatVersion = 3
+
+const (
+	// ProvenanceGenerated marks a record produced by fresh gate execution.
+	ProvenanceGenerated = "generated"
+	// ProvenanceRebound marks a record whose prose identity was re-bound while
+	// the retained aggregate report was carried forward untouched.
+	ProvenanceRebound = "re-bound"
+)
+
+var (
+	taskLedgerArchivedPattern = regexp.MustCompile(`^openspec/changes/archive/([0-9]{4}-[0-9]{2}-[0-9]{2})-([a-z0-9][a-z0-9-]*)/tasks\.md$`)
+	taskLedgerActivePattern   = regexp.MustCompile(`^openspec/changes/([a-z0-9][a-z0-9-]*)/tasks\.md$`)
+	pendingTaskIDPattern      = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)?$`)
+)
 
 // Plan declares every input and executed command required by a retained proof.
+// The reviewed plan is the single source of truth for expected task-ledger
+// names, paths, order, and permitted pending identifiers; code and schema
+// validate structure only.
 type Plan struct {
-	FormatVersion   int                 `json:"format_version"`
-	Inputs          []InputPlan         `json:"inputs"`
-	Toolchain       []ToolPlan          `json:"toolchain"`
-	TaskLedgers     []TaskLedgerPlan    `json:"task_ledgers"`
-	DiffReview      DiffReviewPlan      `json:"diff_review"`
-	Counterexamples CounterexamplePlan  `json:"counterexamples"`
-	Commands        []CommandPlan       `json:"commands"`
-	AggregateReport AggregateReportPlan `json:"aggregate_report"`
-	MutationProofs  []MutationProofPlan `json:"mutation_proofs"`
+	FormatVersion         int                 `json:"format_version"`
+	OwnershipManifestPath string              `json:"ownership_manifest_path"`
+	Inputs                []InputPlan         `json:"inputs"`
+	Toolchain             []ToolPlan          `json:"toolchain"`
+	TaskLedgers           []TaskLedgerPlan    `json:"task_ledgers"`
+	DiffReview            DiffReviewPlan      `json:"diff_review"`
+	Counterexamples       CounterexamplePlan  `json:"counterexamples"`
+	Commands              []CommandPlan       `json:"commands"`
+	AggregateReport       AggregateReportPlan `json:"aggregate_report"`
+	MutationProofs        []MutationProofPlan `json:"mutation_proofs"`
 }
 
 // InputPlan identifies a proof input whose byte digest is retained.
@@ -124,13 +129,14 @@ type MutationProofPlan struct {
 	Observation string `json:"observation"`
 }
 
-// Record is the retained format-v3 proof record.
+// Record is the retained format-v4 proof record.
 type Record struct {
 	FormatVersion   int                     `json:"format_version"`
 	Status          string                  `json:"status"`
 	StartedAt       string                  `json:"started_at"`
 	FinishedAt      string                  `json:"finished_at"`
 	Repository      RepositoryIdentity      `json:"repository"`
+	Provenance      ProvenanceIdentity      `json:"provenance"`
 	DiffCensus      DiffCensusIdentity      `json:"diff_census"`
 	Inputs          []InputIdentity         `json:"inputs"`
 	Toolchain       []ToolIdentity          `json:"toolchain"`
@@ -143,13 +149,30 @@ type Record struct {
 }
 
 // RepositoryIdentity binds a proof to the exact selected repository content.
+// The tree binding is split by reviewed ownership class: the semantic-content
+// digest covers every path class that any gate executes or reads, and the
+// prose digest covers documentation-class paths only.
 type RepositoryIdentity struct {
 	BaseCommit          string   `json:"base_commit"`
 	SyntheticTree       string   `json:"synthetic_tree"`
 	SyntheticCommit     string   `json:"synthetic_commit"`
 	DiffSHA256          string   `json:"diff_sha256"`
+	SemanticTreeDigest  string   `json:"semantic_tree_digest"`
+	ProseTreeDigest     string   `json:"prose_tree_digest"`
 	PathSelectionSHA256 string   `json:"path_selection_sha256"`
 	PathSelection       []string `json:"path_selection"`
+}
+
+// ProvenanceIdentity attributes the retained aggregate report to the exact
+// semantic content that produced it. Re-binding rewrites the prose identity
+// but never this attribution: the aggregate semantic digest and workspace
+// digest stay fixed across every re-bind of the same evidence.
+type ProvenanceIdentity struct {
+	Kind                        string `json:"kind"`
+	AggregateSemanticTreeDigest string `json:"aggregate_semantic_tree_digest"`
+	AggregateWorkspaceDigest    string `json:"aggregate_workspace_digest"`
+	CarriedReportSHA256         string `json:"carried_report_sha256"`
+	PreviousProseDigest         string `json:"previous_prose_digest,omitempty"`
 }
 
 // DiffCensusIdentity binds every selected or explicitly excluded changed path
@@ -249,7 +272,7 @@ type PreservationIdentity struct {
 	WorktreeSHA256After  string `json:"worktree_sha256_after"`
 }
 
-// LoadPlan decodes and validates one format-v3 plan.
+// LoadPlan decodes and validates one format-v4 plan.
 func LoadPlan(path string) (Plan, error) {
 	var plan Plan
 	if err := decodeStrictJSONFile(path, &plan); err != nil {
@@ -261,11 +284,20 @@ func LoadPlan(path string) (Plan, error) {
 	return plan, nil
 }
 
-// LoadRecord decodes one format-v3 retained proof record.
+// LoadRecord decodes one format-v4 retained proof record. The retired v3
+// single-digest format is rejected with an explicit migration notice.
 func LoadRecord(path string) (Record, error) {
 	var record Record
 	if err := decodeStrictJSONFile(path, &record); err != nil {
 		return Record{}, fmt.Errorf("decode clean-tree record: %w", err)
+	}
+	if record.FormatVersion == legacyFormatVersion {
+		return Record{}, fmt.Errorf(
+			"clean-tree record format %d is the retired single-digest format: regenerate the retained record with "+
+				"'make generate-goplint-clean-tree-evidence' to migrate to format %d with semantic and prose tree digests",
+			legacyFormatVersion,
+			FormatVersion,
+		)
 	}
 	if record.FormatVersion != FormatVersion {
 		return Record{}, fmt.Errorf("unsupported clean-tree record format %d", record.FormatVersion)
@@ -281,6 +313,9 @@ func (p Plan) Validate() error {
 	if len(p.Inputs) == 0 || len(p.Toolchain) == 0 || len(p.TaskLedgers) == 0 || len(p.Commands) == 0 {
 		return errors.New("clean-tree plan requires inputs, toolchain, task ledgers, and commands")
 	}
+	if err := validateRepoPath(p.OwnershipManifestPath); err != nil {
+		return fmt.Errorf("ownership manifest: %w", err)
+	}
 	if err := validateNamedPaths("input", p.Inputs, func(input InputPlan) (string, string) {
 		return input.Name, input.Path
 	}); err != nil {
@@ -291,8 +326,8 @@ func (p Plan) Validate() error {
 	}); err != nil {
 		return err
 	}
-	if !reflectTaskLedgerPlansEqual(p.TaskLedgers, requiredTaskLedgers) {
-		return fmt.Errorf("task ledgers must bind the three active changes in dependency order: got %+v, want %+v", p.TaskLedgers, requiredTaskLedgers)
+	if err := validateTaskLedgerStructure(p.TaskLedgers); err != nil {
+		return err
 	}
 	if err := validateReviewedExclusions(p.DiffReview.ReviewedExclusions); err != nil {
 		return err
@@ -333,16 +368,21 @@ func (p Plan) Validate() error {
 		if err := validateUniqueNonempty("expected pending task", ledger.ExpectedPending); err != nil {
 			return fmt.Errorf("task ledger %q: %w", ledger.Name, err)
 		}
+		for _, pendingID := range ledger.ExpectedPending {
+			if !pendingTaskIDPattern.MatchString(pendingID) {
+				return fmt.Errorf("task ledger %q expected pending id %q is not a task number", ledger.Name, pendingID)
+			}
+		}
 	}
 	if !isCanonicalIdentifier(p.AggregateReport.CommandName) || p.AggregateReport.OutputFile == "" ||
 		p.AggregateReport.ManifestPath == "" || p.AggregateReport.RegistryPath == "" {
 		return errors.New("aggregate report requires command, output, manifest, and registry")
 	}
-	if p.AggregateReport.Profile != soundnessgate.ProfileCore {
+	if p.AggregateReport.Profile != soundnessgate.ProfileSemantic {
 		return fmt.Errorf(
 			"clean-tree aggregate report profile = %q, want %q",
 			p.AggregateReport.Profile,
-			soundnessgate.ProfileCore,
+			soundnessgate.ProfileSemantic,
 		)
 	}
 	outputFile := filepath.FromSlash(p.AggregateReport.OutputFile)
@@ -394,11 +434,38 @@ func (p Plan) Validate() error {
 	return nil
 }
 
-func reflectTaskLedgerPlansEqual(left, right []TaskLedgerPlan) bool {
-	return slices.EqualFunc(left, right, func(leftPlan, rightPlan TaskLedgerPlan) bool {
-		return leftPlan.Name == rightPlan.Name && leftPlan.Path == rightPlan.Path &&
-			slices.Equal(leftPlan.ExpectedPending, rightPlan.ExpectedPending)
-	})
+// validateTaskLedgerStructure enforces structural ledger policy without
+// embedding expected values: every ledger path must be an OpenSpec change or
+// archived change tasks file whose change name matches the ledger name,
+// archived predecessors must precede every active change, and archive dates
+// must not regress. The reviewed plan alone owns the expected values.
+func validateTaskLedgerStructure(ledgers []TaskLedgerPlan) error {
+	seenActive := false
+	previousArchiveDate := ""
+	for _, ledger := range ledgers {
+		if match := taskLedgerArchivedPattern.FindStringSubmatch(ledger.Path); match != nil {
+			if ledger.Name != match[2] {
+				return fmt.Errorf("task ledger %q does not match its archived change name %q", ledger.Name, match[2])
+			}
+			if seenActive {
+				return fmt.Errorf("archived task ledger %q follows an active change ledger", ledger.Name)
+			}
+			if match[1] < previousArchiveDate {
+				return fmt.Errorf("archived task ledger %q regresses the archive date order", ledger.Name)
+			}
+			previousArchiveDate = match[1]
+			continue
+		}
+		if match := taskLedgerActivePattern.FindStringSubmatch(ledger.Path); match != nil {
+			if ledger.Name != match[1] {
+				return fmt.Errorf("task ledger %q does not match its change name %q", ledger.Name, match[1])
+			}
+			seenActive = true
+			continue
+		}
+		return fmt.Errorf("task ledger %q path %q is not an OpenSpec change tasks ledger", ledger.Name, ledger.Path)
+	}
+	return nil
 }
 
 func validateReviewedExclusions(exclusions []ReviewedExclusion) error {

@@ -98,11 +98,19 @@ func semanticRulesSchemaPath() string {
 
 func goplintModuleRootPath() string {
 	_, file, _, ok := runtime.Caller(0)
-	if !ok {
+	if ok && filepath.IsAbs(file) {
+		// semantic_spec_test.go lives in tools/goplint/goplint/, so one level up is module root.
+		return filepath.Clean(filepath.Join(filepath.Dir(file), ".."))
+	}
+	// Build-once race/repeat binaries use -trimpath, so runtime.Caller reports
+	// the import path rather than an absolute source path. Those binaries are
+	// launched from the package directory, matching go test's working-directory
+	// contract.
+	workingDirectory, err := os.Getwd()
+	if err != nil {
 		return filepath.Clean("..")
 	}
-	// semantic_spec.go lives in tools/goplint/goplint/, so one level up is module root.
-	return filepath.Clean(filepath.Join(filepath.Dir(file), ".."))
+	return filepath.Clean(filepath.Join(workingDirectory, ".."))
 }
 
 func goplintPackageRootPath() string {

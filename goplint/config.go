@@ -119,6 +119,12 @@ func loadConfig(path string, strictMissing bool) (*ExceptionConfig, error) {
 	return &cfg, nil
 }
 
+// LoadExceptionConfig strictly loads exception governance configuration
+// without loading or analyzing Go packages.
+func LoadExceptionConfig(path string) (*ExceptionConfig, error) {
+	return loadConfig(path, true)
+}
+
 // loadConfigCached reads exceptions config through a process-local cache.
 // The returned config is always a per-run clone with fresh match counters.
 func loadConfigCached(state *flagState, path string, strictMissing bool) (*ExceptionConfig, error) {

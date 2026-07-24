@@ -6,10 +6,10 @@ MODULE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 cd "${MODULE_DIR}"
 echo "Validating the manifest-derived scheduled protocol oracle corpus..."
-GOCACHE="${GOCACHE:-/tmp/go-build}" go test -count=1 ./internal/protocoloracle \
+GOCACHE="${GOCACHE:-/tmp/go-build}" "${SCRIPT_DIR}/soundness-go-test.sh" -count=1 ./internal/protocoloracle \
   -run '^TestScheduledProfileIsStrictBlockingSuperset$'
 
 echo "Comparing the scheduled protocol oracle corpus with the production analyzer..."
 GOPLINT_PROTOCOL_ORACLE_PROFILE=scheduled \
   GOCACHE="${GOCACHE:-/tmp/go-build}" \
-  go test -count=1 ./goplint -run '^TestProtocolOracleScheduledGeneratedGo$'
+  "${SCRIPT_DIR}/soundness-go-test.sh" -count=1 ./goplint -run '^TestProtocolOracleScheduledGeneratedGo$'

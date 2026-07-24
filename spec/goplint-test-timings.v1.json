@@ -1,0 +1,3941 @@
+{
+  "format_version": 1,
+  "package": "./goplint",
+  "toolchain": "go1.26.5",
+  "generated_at": "2026-07-19T19:54:08.618022987Z",
+  "default_weight_nanoseconds": 147970000000,
+  "reviewed_internal_shard_ids": [],
+  "environment": [
+    "GOPLINT_PROTOCOL_ORACLE_PROFILE=scheduled"
+  ],
+  "entries": [
+    {
+      "id": "FuzzFindingDeterminism",
+      "kind": "fuzz",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "FuzzIFDSTabulation",
+      "kind": "fuzz",
+      "duration_weight_nanoseconds": 1100000000,
+      "sample_count": 3,
+      "nested_case_count": 21,
+      "maximum_nested_case_nanoseconds": 170000000
+    },
+    {
+      "id": "FuzzInterprocSupergraphConstruction",
+      "kind": "fuzz",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 12,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "FuzzProtocolSummaryFactSerialization",
+      "kind": "fuzz",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "FuzzSSAConstraintNormalizationEvidence",
+      "kind": "fuzz",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "FuzzSemanticCatalogDecoding",
+      "kind": "fuzz",
+      "duration_weight_nanoseconds": 10000000,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 10000000
+    },
+    {
+      "id": "FuzzSemanticCategoryEvidence",
+      "kind": "fuzz",
+      "duration_weight_nanoseconds": 80000000,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 20000000
+    },
+    {
+      "id": "TestAdaptiveBlockVisitBudgetScalesByCFGSize",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAddCFGWitnessCallChainMeta",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAmbiguousAliasPreservingSummaryIsIrrelevant",
+      "kind": "test",
+      "duration_weight_nanoseconds": 14850000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAmbiguousLiteralRemainsInProcedureInventoryAsBlockingRoot",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAnalysisPackageCensusIncludesPackagesWithoutDiagnostics",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAnalyzer",
+      "kind": "test",
+      "duration_weight_nanoseconds": 980000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAnalyzerWithConfig",
+      "kind": "test",
+      "duration_weight_nanoseconds": 16110000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAnalyzerWithRealExceptionsToml",
+      "kind": "test",
+      "duration_weight_nanoseconds": 14030000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAuditExceptionReviewDatesDoesNotRequirePackages",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAuditExceptions",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20680000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAuditExceptionsMultiPackage",
+      "kind": "test",
+      "duration_weight_nanoseconds": 21450000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestAuditReviewDates",
+      "kind": "test",
+      "duration_weight_nanoseconds": 15360000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBaselineCategoryCompleteness",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBaselineCollectionRejectsProtocolInconclusiveFindings",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBaselineContainsFinding",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 15,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBaselineLoadAndWriteRejectDuplicateAndCollidedIDs",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBaselineNeverMatchesProtocolInconclusiveCategories",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBaselineRoundTrip",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBaselineSupplementaryCategories",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20370000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBaselineSuppression",
+      "kind": "test",
+      "duration_weight_nanoseconds": 16719999999,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBoundaryRequestBlockTerminatesShapes",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBoundaryRequestDefaulting",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBoundaryRequestFuncReturnsErrorShapes",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBoundaryRequestInconclusiveIgnoresConfigException",
+      "kind": "test",
+      "duration_weight_nanoseconds": 22710000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBoundaryRequestLocalAliasStmt",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBoundaryRequestWithoutProtocolParamsSkipsSummaryWork",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBoundaryRequestZeroLiteralShapes",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildFuncCFGForPass",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildInterprocSupergraphClassifiesBuiltinCall",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildInterprocSupergraphFromCFGWithResolutionLinksResolvedCallee",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildInterprocSupergraphKeepsCallAndNonCallEffectsDistinct",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildInterprocSupergraphLinksIIFEProcedure",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildInterprocSupergraphLinksResolvedCalleeEntryAndReturn",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildInterprocSupergraphOrdersNestedCalls",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildInterprocSupergraphSummarizesValidateCall",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildProtocolSummaryFactIsConditionalAndSlotSensitive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestBuildProtocolSummaryFactTracksValidatedConstructorResultIdentity",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGFeasibilityChecksDeadlineInsideEvidenceLoops",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGFeasibilityDoesNotAssumeBranchPolarityAcrossJoin",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGFeasibilityUsesFactOriginForMandatoryPrefix",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGOutcomeMetaWithWitness",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGRefinementDischargesMandatoryContradictoryPrefix",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGRefinementIteratesCheckedUNSATWitnesses",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGRefinementRejectsCancellationDuringIteration",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGRefinementRejectsLateUNSATAndEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGRefinementResourceLimitsStayInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGRefinementUnknownResultStaysInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGSSAComparisonSupportsNilableTypes",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 10,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGSSAConstraintEvidenceChecker",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGSSAConstraintsFeasibilityBackend",
+      "kind": "test",
+      "duration_weight_nanoseconds": 30000000,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 30000000
+    },
+    {
+      "id": "TestCFGSSAConstraintsMissingSSAReturnsUnknown",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGSSAUnsupportedFormulaOverApproximation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGUnsupportedPredicateProvenanceIgnoresLayoutDrift",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCFGWitnessHashDeterministic",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCallEventsFailClosedForAmbiguousGenericInstantiationCaller",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCallEventsFailClosedForDuplicateSourceAssociation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCallEventsUseSSAInstructionOrderRatherThanASTPreorder",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCallMayReturnUsesReachingConditionalAlias",
+      "kind": "test",
+      "duration_weight_nanoseconds": 40000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCallMayReturnWithNoReturnAliases",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCalleeSummaryEffectsAreAppliedInOrder",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCalleeSummaryInProgressEntryUsesSSARecursiveConvergence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCanonicalCastSolverRequiresCheckedValidationSuccess",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCanonicalOptionTypeName",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCanonicalRepoPatternsStayClean",
+      "kind": "test",
+      "duration_weight_nanoseconds": 66120000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCapitalizeFirst",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCastTargetMatchesExpr_AddressOfReceiverCanonicalization",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCastTargetMatchesExpr_IndexParensCanonicalization",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCategoryDeterminismEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 147970000000,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 147970000000
+    },
+    {
+      "id": "TestCategoryFuzzSeedEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 84550000000,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 84550000000
+    },
+    {
+      "id": "TestCategoryGeneratedEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 74880000000,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 74880000000
+    },
+    {
+      "id": "TestCategoryMetamorphicEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20000000,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 20000000
+    },
+    {
+      "id": "TestCategoryMutationGuardMissingConstructorValidate",
+      "kind": "test",
+      "duration_weight_nanoseconds": 25420000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCategoryMutationGuardMissingConstructorValidateInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 25420000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCategoryMutationGuardUnvalidatedBoundaryRequest",
+      "kind": "test",
+      "duration_weight_nanoseconds": 17710000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCategoryMutationGuardUnvalidatedCast",
+      "kind": "test",
+      "duration_weight_nanoseconds": 70640000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCategoryMutationGuardUnvalidatedCastInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 29500000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCategoryMutationGuardUseBeforeValidateCrossBlock",
+      "kind": "test",
+      "duration_weight_nanoseconds": 61470000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCategoryMutationGuardUseBeforeValidateInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 28830000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCategoryMutationGuardUseBeforeValidateSameBlock",
+      "kind": "test",
+      "duration_weight_nanoseconds": 28460000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckAll",
+      "kind": "test",
+      "duration_weight_nanoseconds": 26040000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckAllEnablesCFABackedCastValidation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckBoundaryRequestValidation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 21660000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 23390000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFA",
+      "kind": "test",
+      "duration_weight_nanoseconds": 46390000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFAClosure",
+      "kind": "test",
+      "duration_weight_nanoseconds": 40440000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFAClosureVarAlias",
+      "kind": "test",
+      "duration_weight_nanoseconds": 35360000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFAClosureVarRebind",
+      "kind": "test",
+      "duration_weight_nanoseconds": 27140000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFAConditionalContexts",
+      "kind": "test",
+      "duration_weight_nanoseconds": 35340000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFADetachedClosure",
+      "kind": "test",
+      "duration_weight_nanoseconds": 31390000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFAExecutableClosureVar",
+      "kind": "test",
+      "duration_weight_nanoseconds": 30060000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFAHonorsExcludedProcedurePaths",
+      "kind": "test",
+      "duration_weight_nanoseconds": 39060000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFAMethodValue",
+      "kind": "test",
+      "duration_weight_nanoseconds": 38200000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFANoReturnTerminator",
+      "kind": "test",
+      "duration_weight_nanoseconds": 23270000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFASelectorCanonicalization",
+      "kind": "test",
+      "duration_weight_nanoseconds": 34940000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFASelectorShadowing",
+      "kind": "test",
+      "duration_weight_nanoseconds": 32950000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationCFAShortCircuit",
+      "kind": "test",
+      "duration_weight_nanoseconds": 31770000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCastValidationInconclusiveCooperativeTimeout",
+      "kind": "test",
+      "duration_weight_nanoseconds": 16200000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorErrorUsage",
+      "kind": "test",
+      "duration_weight_nanoseconds": 18320000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorErrorUsageCrossPackageSelector",
+      "kind": "test",
+      "duration_weight_nanoseconds": 11870000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorErrorUsageSuppression",
+      "kind": "test",
+      "duration_weight_nanoseconds": 12230000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorReturnError",
+      "kind": "test",
+      "duration_weight_nanoseconds": 21410000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorReturnErrorAlias",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20820000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorReturnErrorCrossPackage",
+      "kind": "test",
+      "duration_weight_nanoseconds": 21300000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorSig",
+      "kind": "test",
+      "duration_weight_nanoseconds": 21570000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorValidates",
+      "kind": "test",
+      "duration_weight_nanoseconds": 23080000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorValidatesCFABackendSSAHandlesNoReturn",
+      "kind": "test",
+      "duration_weight_nanoseconds": 19540000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorValidatesInconclusiveStateBudget",
+      "kind": "test",
+      "duration_weight_nanoseconds": 10530000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructorValidatesMethodValue",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20330000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckConstructors",
+      "kind": "test",
+      "duration_weight_nanoseconds": 17520000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckCrossPlatformPath",
+      "kind": "test",
+      "duration_weight_nanoseconds": 11070000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSync",
+      "kind": "test",
+      "duration_weight_nanoseconds": 18180000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSyncCueErrorExceptionSuppression",
+      "kind": "test",
+      "duration_weight_nanoseconds": 14650000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSyncIntMembers",
+      "kind": "test",
+      "duration_weight_nanoseconds": 13180000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSyncMultiFile",
+      "kind": "test",
+      "duration_weight_nanoseconds": 14010000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSyncNoSchema",
+      "kind": "test",
+      "duration_weight_nanoseconds": 17350000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSyncNoSchemaBaselineSuppression",
+      "kind": "test",
+      "duration_weight_nanoseconds": 15480000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSyncNoSchemaExceptionSuppression",
+      "kind": "test",
+      "duration_weight_nanoseconds": 15600000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSyncQualifiedConstCases",
+      "kind": "test",
+      "duration_weight_nanoseconds": 13130000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSyncScopedSwitches",
+      "kind": "test",
+      "duration_weight_nanoseconds": 14090000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckEnumSyncSwitchTagConversion",
+      "kind": "test",
+      "duration_weight_nanoseconds": 14590000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckFuncOptions",
+      "kind": "test",
+      "duration_weight_nanoseconds": 21660000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckImmutability",
+      "kind": "test",
+      "duration_weight_nanoseconds": 22760000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckNonZero",
+      "kind": "test",
+      "duration_weight_nanoseconds": 11250000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckPathmatrixDivergent",
+      "kind": "test",
+      "duration_weight_nanoseconds": 10850000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckRedundantConversion",
+      "kind": "test",
+      "duration_weight_nanoseconds": 11240000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckStringer",
+      "kind": "test",
+      "duration_weight_nanoseconds": 17530000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckStructValidate",
+      "kind": "test",
+      "duration_weight_nanoseconds": 18610000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckTestHomeEnvPlatform",
+      "kind": "test",
+      "duration_weight_nanoseconds": 10850000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckUseBeforeValidateCFA",
+      "kind": "test",
+      "duration_weight_nanoseconds": 32270000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckUseBeforeValidateClosureCFA",
+      "kind": "test",
+      "duration_weight_nanoseconds": 32259999999,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckUseBeforeValidateClosureVarCall",
+      "kind": "test",
+      "duration_weight_nanoseconds": 26800000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckUseBeforeValidateCrossCFA",
+      "kind": "test",
+      "duration_weight_nanoseconds": 35150000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckUseBeforeValidateMethodValue",
+      "kind": "test",
+      "duration_weight_nanoseconds": 24380000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckValidate",
+      "kind": "test",
+      "duration_weight_nanoseconds": 18250000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckValidateDelegation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 18480000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckValidateDelegationEmbeddedImportedPointer",
+      "kind": "test",
+      "duration_weight_nanoseconds": 17450000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckValidateDelegationHelperCycle",
+      "kind": "test",
+      "duration_weight_nanoseconds": 16969999999,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckValidateDelegationHelperFunction",
+      "kind": "test",
+      "duration_weight_nanoseconds": 17520000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckValidateDelegationMultiFile",
+      "kind": "test",
+      "duration_weight_nanoseconds": 22220000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckValidateDelegationUniversal",
+      "kind": "test",
+      "duration_weight_nanoseconds": 14700000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckValidateDelegationVarAlias",
+      "kind": "test",
+      "duration_weight_nanoseconds": 18800000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckValidateUsage",
+      "kind": "test",
+      "duration_weight_nanoseconds": 17890000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCheckWindowsPitfalls",
+      "kind": "test",
+      "duration_weight_nanoseconds": 14430000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectBaselineFindingsFromAnalysisJSONRejectsDuplicateAndCollidedIDs",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectBaselineFindingsRejectsDuplicateAndCollidedIDs",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectBoundaryRequestParamsFiltersBoundaryValidateParams",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectClosureVarBindingEventsParallelAssignment",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectDeferredClosureLits_Parenthesized",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectDelegatedHelperParamsPatterns",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectDelegationAliasBindingsChainsAliasThroughValueSpec",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectDelegationAliasBindingsClearsAliasOnNonFieldRebind",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectDelegationAliasBindingsGuardInputs",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectDelegationAliasBindingsParallelAssignment",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectDelegationAliasBindingsRangeValueAlias",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectDelegationAliasBindingsRebind",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectGlobalStaleExceptionPatterns",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectGlobalStaleExceptionPatternsFromStreams",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectImmediateClosureLits",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectImmediateClosureLits_NilBody",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectSynchronousClosureLits_ClassifiesExactClosures",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCollectValidateMethodValueBindingEventsParallelAssignment",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestComposeIDEEdgeFuncs",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestComputeMustAliasKeys_CopyAlias",
+      "kind": "test",
+      "duration_weight_nanoseconds": 13120000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestComputeMustAliasKeys_NestedCallPrefersCast",
+      "kind": "test",
+      "duration_weight_nanoseconds": 12080000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestComputeMustAliasKeys_OverflowReturnsNil",
+      "kind": "test",
+      "duration_weight_nanoseconds": 10380000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestComputeMustAliasKeys_Reassignment",
+      "kind": "test",
+      "duration_weight_nanoseconds": 11240000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConfigTemplate",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorDeferredValidationUsesExitTimeLIFOPaths",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorReturnRelationUsesExactSSAEdge",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20000000,
+      "sample_count": 3,
+      "nested_case_count": 10,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorReturnTargetMatcherIgnoresDecoy",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorReturnsError",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorSSAIdentityHonorsResultSlotAndAmbiguousPhi",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorSSAIdentityKeepsGenericInstantiationsDistinct",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorSSAIdentityProjectsImmediateClosureBinding",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorSSAIdentitySchedulesDeferredValidationAtReturn",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorSSAIdentityTracksMutatedValueAcrossReturns",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorSSAIdentityTracksValidatedZeroValue",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorSSAIdentityUsesReachingReturnObject",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorValidatesCrossPackage",
+      "kind": "test",
+      "duration_weight_nanoseconds": 22140000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorValidatesCrossPackageThirdPartyType",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20400000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorValidatesException",
+      "kind": "test",
+      "duration_weight_nanoseconds": 14820000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorValidatesGenericInstantiation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20210000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestConstructorValidatesPackageCollision",
+      "kind": "test",
+      "duration_weight_nanoseconds": 18110000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestContainsFinding_StrictIDNoMessageFallback",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestContainsValidateCall_Found",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestContainsValidateCall_WrongVar",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestContainsValidateOnReceiverSeenIfMatrix",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestCountParams",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestDelegatedFieldNameForArgDirectAndAlias",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestDiagnosticCategorySpec",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestDiagnosticURLForFinding_EmptyID",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestDiagnosticURLRoundTrip",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestDiagnosticURLWithMeta",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestDirectiveConsumersRejectInvalidSets",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestDynamicIndexTargetKeyIgnoresUnrelatedSourceLayoutDrift",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestEmitProtocolBenchmarkEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 640000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestExactWitnessPredicateProvenanceDrivesFeasibility",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestExprStringKey",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFieldTypeForMeta",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFieldTypeForMeta_NilPassPanics",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFieldTypeForMeta_ReturnsNamedFieldType",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFileDirectiveFindingIDsAreSourceLocal",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFilteredCrossPackageGenericProtocolFacts",
+      "kind": "test",
+      "duration_weight_nanoseconds": 5150000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFilteredPackageExportsProtocolSummaryFact",
+      "kind": "test",
+      "duration_weight_nanoseconds": 9790000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFindConstructorForStruct",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFindDefiningBlock_Found",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFindDefiningBlock_NotFound",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFindDelegatedFieldsSkipsConditionalHelperCall",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFindingMetaFromDiagnosticURL",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFlagState_CalleeSummaryCacheIsAnalyzerScoped",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFormatResultTypes",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestFuzzSeedCoverageMatchesAuditMatrix",
+      "kind": "test",
+      "duration_weight_nanoseconds": 490000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestGeneratedAnalyzerBenchmarkRejectsReferenceOnlyEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestGeneratedAnalyzerDiagnosticAggregationClearsDominatedReason",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestGeneratedAnalyzerEvidenceCorruptionEntersBeforeCheckingAndAggregation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 540000000,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 10000000
+    },
+    {
+      "id": "TestGeneratedAnalyzerPipelineTraceCoversBenchmarkStages",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestGeneratedAnalyzerReasonMatchesProductionPriority",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestGenericConstraintCastCFA",
+      "kind": "test",
+      "duration_weight_nanoseconds": 42050000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestGenericsStructural",
+      "kind": "test",
+      "duration_weight_nanoseconds": 25430000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestGoCallEventOwnsConcurrentTargetEffect",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestHasIgnoreAtPos_StatementOwnership",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestHasIgnoreDirective",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 16,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestHasInternalDirective",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestHasRenderDirective",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestHasValidateMethod",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestHelperMethodDepth",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIDEEdgeFuncApply",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSPropagationMatchesReturnsToCallingSite",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSRelevantUnknownAfterValidationIsInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSRelevantUnknownRemainsInconclusiveAfterValidation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSTabulationBudgetExhaustionRejectsPartialResult",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSTabulationConvergesMutuallyRecursiveSummaries",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSTabulationConvergesRecursiveSummaryWithoutDepthCutoff",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSTabulationPreservesEffectsAcrossSummaries",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSTabulationRecursiveViolationRemainsUnsafe",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSTabulationStopsCooperativelyBeforeAcceptingSafe",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSViolationOutranksObservedInconclusivePath",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSViolationOutranksRelevantUnknownAtTerminal",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSWitnessAntichainBoundIsInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 10000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIFDSWitnessAntichainPreservesIncomparableContributions",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIIFEProcedurePropagatesCapturedTargetUse",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIncludePackagesFactExportOnly",
+      "kind": "test",
+      "duration_weight_nanoseconds": 15070000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInspectDirectivesInFileAcceptsTypeDeclarationAndLooseMethodDirectives",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInspectDirectivesInFileCombinesAndBoundsLooseMethodGroups",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInspectDirectivesInFileKeepsAdjacentStatementDirectivesDistinct",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInspectDirectivesInFileRejectsEveryInvalidConfigurationClass",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInspectValidateUsageIgnoresUntypedReceiver",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInstallDiagnosticReporterRestoresOriginalReport",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocGraphBuildsRecursiveCallEdges",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocGraphHasNoUnconditionalResolvedCallBypass",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocGraphPrunesKnownNonReturningCallsAndAliases",
+      "kind": "test",
+      "duration_weight_nanoseconds": 40000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocOutgoingEdgesHaveCanonicalOrder",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocSolverCastPathNilDefinitionIsInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocSolverCheckedVoidFailureTerminatesCastAndExposesCrossBlockUBV",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocSolverUBVCanonicalTraversalEdgeTransitions",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocSolverUBVCrossBlockCarriesUncertaintyToTrackedSink",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocSolverUBVCrossBlockNilDefinitionIsInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocWitnessIdentityBindsPostTransferState",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocWitnessReplayRejectsInvalidTransitions",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 9,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestInterprocWitnessSubsumptionRequiresNoMoreConstraints",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsAllBlankForValidate",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsBaselineSuppressibleCategory",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsBlankValueSpecForValidate",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsCategoryExcepted",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsConditionallyEvaluatedContextMatrix",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 11,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsErrorReturnBlankedValueSpecOneToOne",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsErrorReturnBlankedValueSpecOneToOneNotBlank",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsErrorReturnBlankedValueSpec_CallNotFound",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsErrorReturnBlankedValueSpec_MultiValueSingleCall",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsErrorReturnBlankedValueSpec_MultiValueSingleCallNotBlank",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsErrorType",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsExcepted",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsExcludedPath",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsInterfaceMethodReturn",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 21,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsKnownDiagnosticCategory",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsKnownInterfaceContractMethod",
+      "kind": "test",
+      "duration_weight_nanoseconds": 30000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsKnownNoReturnFuncTable",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 9,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsMapIndexExpr",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsOptionFuncType",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsPrimitive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 24,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsPrimitiveBasic",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 26,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsPrimitiveTypeParamConstraints",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsPrimitiveUnderlying",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 13,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsSkippedType",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsSlicesComparisonFunc",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsTestFile",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsVarUseTargetSeen_ExpressionKinds",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 9,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsVarUseTargetSeen_SyncCalls",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsVarUseTargetSeen_SyncClosureControls",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestIsVarUseWrapper",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestJoinIDEStatesIsConservative",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadBaseline",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 10,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadBaselineCached_ReusesConfig",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadBaselineCached_StrictModeCacheIsolation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadBaselineRejectsProtocolInconclusiveData",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadCacheEntry",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadConfig",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadConfigCached_CloneIsolation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadConfig_IncludePackages",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadConfig_IncludePackagesRejectsEmptyPrefix",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadRunInputsExplicitMissingBaselinePath",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadRunInputsExplicitMissingConfigPath",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLoadRunInputsUsesRunConfigPaths",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLocalCalleeSummariesUseExplicitEffects",
+      "kind": "test",
+      "duration_weight_nanoseconds": 10000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestLookupWithOptional",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestMatchCountsTracking",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestMatchPattern",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 19,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestMatchesExprWithAliasSet",
+      "kind": "test",
+      "duration_weight_nanoseconds": 12730000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestMethodDirectiveConsumersUseCentralLooseAttachment",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestMixedCategoryInconclusiveBlocksAllSuppressionSurfaces",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestMutationGuardMismatchEncodingIsStable",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestNewRunConfig",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestNewRunConfigCarriesTrackedStringExplicitness",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestNonZeroFactAFact",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestNormalizeProtocolCallUsesInstantiatedGenericSignatures",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestObjectKeyAtIgnoresUnrelatedSourceLayoutDrift",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestObjectKeyAtSeparatesShadowedLocalDeclarations",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestObjectKeyDeterministic",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPackageCallFuncName",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPackageName",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPackageScopedFindingIDSeparatesEqualPackageLeafNames",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestParseDirectiveKeys",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 24,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestParseFuncBodyBuildsSimpleCFG",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestParseIncludePackagesOverride",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPathDomainFactAFact",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPostValidationEscapeProductionBoundaries",
+      "kind": "test",
+      "duration_weight_nanoseconds": 39850000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPostValidationNonCallTransferDistinguishesMutableEscapesFromValueCopies",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPostValidationNonCallTransferKeepsSynchronousReadsAndIIFEsValidated",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPostValidationRecursiveMutationUsesLocalSummaryOnce",
+      "kind": "test",
+      "duration_weight_nanoseconds": 10000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPostValidationTransferAppliesOrderedLocalSummaries",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPostValidationTransferDoesNotEscapeValueCopy",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPrimitiveMapDetail",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestPrimitiveMapDetailWithSkip",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProcedureInventoryDirectValidationRemainsSafe",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolAdaptersFailClosedForTypedSSAUnavailability",
+      "kind": "test",
+      "duration_weight_nanoseconds": 39490000000,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 39490000000
+    },
+    {
+      "id": "TestProtocolAliasAnalysisEscapeAndClosureSemantics",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolAliasAnalysisPhiAndStoreSemantics",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolAliasCounterexamples",
+      "kind": "test",
+      "duration_weight_nanoseconds": 38760000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolAliasSnapshotJoinAndStoreKill",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolConcurrentCaptureRemainsInconclusive",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolConditionalValidationEffect",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolCounterexamplesBlackBox",
+      "kind": "test",
+      "duration_weight_nanoseconds": 7660000000,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 7660000000
+    },
+    {
+      "id": "TestProtocolDeterminismAcrossWorklistAndPackageOrder",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolDomainJoinLaws",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolDomainOrderingLaws",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolFindingPolicyIsConsultedOnlyAfterClassification",
+      "kind": "test",
+      "duration_weight_nanoseconds": 130000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolIdentityInternerRecordsCopySources",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolIdentityInternerUsesQualifiedStaticAddresses",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolIdentityInternerUsesSSAIdentity",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolInconclusiveCategoriesAreAlwaysVisible",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolInconclusivePolicyMatchesLiveCatalog",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolInconclusivePolicyRejectsMutations",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolJoinRefinementCounterexamples",
+      "kind": "test",
+      "duration_weight_nanoseconds": 39670000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolMetamorphicRelations",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolOracleEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 910000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolOracleGeneratedGoEndToEnd",
+      "kind": "test",
+      "duration_weight_nanoseconds": 970000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolOracleGeneratedGoPerturbationsAreDetected",
+      "kind": "test",
+      "duration_weight_nanoseconds": 880000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolOracleIndependence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolOracleScheduledGeneratedGo",
+      "kind": "test",
+      "duration_weight_nanoseconds": 44120000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolOracleSolverCoreComponent",
+      "kind": "test",
+      "duration_weight_nanoseconds": 590000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolOracleUNSATNodeDoesNotPruneSiblingBranch",
+      "kind": "test",
+      "duration_weight_nanoseconds": 150000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolOracleUNSATWitnessIsDischargedEndToEnd",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1460000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolPackageFunctionsIncludesLocalMethodsAndClosures",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolProcedureFallbackLiteralKeyIgnoresPrecedingLayoutDrift",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolProcedureLiteralKeyIgnoresPrecedingLayoutDrift",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolProductionArchitecture",
+      "kind": "test",
+      "duration_weight_nanoseconds": 960000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolProductionDomainReachability",
+      "kind": "test",
+      "duration_weight_nanoseconds": 280000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolProductionRoutingEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 102110000000,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 102110000000
+    },
+    {
+      "id": "TestProtocolRedBaselineBlackBox",
+      "kind": "test",
+      "duration_weight_nanoseconds": 6750000000,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 6750000000
+    },
+    {
+      "id": "TestProtocolRedBaselineMetaContracts",
+      "kind": "test",
+      "duration_weight_nanoseconds": 280000000,
+      "sample_count": 3,
+      "nested_case_count": 13,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolRelevanceIncludesSafeValidationSinks",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolRelevanceQueryLaws",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 10,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolRelevanceRequiresAReachableObligationSink",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolReviewGapsBlackBox",
+      "kind": "test",
+      "duration_weight_nanoseconds": 40000000,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 40000000
+    },
+    {
+      "id": "TestProtocolSummaryEffectsApplyAcrossPackages",
+      "kind": "test",
+      "duration_weight_nanoseconds": 5170000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolSummaryFactAcceptsExplicitEffectVocabulary",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolSummaryFactFailsClosedForComplexInputEffects",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolSummaryFactFailuresHaveDeterministicStatuses",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolSummaryFactRejectsSameNamedMethodOnDifferentReceiver",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolSummaryFactStringIncludesVersionAndOwner",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolSummaryFactValidationBindsAttachedFunctionAndSlots",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 8,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolSummaryFactsExportAllExplicitEffects",
+      "kind": "test",
+      "duration_weight_nanoseconds": 5180000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolSuppressionPolicyIsConsultedOnlyAfterDefiniteClassification",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolTestsUseCanonicalComponents",
+      "kind": "test",
+      "duration_weight_nanoseconds": 50000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolTransfersAreMonotone",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolUnknownAndOutcomeAggregation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolUnknownEffectsAfterValidation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 43360000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolUnresolvedEffectsCarryUnknownIdentityAtSink",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolValidationContinueDoesNotHideFailureBranchUse",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolValidationContinueGuardsCurrentIteration",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolValidationCounterexamplesUseConditionalSuccessEdges",
+      "kind": "test",
+      "duration_weight_nanoseconds": 21570000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolValidationEffectsRequireNilResultEdge",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolValidationFormsShareConditionalEffectAPI",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolValidationIgnoresLowercaseLookalike",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolValidationProgramProjectsSSAResultOntoCFGEdges",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestProtocolValidationProgramResolvesReceiverIdentityAtInvocation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestQualifiedTypeName",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestQuote",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRawPrimitiveTypeParameterConstraintsAreConservative",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRealAnalyzerDeterminismAcrossPackageFileAndScheduleOrder",
+      "kind": "test",
+      "duration_weight_nanoseconds": 200000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRealAnalyzerRejectsCorruptRefinementEvidence",
+      "kind": "test",
+      "duration_weight_nanoseconds": 16059999999,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRealAnalyzerReportsRefinementIterationLimit",
+      "kind": "test",
+      "duration_weight_nanoseconds": 12280000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRealAnalyzerReportsRefinementQueryLimit",
+      "kind": "test",
+      "duration_weight_nanoseconds": 12230000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestReceiverImplementsError",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestReceiverTypeName",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRecursiveCalleeSummaryConvergesConditionalValidation",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRecursiveCalleeSummaryPreservesOrderedEffects",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRecursiveSummaryCFA",
+      "kind": "test",
+      "duration_weight_nanoseconds": 47150000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRecursiveValidationCallEventsPreserveTargetUntilBaseCase",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRefinementEvidenceIsByteDeterministic",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestRemovedProtocolFlagsAreUnknown",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestReportInconclusiveFindingBypassesMatchingBaseline",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 4,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestReportInconclusiveFindingIsBlocking",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestReportValidateUsageFinding",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestResetFlagsCompleteness",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestResolveConstantValue",
+      "kind": "test",
+      "duration_weight_nanoseconds": 70000000,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestResolveProtocolValidateMethodUsesGoMethodSets",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestResolveReturnTypeValidateInfoPointerNamedResult",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSSABuilderProducesDebugRefs",
+      "kind": "test",
+      "duration_weight_nanoseconds": 12080000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSSAConstraintExtractionStopsCooperatively",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSSAFlowAliasAddressResolution",
+      "kind": "test",
+      "duration_weight_nanoseconds": 15780000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSSAFlowAliasResolution",
+      "kind": "test",
+      "duration_weight_nanoseconds": 29730000000,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 29730000000
+    },
+    {
+      "id": "TestSSAFlowAliasStructuralRebinding",
+      "kind": "test",
+      "duration_weight_nanoseconds": 33540000000,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 33540000000
+    },
+    {
+      "id": "TestSSAFlowAliasValidateBeforeUseTransfer",
+      "kind": "test",
+      "duration_weight_nanoseconds": 16780000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSameStructTypeIdentity",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSelectorIsDirectCallTarget",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticCategoryProgramOrderDoesNotChangeIndependentOutcome",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticCategorySeedRejectsUnrelatedNonemptyInput",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticCoverageCensusIsTotalAndDeterministic",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticCoverageCensusRejectsBidirectionalEvidenceDrift",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticEvidenceContract",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 16,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticEvidenceProduction",
+      "kind": "test",
+      "duration_weight_nanoseconds": 111310000000,
+      "sample_count": 3,
+      "nested_case_count": 40,
+      "maximum_nested_case_nanoseconds": 111310000000
+    },
+    {
+      "id": "TestSemanticNodeKeyIgnoresUnrelatedSourceLayoutDrift",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticNodeKeySeparatesSitesWithinOneStatement",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecCFARulesRequireResourceControls",
+      "kind": "test",
+      "duration_weight_nanoseconds": 10000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecHistoricalMissOracleBehavior",
+      "kind": "test",
+      "duration_weight_nanoseconds": 41720000000,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 41720000000
+    },
+    {
+      "id": "TestSemanticSpecInconclusiveMetaContract",
+      "kind": "test",
+      "duration_weight_nanoseconds": 30000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecInconclusiveReasonContract",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecInconclusiveRulesRequireWitnessControl",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecOracleBehavior",
+      "kind": "test",
+      "duration_weight_nanoseconds": 40130000000,
+      "sample_count": 3,
+      "nested_case_count": 28,
+      "maximum_nested_case_nanoseconds": 40130000000
+    },
+    {
+      "id": "TestSemanticSpecOracleCoverageSync",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecOracleFixturesExist",
+      "kind": "test",
+      "duration_weight_nanoseconds": 60000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecRefinementMetaContract",
+      "kind": "test",
+      "duration_weight_nanoseconds": 10000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecRefinementStatusContract",
+      "kind": "test",
+      "duration_weight_nanoseconds": 20000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecRegistrySync",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecRejectsIncompleteTotalCoverage",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecRunControlsAreKnownFlags",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecSchemaAndCatalogParse",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSemanticSpecSchemaValidationRejectsInvalidCatalog",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestShouldAnalyzePackage",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 11,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestShouldReportOverdueReviewFinding",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestShouldSkipFunc",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 12,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestStableFindingID",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestStaleExceptionPatternFromDiagnostic",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestStaleExceptions",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestSuggestValidateAll",
+      "kind": "test",
+      "duration_weight_nanoseconds": 15030000000,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestTargetKeyForExprRejectsSyntacticIdentityFallback",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestTrackedStringFlagString",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestTrackedStringFlagsExplicitness",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestTypedSSAAvailabilityDistinguishesFailureClasses",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestTypedSSAAvailabilityResolvesFunction",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestUBVPostValidationUnknownEffectRequiresMutableIdentity",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestUBVPreValidationPackageEscapeIsDefiniteByDefault",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestUnavailableSSAPathResultPreservesFailureClass",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 5,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestUnresolvedClosureRootRemainsVisibleThroughExceptionAndInlineIgnore",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidateFindingStreamCoverageIncludesAlwaysVisibleCategories",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidateMethodReceiverForCallSelectorBinding",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidateMethodReceiverFromExpr",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidateProtocolSummaryFactFailsClosed",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidateRunConfigAllowsMissionChecks",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidateRunConfigRejectsExplicitEmptyPaths",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 7,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidateSemanticCategoryCatalogRejectsDrift",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 6,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidateSemanticRegistries",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidateSemanticRegistryDataRejectsInvalidOwnership",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 10,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestValidationProgramRejectsWeakErrorHandling",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestWarnFindingSinkError",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 2,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestWriteBaseline",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 3,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestWriteBaselineRejectsProtocolInconclusiveFindings",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestWriteFindingToSinkWithMeta_WritesCompactMeta",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestWriteFindingToSink_InvalidPathNoPanic",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestWriteFindingToSink_NoPathNoWrite",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestWriteFindingToSink_WritesJSONLRecord",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestWriteRefinementTraceToSinkSkipsWhenRefinementDisabled",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    },
+    {
+      "id": "TestWriteRefinementTraceToSinkWritesTraceRecord",
+      "kind": "test",
+      "duration_weight_nanoseconds": 1,
+      "sample_count": 3,
+      "nested_case_count": 0,
+      "maximum_nested_case_nanoseconds": 0
+    }
+  ]
+}

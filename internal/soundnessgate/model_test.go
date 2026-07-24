@@ -65,18 +65,40 @@ func TestManifestValidateRejectsBidirectionalDrift(t *testing.T) {
 			wantError: "duplicate subgate",
 		},
 		{
-			name: "unscheduled core subgate",
+			name: "unknown dependency",
 			mutate: func(manifest *Manifest, _ *soundnessevidence.Registry) {
-				manifest.Profiles[0].SubgateIDs = manifest.Profiles[0].SubgateIDs[:1]
+				manifest.Subgates[1].Dependencies = []string{"unknown"}
 			},
-			wantError: "core profile must contain every subgate",
+			wantError: "depends on unknown subgate",
+		},
+		{
+			name: "dependency cycle",
+			mutate: func(manifest *Manifest, _ *soundnessevidence.Registry) {
+				manifest.Subgates[1].Dependencies = []string{"semantic-production-b"}
+				manifest.Subgates[2].Dependencies = []string{"semantic-production-a"}
+			},
+			wantError: "dependency cycle",
+		},
+		{
+			name: "profile membership drift",
+			mutate: func(manifest *Manifest, _ *soundnessevidence.Registry) {
+				manifest.Subgates[1].ProfileIDs = []ProfileID{ProfileComplete}
+			},
+			wantError: "profile_ids",
+		},
+		{
+			name: "unscheduled semantic subgate",
+			mutate: func(manifest *Manifest, _ *soundnessevidence.Registry) {
+				manifest.Profiles[3].SubgateIDs = manifest.Profiles[3].SubgateIDs[:1]
+			},
+			wantError: "complete profile must equal semantic",
 		},
 		{
 			name: "unscheduled complete subgate",
 			mutate: func(manifest *Manifest, _ *soundnessevidence.Registry) {
-				manifest.Profiles[1].SubgateIDs = manifest.Profiles[1].SubgateIDs[:2]
+				manifest.Profiles[0].SubgateIDs = manifest.Profiles[0].SubgateIDs[:2]
 			},
-			wantError: "complete profile must contain every subgate",
+			wantError: "complete profile must equal semantic",
 		},
 	}
 	for _, test := range tests {

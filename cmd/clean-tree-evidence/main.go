@@ -17,22 +17,35 @@ import (
 func main() {
 	root := flag.String("root", ".", "repository root")
 	pathsPath := flag.String("paths", "", "reviewed newline-delimited path selection")
-	planPath := flag.String("plan", "tools/goplint/testdata/gates/clean-tree-v3.json", "format-v3 command plan")
+	planPath := flag.String("plan", "tools/goplint/testdata/gates/clean-tree-v4.json", "format-v4 command plan")
 	evidencePath := flag.String(
 		"evidence",
-		"tools/goplint/testdata/gates/clean-tree-run.v3.json",
-		"retained format-v3 evidence file",
+		"tools/goplint/testdata/gates/clean-tree-run.v4.json",
+		"retained format-v4 evidence file",
+	)
+	rebind := flag.Bool(
+		"rebind",
+		false,
+		"re-bind the retained record after prose-only drift without executing any assurance profile; "+
+			"semantic-content drift fails closed",
 	)
 	flag.Parse()
 	if *pathsPath == "" {
 		fail(errors.New("-paths is required; implicit dirty-worktree capture is forbidden"))
 	}
-	if _, err := cleantreeevidence.Capture(context.Background(), cleantreeevidence.CaptureOptions{
+	options := cleantreeevidence.CaptureOptions{
 		Root:         *root,
 		PathsPath:    *pathsPath,
 		PlanPath:     *planPath,
 		EvidencePath: *evidencePath,
-	}); err != nil {
+	}
+	if *rebind {
+		if _, err := cleantreeevidence.Rebind(context.Background(), options); err != nil {
+			fail(err)
+		}
+		return
+	}
+	if _, err := cleantreeevidence.Capture(context.Background(), options); err != nil {
 		fail(err)
 	}
 }

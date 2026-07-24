@@ -146,8 +146,7 @@ func runInconclusiveAnalyzer(
 	if err == nil {
 		t.Fatalf("real analyzer unexpectedly accepted injected inconclusive\n%s", output)
 	}
-	var exitError *exec.ExitError
-	if !errors.As(err, &exitError) {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); !ok || exitErr == nil {
 		t.Fatalf("real analyzer command error = %v, want diagnostic exit\n%s", err, output)
 	}
 	file, err := os.Open(streamPath)
@@ -191,14 +190,16 @@ func proveMakeAnalyzerSurface(t *testing.T, repositoryRoot, target string) {
 	t.Helper()
 
 	output := makeDryRun(t, repositoryRoot, target)
-	analyzerLine := commandLineContaining(t, output, "./bin/goplint -test=false")
-	for _, required := range []string{"-test=false", "-check-all", "-baseline=tools/goplint/baseline.toml"} {
-		if !strings.Contains(analyzerLine, required) {
-			t.Fatalf("make target %s analyzer command lacks %q: %s", target, required, analyzerLine)
-		}
+	auditLine := commandLineContaining(t, output, "go run ./cmd/repository-audit")
+	wantMode := map[string]string{
+		"check-baseline":          "-mode baseline",
+		"check-goplint-full-scan": "-mode full-scan",
+	}[target]
+	if !strings.Contains(auditLine, wantMode) {
+		t.Fatalf("make target %s repository-audit command lacks %q: %s", target, wantMode, auditLine)
 	}
-	if strings.Contains(analyzerLine, "|| true") {
-		t.Fatalf("make target %s masks analyzer failure: %s", target, analyzerLine)
+	if strings.Contains(auditLine, "|| true") {
+		t.Fatalf("make target %s masks repository-audit failure: %s", target, auditLine)
 	}
 	reporterLine := commandLineContaining(t, output, "go run ./cmd/subgate-report")
 	if !strings.Contains(reporterLine, "-observation repository-scans=") || strings.Contains(reporterLine, "-population") {
@@ -210,16 +211,22 @@ func provePreCommitSurface(t *testing.T, repositoryRoot string) {
 	t.Helper()
 
 	content := readContractFile(t, filepath.Join(repositoryRoot, ".pre-commit-config.yaml"))
-	assertPattern(t, content, `(?s)- id: goplint-baseline\b.*?entry: "bash -c 'make check-baseline 2>&1'"`)
-	assertPattern(t, content, `(?s)- id: goplint-behavior\b.*?entry: "bash -c 'make check-goplint-soundness-core 2>&1'"`)
+	assertPattern(t, content, `(?s)- id: goplint-behavior\b.*?entry: "bash -c 'make check-goplint-soundness-routed 2>&1'"`)
+	if strings.Contains(content, "- id: goplint-baseline") || strings.Contains(content, "- id: goplint-exceptions") {
+		t.Fatal("pre-commit reintroduced standalone repository-analysis hooks instead of the routed shared audit")
+	}
 }
 
 func proveCISurface(t *testing.T, repositoryRoot string) {
 	t.Helper()
 
 	content := readContractFile(t, filepath.Join(repositoryRoot, ".github", "workflows", "lint.yml"))
-	assertPattern(t, content, `(?s)goplint-baseline:\s+name: goplint \(baseline\).*?run: \|\s+make check-baseline`)
-	assertPattern(t, content, `(?s)goplint-tests:\s+name: goplint tests.*?run: make check-goplint-soundness-core`)
+	assertPattern(t, content, `(?s)goplint-plan:\s+name: goplint soundness plan and shared audit.*?-action plan.*?-work-unit repository-audit`)
+	assertPattern(t, content, `(?s)goplint-workers:\s+name: goplint soundness worker.*?-action work.*?-repository-audit`)
+	assertPattern(t, content, `(?s)goplint-aggregate:\s+name: goplint soundness aggregate.*?-action aggregate`)
+	if strings.Contains(content, "goplint-baseline:") || strings.Contains(content, "goplint-exceptions:") {
+		t.Fatal("lint workflow reintroduced standalone repository-analysis jobs instead of the shared audit plan")
+	}
 }
 
 func proveAggregateSurface(t *testing.T, repositoryRoot string) {
@@ -230,29 +237,47 @@ func proveAggregateSurface(t *testing.T, repositoryRoot string) {
 	if err != nil {
 		t.Fatalf("LoadManifest() error: %v", err)
 	}
-	core, err := manifest.SubgatesForProfile(soundnessgate.ProfileCore)
+	semantic, err := manifest.SubgatesForProfile(soundnessgate.ProfileSemantic)
 	if err != nil {
-		t.Fatalf("SubgatesForProfile(core) error: %v", err)
+		t.Fatalf("SubgatesForProfile(semantic) error: %v", err)
 	}
-	commands := make(map[string][]string, len(core))
-	for _, subgate := range core {
+	commands := make(map[string][]string, len(semantic))
+	for _, subgate := range semantic {
 		commands[subgate.ID] = subgate.Command
 	}
 	want := map[string][]string{
 		"baseline":                 {"make", "check-baseline"},
 		"full-scan":                {"make", "check-goplint-full-scan"},
 		"inconclusive-suppression": {"./scripts/check-inconclusive-suppression.sh"},
+		"repository-audit":         {"make", "check-goplint-repository-audit"},
+	}
+	for _, subgateID := range []string{"baseline", "full-scan"} {
+		subgate := manifestSubgateByID(t, manifest, subgateID)
+		if !slices.Equal(subgate.Dependencies, []string{"repository-audit"}) {
+			t.Fatalf("semantic aggregate subgate %q dependencies = %v, want repository-audit", subgateID, subgate.Dependencies)
+		}
 	}
 	for subgateID, command := range want {
 		if !slices.Equal(commands[subgateID], command) {
-			t.Fatalf("core aggregate subgate %q command = %v, want %v", subgateID, commands[subgateID], command)
+			t.Fatalf("semantic aggregate subgate %q command = %v, want %v", subgateID, commands[subgateID], command)
 		}
 	}
-	makeOutput := makeDryRun(t, repositoryRoot, "check-goplint-soundness-core")
+	makeOutput := makeDryRun(t, repositoryRoot, "check-goplint-soundness-semantic")
 	line := commandLineContaining(t, makeOutput, "go run ./cmd/soundness-gate")
-	if !strings.Contains(line, "-profile core") || !strings.Contains(line, "-manifest tools/goplint/spec/soundness-gate.v1.json") {
-		t.Fatalf("core Make target does not execute reviewed aggregate manifest: %s", line)
+	if !strings.Contains(line, "-profile semantic") || !strings.Contains(line, "-manifest tools/goplint/spec/soundness-gate.v1.json") {
+		t.Fatalf("semantic Make target does not execute reviewed aggregate manifest: %s", line)
 	}
+}
+
+func manifestSubgateByID(t *testing.T, manifest soundnessgate.Manifest, id string) soundnessgate.Subgate {
+	t.Helper()
+	for _, subgate := range manifest.Subgates {
+		if subgate.ID == id {
+			return subgate
+		}
+	}
+	t.Fatalf("manifest has no subgate %q", id)
+	return soundnessgate.Subgate{}
 }
 
 func makeDryRun(t *testing.T, repositoryRoot, target string) string {

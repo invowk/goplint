@@ -19,8 +19,8 @@
     },
     "profiles": {
       "type": "array",
-      "minItems": 2,
-      "maxItems": 2,
+      "minItems": 3,
+      "maxItems": 3,
       "items": {
         "$ref": "#/$defs/profile"
       }
@@ -71,8 +71,9 @@
       "properties": {
         "id": {
           "enum": [
-            "core",
-            "complete"
+        "complete",
+        "consumer",
+        "semantic"
           ]
         },
         "subgate_ids": {
@@ -92,6 +93,12 @@
         "id",
         "working_directory",
         "command",
+		"dependencies",
+		"cpu_units",
+		"estimated_peak_memory_bytes",
+		"exclusivity_groups",
+		"distributable",
+		"profile_ids",
         "timeout_seconds",
         "report_file",
         "required_registration_ids",
@@ -112,6 +119,43 @@
             "minLength": 1
           }
         },
+		"dependencies": {
+		  "type": "array",
+		  "uniqueItems": true,
+		  "items": {
+			"$ref": "#/$defs/identifier"
+		  }
+		},
+		"cpu_units": {
+		  "type": "integer",
+		  "minimum": 1
+		},
+		"estimated_peak_memory_bytes": {
+		  "type": "integer",
+		  "minimum": 1
+		},
+		"exclusivity_groups": {
+		  "type": "array",
+		  "uniqueItems": true,
+		  "items": {
+			"$ref": "#/$defs/identifier"
+		  }
+		},
+		"distributable": {
+		  "type": "boolean"
+		},
+		"profile_ids": {
+		  "type": "array",
+		  "minItems": 1,
+		  "uniqueItems": true,
+		  "items": {
+			"enum": [
+			  "complete",
+			  "consumer",
+			  "semantic"
+			]
+		  }
+		},
         "timeout_seconds": {
           "type": "integer",
           "minimum": 1,

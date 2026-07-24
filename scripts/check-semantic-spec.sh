@@ -7,7 +7,7 @@ MODULE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${MODULE_DIR}"
 
 echo "Running goplint semantic-spec contract tests..."
-GOCACHE="${GOCACHE:-/tmp/go-build}" go test ./goplint \
+GOCACHE="${GOCACHE:-/tmp/go-build}" "${SCRIPT_DIR}/soundness-go-test.sh" ./goplint \
 	-run '^(TestSemanticSpec|TestValidateSemantic|TestSemanticCoverage|TestSemanticEvidence)'
 
 echo "Emitting deterministic goplint semantic coverage census..."

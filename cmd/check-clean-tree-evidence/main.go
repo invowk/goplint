@@ -21,11 +21,11 @@ const cleanTreeGenerationCommand = "make generate-goplint-clean-tree-evidence"
 func main() {
 	root := flag.String("root", ".", "repository root")
 	pathsPath := flag.String("paths", "", "reviewed newline-delimited path selection")
-	planPath := flag.String("plan", "tools/goplint/testdata/gates/clean-tree-v3.json", "format-v3 command plan")
+	planPath := flag.String("plan", "tools/goplint/testdata/gates/clean-tree-v4.json", "format-v4 command plan")
 	evidencePath := flag.String(
 		"evidence",
-		"tools/goplint/testdata/gates/clean-tree-run.v3.json",
-		"retained format-v3 evidence file",
+		"tools/goplint/testdata/gates/clean-tree-run.v4.json",
+		"retained format-v4 evidence file",
 	)
 	flag.Parse()
 	if *pathsPath == "" {

@@ -115,12 +115,21 @@ func buildManifest(registry soundnessevidence.Registry) (soundnessgate.Manifest,
 		newSubgate(
 			"benchmarks",
 			"tools/goplint",
-			[]string{"./scripts/check-cfg-bench-thresholds.sh"},
+			[]string{"./scripts/check-cfg-bench-thresholds.sh", "--phase", "algorithms"},
 			3600,
 			"report.json",
 			nil,
 			population("analyzer-benchmarks", 1),
 			population("generated-programs", 42),
+		),
+		newSubgate(
+			"benchmark-full-scan",
+			"tools/goplint",
+			[]string{"./scripts/check-cfg-bench-thresholds.sh", "--phase", "full-scan"},
+			3600,
+			"report.json",
+			nil,
+			population("certification-full-scans", 5),
 		),
 		newSubgate(
 			"catalog",
@@ -151,11 +160,11 @@ func buildManifest(registry soundnessevidence.Registry) (soundnessgate.Manifest,
 				"-root",
 				"../..",
 				"-paths",
-				"tools/goplint/testdata/gates/clean-tree-v3.paths",
+				"tools/goplint/testdata/gates/clean-tree-v4.paths",
 				"-plan",
-				"tools/goplint/testdata/gates/clean-tree-v3.json",
+				"tools/goplint/testdata/gates/clean-tree-v4.json",
 				"-evidence",
-				"tools/goplint/testdata/gates/clean-tree-run.v3.json",
+				"tools/goplint/testdata/gates/clean-tree-run.v4.json",
 			},
 			3600,
 			"clean-tree-freshness.json",
@@ -192,6 +201,15 @@ func buildManifest(registry soundnessevidence.Registry) (soundnessgate.Manifest,
 			population("perturbations", 7),
 		),
 		newSubgate(
+			"exceptions",
+			".",
+			[]string{"make", "check-goplint-exceptions"},
+			300,
+			"report.json",
+			nil,
+			population("repository-scans", 1),
+		),
+		newSubgate(
 			"full-scan",
 			".",
 			[]string{"make", "check-goplint-full-scan"},
@@ -210,6 +228,15 @@ func buildManifest(registry soundnessevidence.Registry) (soundnessgate.Manifest,
 			population("decoded-seeds", 35),
 			population("historical-counterexamples", 24),
 			population("protocol-categories", 8),
+		),
+		newSubgate(
+			"harness-parity",
+			"tools/goplint",
+			[]string{"go", "run", "./cmd/harness-parity"},
+			600,
+			"report.json",
+			nil,
+			population("parity-fixture-comparisons", 1),
 		),
 		newSubgate(
 			"inconclusive-suppression",
@@ -238,6 +265,24 @@ func buildManifest(registry soundnessevidence.Registry) (soundnessgate.Manifest,
 			mutationKernelRequirements...,
 		),
 		newSubgate(
+			"module-tests",
+			"tools/goplint",
+			[]string{"./scripts/check-module-tests.sh"},
+			1800,
+			"report.json",
+			nil,
+			population("module-test-suites", 1),
+		),
+		newSubgate(
+			"performance-smoke",
+			"tools/goplint",
+			[]string{"./scripts/check-performance-smoke.sh"},
+			900,
+			"report.json",
+			nil,
+			population("consumer-performance-smoke", 1),
+		),
+		newSubgate(
 			"production-integration",
 			"tools/goplint",
 			[]string{"./scripts/check-production-integration.sh"},
@@ -257,15 +302,30 @@ func buildManifest(registry soundnessevidence.Registry) (soundnessgate.Manifest,
 			population("independent-cases", 42),
 			population("metamorphic-relations", 8),
 		),
+		raceRepeatGroupSubgate(1),
+		raceRepeatGroupSubgate(2),
+		raceRepeatGroupSubgate(3),
+		raceRepeatGroupSubgate(4),
+		raceRepeatGroupSubgate(5),
+		raceRepeatGroupSubgate(6),
 		newSubgate(
-			"race-repeat",
+			"race-repeat-supporting",
 			"tools/goplint",
-			[]string{"./scripts/check-race-repeat.sh"},
-			3600,
+			[]string{"./scripts/check-race-repeat.sh", "--phase", "supporting"},
+			1800,
 			"report.json",
 			nil,
-			population("race-runs", 1),
-			population("repeat-runs", 3),
+			population("supporting-race-runs", 1),
+			population("supporting-repeat-runs", 3),
+		),
+		newSubgate(
+			"repository-audit",
+			".",
+			[]string{"make", "check-goplint-repository-audit"},
+			900,
+			"report.json",
+			nil,
+			population("repository-scans", 1),
 		),
 		newSubgate(
 			"scheduled-oracle",
@@ -291,6 +351,11 @@ func buildManifest(registry soundnessevidence.Registry) (soundnessgate.Manifest,
 			population("selected-guards", 27),
 		),
 	}
+	for index := range subgates {
+		if err := applyExecutionPolicy(&subgates[index]); err != nil {
+			return soundnessgate.Manifest{}, err
+		}
+	}
 	slices.SortFunc(subgates, func(left, right soundnessgate.Subgate) int {
 		return strings.Compare(left.ID, right.ID)
 	})
@@ -298,18 +363,104 @@ func buildManifest(registry soundnessevidence.Registry) (soundnessgate.Manifest,
 	for _, subgate := range subgates {
 		allIDs = append(allIDs, subgate.ID)
 	}
-	coreIDs := slices.DeleteFunc(slices.Clone(allIDs), func(subgateID string) bool {
-		return subgateID == "clean-tree-freshness"
+	semanticIDs := slices.DeleteFunc(slices.Clone(allIDs), func(subgateID string) bool {
+		return subgateID == "clean-tree-freshness" || subgateID == "performance-smoke"
 	})
+	completeIDs := append(slices.Clone(semanticIDs), "clean-tree-freshness")
+	slices.Sort(completeIDs)
+	consumerIDs := []string{"baseline", "exceptions", "full-scan", "performance-smoke", "repository-audit"}
+	harnessIDs := append(slices.Clone(consumerIDs), "harness-parity", "module-tests")
+	slices.Sort(harnessIDs)
 	return soundnessgate.Manifest{
 		FormatVersion: soundnessgate.ManifestFormatVersion,
 		RegistryPath:  "tools/goplint/spec/semantic-evidence.v2.json",
 		Profiles: []soundnessgate.Profile{
-			{ID: soundnessgate.ProfileCore, SubgateIDs: coreIDs},
-			{ID: soundnessgate.ProfileComplete, SubgateIDs: allIDs},
+			{ID: soundnessgate.ProfileComplete, SubgateIDs: completeIDs},
+			{ID: soundnessgate.ProfileConsumer, SubgateIDs: consumerIDs},
+			{ID: soundnessgate.ProfileHarness, SubgateIDs: harnessIDs},
+			{ID: soundnessgate.ProfileSemantic, SubgateIDs: semanticIDs},
 		},
 		Subgates: subgates,
 	}, nil
+}
+
+func applyExecutionPolicy(subgate *soundnessgate.Subgate) error {
+	type policy struct {
+		cpu       int
+		memory    int64
+		dependsOn []string
+		exclusive []string
+	}
+	policies := map[string]policy{
+		"aggregate-contract":       {cpu: 1, memory: 512 * 1024 * 1024},
+		"architecture":             {cpu: 2, memory: 2 * 1024 * 1024 * 1024},
+		"baseline":                 {cpu: 1, memory: 512 * 1024 * 1024, dependsOn: []string{"repository-audit"}},
+		"benchmark-full-scan":      {cpu: 4, memory: 6 * 1024 * 1024 * 1024},
+		"benchmarks":               {cpu: 4, memory: 6 * 1024 * 1024 * 1024},
+		"catalog":                  {cpu: 2, memory: 4 * 1024 * 1024 * 1024},
+		"cfg-refinement":           {cpu: 2, memory: 4 * 1024 * 1024 * 1024},
+		"clean-tree-freshness":     {cpu: 1, memory: 1024 * 1024 * 1024},
+		"counterexamples":          {cpu: 2, memory: 4 * 1024 * 1024 * 1024},
+		"determinism":              {cpu: 4, memory: 8 * 1024 * 1024 * 1024},
+		"end-to-end-oracle":        {cpu: 4, memory: 8 * 1024 * 1024 * 1024},
+		"exceptions":               {cpu: 1, memory: 512 * 1024 * 1024, dependsOn: []string{"repository-audit"}},
+		"full-scan":                {cpu: 1, memory: 512 * 1024 * 1024, dependsOn: []string{"repository-audit"}},
+		"fuzz-seeds":               {cpu: 4, memory: 8 * 1024 * 1024 * 1024},
+		"harness-parity":           {cpu: 2, memory: 2 * 1024 * 1024 * 1024},
+		"inconclusive-suppression": {cpu: 1, memory: 1024 * 1024 * 1024},
+		"module-tests":             {cpu: 4, memory: 8 * 1024 * 1024 * 1024},
+		"mutation-kernel-coverage": {cpu: 1, memory: 1024 * 1024 * 1024},
+		"performance-smoke":        {cpu: 1, memory: 512 * 1024 * 1024, dependsOn: []string{"repository-audit"}},
+		"production-integration":   {cpu: 4, memory: 8 * 1024 * 1024 * 1024},
+		"protocol-oracle":          {cpu: 4, memory: 4 * 1024 * 1024 * 1024},
+		"race-repeat-1":            {cpu: 4, memory: 12 * 1024 * 1024 * 1024},
+		"race-repeat-2":            {cpu: 4, memory: 12 * 1024 * 1024 * 1024},
+		"race-repeat-3":            {cpu: 4, memory: 12 * 1024 * 1024 * 1024},
+		"race-repeat-4":            {cpu: 4, memory: 12 * 1024 * 1024 * 1024},
+		"race-repeat-5":            {cpu: 4, memory: 12 * 1024 * 1024 * 1024},
+		"race-repeat-6":            {cpu: 4, memory: 12 * 1024 * 1024 * 1024},
+		"race-repeat-supporting":   {cpu: 4, memory: 8 * 1024 * 1024 * 1024},
+		"repository-audit":         {cpu: 4, memory: 6 * 1024 * 1024 * 1024, exclusive: []string{"repository-analysis"}},
+		"scheduled-oracle":         {cpu: 4, memory: 8 * 1024 * 1024 * 1024},
+		"targeted-mutation":        {cpu: 4, memory: 8 * 1024 * 1024 * 1024},
+	}
+	selected, exists := policies[subgate.ID]
+	if !exists {
+		return fmt.Errorf("missing soundness execution policy for %s", subgate.ID)
+	}
+	subgate.Dependencies = selected.dependsOn
+	if subgate.Dependencies == nil {
+		subgate.Dependencies = []string{}
+	}
+	subgate.CPUUnits = selected.cpu
+	subgate.EstimatedPeakMemoryBytes = selected.memory
+	subgate.ExclusivityGroups = selected.exclusive
+	if subgate.ExclusivityGroups == nil {
+		subgate.ExclusivityGroups = []string{}
+	}
+	subgate.Distributable = true
+	switch subgate.ID {
+	case "clean-tree-freshness":
+		subgate.ProfileIDs = []soundnessgate.ProfileID{soundnessgate.ProfileComplete}
+	case "performance-smoke":
+		subgate.ProfileIDs = []soundnessgate.ProfileID{soundnessgate.ProfileConsumer, soundnessgate.ProfileHarness}
+	case "baseline", "exceptions", "full-scan", "repository-audit":
+		subgate.ProfileIDs = []soundnessgate.ProfileID{
+			soundnessgate.ProfileComplete,
+			soundnessgate.ProfileConsumer,
+			soundnessgate.ProfileHarness,
+			soundnessgate.ProfileSemantic,
+		}
+	case "harness-parity", "module-tests":
+		subgate.ProfileIDs = []soundnessgate.ProfileID{
+			soundnessgate.ProfileComplete,
+			soundnessgate.ProfileHarness,
+			soundnessgate.ProfileSemantic,
+		}
+	default:
+		subgate.ProfileIDs = []soundnessgate.ProfileID{soundnessgate.ProfileComplete, soundnessgate.ProfileSemantic}
+	}
+	return nil
 }
 
 func mutationKernelPopulationRequirements() ([]soundnessgate.PopulationRequirement, error) {
@@ -388,6 +539,28 @@ func newSubgate(
 
 func population(id string, minimum int) soundnessgate.PopulationRequirement {
 	return soundnessgate.PopulationRequirement{ID: id, Minimum: minimum}
+}
+
+// raceRepeatGroupCount partitions the analyzer race/repeat plan into
+// deterministic distributable groups so each group fits one reviewed
+// four-CPU worker within its subgate timeout.
+const raceRepeatGroupCount = 6
+
+func raceRepeatGroupSubgate(index int) soundnessgate.Subgate {
+	return newSubgate(
+		fmt.Sprintf("race-repeat-%d", index),
+		"tools/goplint",
+		[]string{
+			"./scripts/check-race-repeat.sh",
+			"--phase", "analyzer",
+			"--group", fmt.Sprintf("%d/%d", index, raceRepeatGroupCount),
+		},
+		3600,
+		"report.json",
+		nil,
+		population("race-runs", 1),
+		population("repeat-runs", 3),
+	)
 }
 
 func registrationIDs(registry soundnessevidence.Registry, producerID string) []string {

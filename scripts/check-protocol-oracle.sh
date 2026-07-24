@@ -6,5 +6,5 @@ MODULE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 cd "${MODULE_DIR}"
 echo "Running independent protocol oracle and solver-core component corpus..."
-GOCACHE="${GOCACHE:-/tmp/go-build}" go test -count=1 ./internal/protocoloracle ./goplint \
+GOCACHE="${GOCACHE:-/tmp/go-build}" "${SCRIPT_DIR}/soundness-go-test.sh" -count=1 ./internal/protocoloracle ./goplint \
   -run '^(TestBoundedCorpusCardinalityCensusAndReferenceOutcomes|TestReferenceInterpreterReviewedScenarios|TestManifestDimensionsAreCorpusSensitive|TestCorpusProfilesPartitionDeterministically|TestGeneratedGoCorpusParsesAndTypeChecks|TestGeneratedGoProjectionTraceCoversDeclaredIntegratedDimensions|TestProtocolOracleSolverCoreComponent|TestProtocolOracleIndependence|TestProtocolMetamorphicRelations|TestProtocolOracleEvidence|TestCategoryMetamorphicEvidence)$'

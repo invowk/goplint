@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -33,91 +34,95 @@ func SnapshotCallerState(ctx context.Context, root string, excludedPaths ...stri
 		}
 		excluded[path] = true
 	}
-	indexPath, err := gitOutput(
-		ctx,
-		absoluteRoot,
-		nil,
-		nil,
-		"rev-parse",
-		"--path-format=absolute",
-		"--git-path",
-		"index",
-	)
-	if err != nil {
-		return CallerSnapshot{}, err
-	}
-	indexDigest, err := digestFileOrMissing(indexPath)
+	// The index identity is its staged content — paths, modes, blob objects,
+	// and stages — not the raw index file bytes: concurrent read-only git
+	// commands legitimately refresh the stat cache without changing what is
+	// staged, while any real staging change alters this listing.
+	staged, err := runCommand(ctx, absoluteRoot, nil, nil, "git", "ls-files", "--stage", "-z")
 	if err != nil {
 		return CallerSnapshot{}, fmt.Errorf("snapshot caller index: %w", err)
 	}
-	worktreeDigest, err := snapshotWorktree(absoluteRoot, excluded)
+	indexDigest := digestBytes(staged)
+	worktreeDigest, err := snapshotWorktree(ctx, absoluteRoot, excluded)
 	if err != nil {
 		return CallerSnapshot{}, err
 	}
 	return CallerSnapshot{IndexSHA256: indexDigest, WorktreeSHA256: worktreeDigest}, nil
 }
 
-func snapshotWorktree(root string, excluded map[string]bool) (string, error) {
+// snapshotWorktree inventories the caller's git-visible worktree: every
+// tracked path and every untracked, non-ignored path. Ignored artifacts —
+// build outputs, caches, editor and agent scratch state — are outside the
+// proof identity by construction (the diff census and synthetic tree never
+// admit them), and unrelated processes may legitimately write them while
+// evidence is generated, so they must not poison the preservation guarantee.
+func snapshotWorktree(ctx context.Context, root string, excluded map[string]bool) (string, error) {
+	listing, err := runCommand(
+		ctx,
+		root,
+		nil,
+		nil,
+		"git",
+		"ls-files",
+		"-z",
+		"--cached",
+		"--others",
+		"--exclude-standard",
+	)
+	if err != nil {
+		return "", fmt.Errorf("enumerate caller worktree files: %w", err)
+	}
+	paths := make([]string, 0, 256)
+	seen := make(map[string]bool, 256)
+	for rawPath := range bytes.SplitSeq(listing, []byte{0}) {
+		if len(rawPath) == 0 {
+			continue
+		}
+		path := string(rawPath)
+		if !seen[path] {
+			seen[path] = true
+			paths = append(paths, path)
+		}
+	}
+	slices.Sort(paths)
 	var inventory bytes.Buffer
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		relative, err := filepath.Rel(root, path)
-		if err != nil {
-			return fmt.Errorf("relativize worktree path %q: %w", path, err)
-		}
-		if relative == "." {
-			return nil
-		}
-		relative = filepath.ToSlash(relative)
-		if relative == ".git" {
-			if entry.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
+	for _, relative := range paths {
 		if excluded[relative] {
-			if entry.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
+			continue
 		}
+		skip := false
 		for excludedPath := range excluded {
 			if strings.HasPrefix(relative, excludedPath+"/") {
-				if entry.IsDir() {
-					return filepath.SkipDir
-				}
-				return nil
+				skip = true
+				break
 			}
 		}
-		info, err := entry.Info()
-		if err != nil {
-			return fmt.Errorf("inspect worktree path %q: %w", relative, err)
+		if skip {
+			continue
 		}
-		mode := uint32(info.Mode())
+		absolute := filepath.Join(root, filepath.FromSlash(relative))
+		info, err := os.Lstat(absolute)
 		switch {
-		case info.Mode().IsDir():
-			fmt.Fprintf(&inventory, "D %08x %s\n", mode, relative)
+		case os.IsNotExist(err):
+			// Tracked but deleted from the worktree: record the deletion.
+			fmt.Fprintf(&inventory, "M %s\n", relative)
+		case err != nil:
+			return "", fmt.Errorf("inspect worktree path %q: %w", relative, err)
 		case info.Mode().IsRegular():
-			digest, err := digestFile(path)
-			if err != nil {
-				return fmt.Errorf("digest worktree file %q: %w", relative, err)
+			digest, digestErr := digestFile(absolute)
+			if digestErr != nil {
+				return "", fmt.Errorf("digest worktree file %q: %w", relative, digestErr)
 			}
-			fmt.Fprintf(&inventory, "F %08x %d %s %s\n", mode, info.Size(), digest, relative)
+			fmt.Fprintf(&inventory, "F %08x %d %s %s\n", uint32(info.Mode()), info.Size(), digest, relative)
 		case info.Mode()&fs.ModeSymlink != 0:
-			target, err := os.Readlink(path)
-			if err != nil {
-				return fmt.Errorf("read worktree symlink %q: %w", relative, err)
+			target, linkErr := os.Readlink(absolute)
+			if linkErr != nil {
+				return "", fmt.Errorf("read worktree symlink %q: %w", relative, linkErr)
 			}
-			fmt.Fprintf(&inventory, "L %08x %s %s\n", mode, digestBytes([]byte(target)), relative)
+			fmt.Fprintf(&inventory, "L %08x %s %s\n", uint32(info.Mode()), digestBytes([]byte(target)), relative)
 		default:
-			return fmt.Errorf("unsupported worktree file mode %s at %q", info.Mode(), relative)
+			return "", fmt.Errorf("unsupported worktree file mode %s at %q", info.Mode(), relative)
 		}
-		return nil
-	})
-	if err != nil {
-		return "", fmt.Errorf("snapshot caller worktree: %w", err)
 	}
 	return digestBytes(inventory.Bytes()), nil
 }
@@ -142,15 +147,4 @@ func requireRegularFile(path string) error {
 		return fmt.Errorf("path %s is not a regular file", path)
 	}
 	return nil
-}
-
-func digestFileOrMissing(path string) (string, error) {
-	digest, err := digestFile(path)
-	if err == nil {
-		return digest, nil
-	}
-	if os.IsNotExist(err) {
-		return "missing", nil
-	}
-	return "", err
 }

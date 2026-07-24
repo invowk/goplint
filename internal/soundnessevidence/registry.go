@@ -80,9 +80,15 @@ func (registry Registry) Validate() error {
 	return nil
 }
 
-// ValidateObservations checks the bidirectional registry/observation census.
-// Each registration must have exactly one current, producer-bound observation;
-// missing, duplicate, extra, stale, and zero-population evidence is rejected.
+// ValidateObservations checks the bidirectional registry/observation census
+// for the producers selected by the executing profile. A registration is
+// required exactly when its producing subgate has an expected binding; the
+// semantic and complete profiles select every registration producer by
+// manifest invariant, so completeness is unweakened where it must hold, while
+// the consumer and harness tiers are not charged with evidence their reviewed
+// selections never execute. Every observation must belong to a selected
+// registration; missing, duplicate, extra, stale, and zero-population
+// evidence is rejected.
 func ValidateObservations(
 	registry Registry,
 	observations []SemanticObservation,
@@ -93,10 +99,9 @@ func ValidateObservations(
 	}
 	registrations := make(map[string]Registration, len(registry.Registrations))
 	for _, registration := range registry.Registrations {
-		registrations[registration.ID] = registration
 		expectedBinding, exists := expectedBindings[registration.ProducerID]
 		if !exists {
-			return fmt.Errorf("evidence registration %q producer %q has no expected binding", registration.ID, registration.ProducerID)
+			continue
 		}
 		if err := expectedBinding.Validate(); err != nil {
 			return fmt.Errorf("evidence registration %q producer binding: %w", registration.ID, err)
@@ -104,6 +109,7 @@ func ValidateObservations(
 		if expectedBinding.SubgateID != registration.ProducerID {
 			return fmt.Errorf("evidence registration %q producer %q has binding subgate_id %q", registration.ID, registration.ProducerID, expectedBinding.SubgateID)
 		}
+		registrations[registration.ID] = registration
 	}
 
 	seen := make(map[string]bool, len(observations))
@@ -124,7 +130,7 @@ func ValidateObservations(
 		}
 	}
 	for _, registration := range registry.Registrations {
-		if !seen[registration.ID] {
+		if _, selected := registrations[registration.ID]; selected && !seen[registration.ID] {
 			return fmt.Errorf("evidence registration %q has no observation", registration.ID)
 		}
 	}

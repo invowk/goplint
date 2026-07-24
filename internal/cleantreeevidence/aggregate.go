@@ -35,18 +35,24 @@ func collectAggregateReport(
 	if err != nil {
 		return AggregateReportIdentity{}, fmt.Errorf("load aggregate run report: %w", err)
 	}
-	identity, err := validateAggregateReport(ctx, root, planned, report)
+	identity, err := validateAggregateReport(ctx, root, planned, report, "")
 	if err != nil {
 		return AggregateReportIdentity{}, err
 	}
 	return identity, nil
 }
 
+// validateAggregateReport validates the retained report against the reviewed
+// manifest and registry in root. When expectedWorkspaceDigest is empty the
+// report must bind the workspace digest recomputed from root; a re-bound
+// record instead supplies the retained provenance digest, because the report
+// is evidence about the semantic content that produced it, not about prose.
 func validateAggregateReport(
 	ctx context.Context,
 	root string,
 	planned AggregateReportPlan,
 	report soundnessgate.RunReport,
+	expectedWorkspaceDigest string,
 ) (AggregateReportIdentity, error) {
 	manifestPath := resolveFromRoot(root, planned.ManifestPath)
 	manifestByteDigest, err := digestFile(manifestPath)
@@ -85,13 +91,16 @@ func validateAggregateReport(
 			manifestDigest,
 		)
 	}
-	workspaceDigest, err := soundnessgate.WorkspaceDigest(ctx, root)
-	if err != nil {
-		return AggregateReportIdentity{}, fmt.Errorf("compute aggregate workspace digest: %w", err)
+	workspaceDigest := expectedWorkspaceDigest
+	if workspaceDigest == "" {
+		workspaceDigest, err = soundnessgate.WorkspaceDigest(ctx, root)
+		if err != nil {
+			return AggregateReportIdentity{}, fmt.Errorf("compute aggregate workspace digest: %w", err)
+		}
 	}
 	if report.WorkspaceDigest != workspaceDigest {
 		return AggregateReportIdentity{}, fmt.Errorf(
-			"aggregate report workspace digest %s, current %s",
+			"aggregate report workspace digest %s, expected %s",
 			report.WorkspaceDigest,
 			workspaceDigest,
 		)

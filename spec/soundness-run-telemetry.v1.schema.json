@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://invowk.dev/schemas/goplint/soundness-run-telemetry.v1.schema.json",
+  "title": "goplint aggregate soundness telemetry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "run_id",
+    "profile",
+    "workspace_digest",
+    "manifest_digest",
+    "started_at",
+    "finished_at",
+    "wall_duration_nanoseconds",
+    "critical_path_nanoseconds",
+    "max_reserved_cpu_units",
+    "max_reserved_memory_bytes",
+    "subgates"
+  ],
+  "properties": {
+    "format_version": {
+      "const": 1
+    },
+    "run_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "profile": {
+      "enum": [
+        "complete",
+        "consumer",
+        "semantic"
+      ]
+    },
+    "workspace_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "manifest_digest": {
+      "$ref": "#/$defs/digest"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "wall_duration_nanoseconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "critical_path_nanoseconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_reserved_cpu_units": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_reserved_memory_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "subgates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/subgate"
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\S(?:.*\\S)?$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "population": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "count"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "reservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cpu_units",
+        "memory_bytes",
+        "worker_slots"
+      ],
+      "properties": {
+        "cpu_units": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memory_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "worker_slots": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "subgate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "queued_at",
+        "started_at",
+        "finished_at",
+        "queue_duration_nanoseconds",
+        "wall_duration_nanoseconds",
+        "cpu_time_nanoseconds",
+        "peak_rss_bytes",
+        "reserved_resources",
+        "timeout_seconds",
+        "timed_out",
+        "terminal_status",
+        "populations"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "queued_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finished_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "queue_duration_nanoseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "wall_duration_nanoseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cpu_time_nanoseconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "peak_rss_bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reserved_resources": {
+          "$ref": "#/$defs/reservation"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "timed_out": {
+          "const": false
+        },
+        "terminal_status": {
+          "const": "passed"
+        },
+        "populations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/population"
+          }
+        }
+      }
+    }
+  }
+}

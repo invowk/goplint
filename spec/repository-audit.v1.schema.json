@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/invowk/invowk/tools/goplint/spec/repository-audit.v1.schema.json",
+  "title": "Goplint canonical repository audit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "result_id", "inputs", "findings", "baseline", "exceptions", "packages", "scan"],
+  "properties": {
+    "format_version": { "const": 1 },
+    "result_id": { "$ref": "#/$defs/digest" },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspace_digest", "analyzer_digest", "baseline_digest", "exceptions_digest", "semantic_manifest_digest", "toolchain_digest", "command_digest", "analyzer_mode", "flags", "package_patterns", "cache_policy", "purpose"],
+      "properties": {
+        "workspace_digest": { "$ref": "#/$defs/digest" },
+        "analyzer_digest": { "$ref": "#/$defs/digest" },
+        "baseline_digest": { "$ref": "#/$defs/digest" },
+        "exceptions_digest": { "$ref": "#/$defs/digest" },
+        "semantic_manifest_digest": { "$ref": "#/$defs/digest" },
+        "toolchain_digest": { "$ref": "#/$defs/digest" },
+        "command_digest": { "$ref": "#/$defs/digest" },
+        "analyzer_mode": { "type": "string", "minLength": 1 },
+        "flags": { "$ref": "#/$defs/nonEmptyStrings" },
+        "package_patterns": { "$ref": "#/$defs/nonEmptyStrings" },
+        "cache_policy": { "type": "string", "minLength": 1 },
+        "purpose": { "const": "canonical-superset" }
+      }
+    },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched", "new", "stale"],
+      "properties": {
+        "matched": { "type": "array", "items": { "$ref": "#/$defs/findingReference" } },
+        "new": { "type": "array", "items": { "$ref": "#/$defs/findingReference" } },
+        "stale": { "type": "array", "items": { "$ref": "#/$defs/findingReference" } }
+      }
+    },
+    "exceptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched_patterns", "stale_patterns"],
+      "properties": {
+        "matched_patterns": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "stale_patterns": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "packages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_ids", "digest"],
+      "properties": {
+        "package_ids": { "$ref": "#/$defs/nonEmptyStrings" },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["started_at", "finished_at", "wall_duration_nanoseconds", "peak_rss_bytes", "exit_code", "finding_count", "package_count"],
+      "properties": {
+        "started_at": { "type": "string", "format": "date-time" },
+        "finished_at": { "type": "string", "format": "date-time" },
+        "wall_duration_nanoseconds": { "type": "integer", "minimum": 0 },
+        "peak_rss_bytes": { "type": "integer", "minimum": 0 },
+        "exit_code": { "type": "integer", "minimum": 0 },
+        "finding_count": { "type": "integer", "minimum": 0 },
+        "package_count": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nonEmptyStrings": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package", "category", "id", "message", "position", "disposition"],
+      "properties": {
+        "package": { "type": "string", "minLength": 1 },
+        "category": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "position": { "type": "string" },
+        "meta": { "type": "object", "additionalProperties": { "type": "string" } },
+        "disposition": { "enum": ["baseline-match", "new", "always-visible", "governance"] }
+      }
+    },
+    "findingReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "id", "message"],
+      "properties": {
+        "category": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

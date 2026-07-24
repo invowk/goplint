@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/invowk/invowk/tools/goplint/internal/gitenv"
+	"github.com/invowk/invowk/tools/goplint/internal/profileownership"
 )
 
 const (
@@ -37,8 +38,12 @@ type Materialization struct {
 // Materialize builds HEAD plus the explicit path selection through an isolated
 // temporary index. When withWorktree is true it also creates a clean detached
 // worktree at the deterministic synthetic commit.
-func Materialize(ctx context.Context, root, pathsPath string, withWorktree bool) (*Materialization, error) {
-	return materializeFromBase(ctx, root, pathsPath, "HEAD", withWorktree)
+func Materialize(
+	ctx context.Context,
+	root, pathsPath, ownershipManifestPath string,
+	withWorktree bool,
+) (*Materialization, error) {
+	return materializeFromBase(ctx, root, pathsPath, ownershipManifestPath, "HEAD", withWorktree)
 }
 
 // materializeFromBase builds the selected content on top of one exact base
@@ -48,6 +53,7 @@ func materializeFromBase(
 	ctx context.Context,
 	root string,
 	pathsPath string,
+	ownershipManifestPath string,
 	baseRevision string,
 	withWorktree bool,
 ) (_ *Materialization, resultErr error) {
@@ -119,7 +125,7 @@ func materializeFromBase(
 		ctx,
 		absoluteRoot,
 		commitEnv,
-		[]byte("goplint clean-tree evidence v3\n"),
+		[]byte("goplint clean-tree evidence v4\n"),
 		"commit-tree",
 		syntheticTree,
 		"-p",
@@ -128,11 +134,17 @@ func materializeFromBase(
 	if err != nil {
 		return nil, err
 	}
+	semanticDigest, proseDigest, err := classTreeDigests(ctx, absoluteRoot, syntheticTree, ownershipManifestPath)
+	if err != nil {
+		return nil, err
+	}
 	materialization.Identity = RepositoryIdentity{
 		BaseCommit:          baseCommit,
 		SyntheticTree:       syntheticTree,
 		SyntheticCommit:     syntheticCommit,
 		DiffSHA256:          digestBytes(diff),
+		SemanticTreeDigest:  semanticDigest,
+		ProseTreeDigest:     proseDigest,
 		PathSelectionSHA256: digestBytes([]byte(strings.Join(paths, "\n") + "\n")),
 		PathSelection:       paths,
 	}
@@ -163,6 +175,49 @@ func materializeFromBase(
 	}
 	failed = false
 	return materialization, nil
+}
+
+// classTreeDigests partitions the synthetic tree's blob inventory by reviewed
+// ownership class and digests each partition. The ownership manifest is read
+// from the synthetic tree itself, so the classification is bound to the exact
+// proven content. Documentation-class paths form the prose digest; every
+// other class — and any ungoverned path, conservatively — forms the
+// semantic-content digest.
+func classTreeDigests(
+	ctx context.Context,
+	root, syntheticTree, ownershipManifestPath string,
+) (string, string, error) {
+	manifestData, err := runCommand(ctx, root, nil, nil, "git", "show", syntheticTree+":"+ownershipManifestPath)
+	if err != nil {
+		return "", "", fmt.Errorf("read ownership manifest %q from synthetic tree: %w", ownershipManifestPath, err)
+	}
+	manifest, err := profileownership.Decode(manifestData)
+	if err != nil {
+		return "", "", fmt.Errorf("decode synthetic-tree ownership manifest: %w", err)
+	}
+	listing, err := runCommand(ctx, root, nil, nil, "git", "ls-tree", "-r", "-z", syntheticTree)
+	if err != nil {
+		return "", "", fmt.Errorf("enumerate synthetic tree blobs: %w", err)
+	}
+	var semanticEntries, proseEntries []string
+	for rawEntry := range bytes.SplitSeq(listing, []byte{0}) {
+		if len(rawEntry) == 0 {
+			continue
+		}
+		entry := string(rawEntry)
+		_, path, found := strings.Cut(entry, "\t")
+		if !found || path == "" {
+			return "", "", fmt.Errorf("malformed synthetic tree entry %q", entry)
+		}
+		if class, matched := manifest.ClassForPath(path); matched && class == profileownership.ClassDocumentation {
+			proseEntries = append(proseEntries, entry)
+			continue
+		}
+		semanticEntries = append(semanticEntries, entry)
+	}
+	semanticDigest := digestBytes([]byte(strings.Join(semanticEntries, "\n") + "\n"))
+	proseDigest := digestBytes([]byte(strings.Join(proseEntries, "\n") + "\n"))
+	return semanticDigest, proseDigest, nil
 }
 
 // Close removes the detached worktree and all isolated temporary state.

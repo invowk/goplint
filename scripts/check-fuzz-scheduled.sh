@@ -18,5 +18,5 @@ targets=(
 cd "${MODULE_DIR}"
 for target in "${targets[@]}"; do
   echo "Running bounded fuzz target ${target} for ${FUZZ_TIME}..."
-  go test ./goplint -run '^$' -fuzz="^${target}$" -fuzztime="${FUZZ_TIME}" -parallel=2 -timeout=35m
+  "${SCRIPT_DIR}/soundness-go-test.sh" ./goplint -run '^$' -fuzz="^${target}$" -fuzztime="${FUZZ_TIME}" -timeout=35m
 done

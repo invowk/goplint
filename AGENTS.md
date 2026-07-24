@@ -15,10 +15,17 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | Run (JSON for agents) | `make check-types-json` |
 | **Run all DDD checks** | **`make check-types-all`** |
 | **Run all DDD checks (JSON)** | **`make check-types-all-json`** |
-| **Check canonical soundness core** | **`make check-goplint-soundness-core`** |
+| **Route and run canonical soundness** | **`make check-goplint-soundness`** |
+| **Documentation tier (static docs-guard)** | **`make check-goplint-docs`** |
+| **Force consumer profile** | **`make check-goplint-soundness-consumer`** |
+| **Force harness profile** | **`make check-goplint-soundness-harness`** |
+| **Check executor parity (plan-serial vs parallel)** | **`make check-goplint-harness-parity`** |
+| **Run module test suite** | **`make check-goplint-module-tests`** |
+| **Force semantic soundness** | **`make check-goplint-soundness-semantic`** |
 | **Check completion proof** | **`make check-goplint-soundness-complete`** |
-| **Generate retained exact-tree proof** | **`make generate-goplint-clean-tree-evidence`** |
-| **Verify retained exact-tree proof** | **`make check-goplint-clean-tree-evidence`** |
+| **Generate retained exact-tree proof (v4)** | **`make generate-goplint-clean-tree-evidence`** |
+| **Re-bind retained proof after prose-only drift** | **`make rebind-goplint-clean-tree-evidence`** |
+| **Verify retained exact-tree proof (v4)** | **`make check-goplint-clean-tree-evidence`** |
 | **Check mutation-kernel coverage** | **`make check-goplint-mutation-kernel-coverage`** |
 | **Check production integration** | **`make check-goplint-production-integration`** |
 | **Check historical counterexamples** | **`make check-goplint-counterexamples`** |
@@ -31,7 +38,10 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | **Check determinism** | **`make check-goplint-determinism`** |
 | **Check targeted mutation** | **`make check-goplint-targeted-mutation`** |
 | **Check race/repeat evidence** | **`make check-goplint-race-repeat`** |
+| **Refresh race/repeat timings** | **`make update-goplint-race-repeat-timings`** |
 | **Check canonical full scan** | **`make check-goplint-full-scan`** |
+| **Check consumer performance smoke** | **`make check-goplint-performance-smoke`** |
+| **Check certified performance** | **`make check-goplint-benchmarks`** |
 | **Check baseline (regression gate)** | **`make check-baseline`** |
 | **Check exception governance** | **`make check-goplint-exceptions`** |
 | **Update baseline** | **`make update-baseline`** |
@@ -69,21 +79,57 @@ mutant with non-empty `changed_stages` and structured `expected_mismatches`.
 The subgate emits a deterministic category-to-mutant census; uncovered
 required categories cannot be exempted, baselined, excepted, or inline-ignored.
 
-For a completion claim, run the core gate, generate the retained record, verify
+For a completion claim, run the semantic gate, generate the retained record, verify
 it, and then run the complete gate:
 
 ```bash
-make check-goplint-soundness-core
+make check-goplint-soundness-semantic
 make generate-goplint-clean-tree-evidence
 make check-goplint-clean-tree-evidence
 make check-goplint-soundness-complete
 ```
 
-Generation consumes the reviewed `clean-tree-v3.paths` and
-`clean-tree-v3.json` inputs, invokes the `core` profile to avoid recursive
-freshness verification, and writes only `clean-tree-run.v3.json`. Missing or
-stale retained evidence is blocking and cannot be baselined, excepted, or
-inline-ignored.
+Generation consumes the reviewed `clean-tree-v4.paths` and
+`clean-tree-v4.json` inputs, invokes the `semantic` profile to avoid recursive
+freshness verification, and writes only the retained `clean-tree-run.v4.json`
+dual-digest record (a retained v3 record is rejected with an explicit
+migration notice). When only documentation-class prose drifted since a valid
+record, `make rebind-goplint-clean-tree-evidence` re-binds it in seconds:
+both tree digests are recomputed, task ledgers and the diff census are
+revalidated, and the aggregate report is carried forward with re-bound
+provenance; semantic-content drift makes re-binding fail closed naming the
+drifted paths. Missing or stale retained evidence is blocking and cannot be
+baselined, excepted, or inline-ignored.
+
+The routed command uses the versioned four-class ownership manifest
+(`spec/soundness-ownership.v2.json`): `documentation`, `consumer`, `harness`,
+and `analyzer-semantics` path classes map to the `documentation`, `consumer`,
+`harness`, and `semantic` profiles, the highest class in the diff wins, and
+unknown or ambiguous change context fails closed to `semantic`. The
+documentation tier runs only the static `cmd/docs-guard` anchoring validator;
+the harness tier adds `module-tests` and `harness-parity` to the consumer
+surface and never substitutes for semantic assurance. The default executor is
+the immutable, resource-aware parallel planner. Consumer smoke is
+deliberately one-sample and is not certification; only semantic/complete runs
+support analyzer-soundness or exact-tree completion claims. See
+[`../../docs/goplint/soundness-gate-execution.md`](../../docs/goplint/soundness-gate-execution.md)
+for resource overrides, timing refresh, plan/bundle schemas, CI reproduction,
+telemetry fields, and failure diagnostics.
+
+The local plan gives the short runner-class-calibrated algorithm certification
+the full CPU budget. The analyzer race/repeat census executes as six
+deterministic four-CPU work groups (`race-repeat-1` through `race-repeat-6`)
+that partition every plan work unit exactly once by descending effective
+weight; the supporting-package population is its own work unit. The
+deterministic scheduler admits larger reservations before small work can
+fragment the runner. Distributed CI runs each group and phase on an
+independent four-CPU worker so no unit depends on a runner larger than the
+hosted class. Worker bundle v2 timestamps and content-binds its embedded
+report plus shared-audit digest; aggregation retains both the canonical report
+and versioned telemetry. Scheduled and release events force completion. The
+migration-era legacy serial comparison lane was removed after hosted parity
+and wall-time acceptance were recorded in
+[`../../docs/goplint/soundness-gate-performance.md`](../../docs/goplint/soundness-gate-performance.md).
 
 ## Testing Parallelism
 
@@ -740,21 +786,42 @@ Run `make update-baseline` after:
 
 ### CI integration
 
-The `goplint`, `goplint-baseline`, `goplint-exceptions`, and `goplint-tests` jobs
-in `lint.yml` are required checks. The full scan is blocking, baseline and
-exception jobs govern accepted definite debt, and `goplint-tests` runs the
-causal core profile with `make check-goplint-soundness-core`. The scheduled
-oracle workflow runs its manifest-derived strict superset separately.
+The `goplint-plan`, bounded `goplint-workers`, and `goplint-aggregate` jobs in
+`lint.yml` are required checks. The plan job classifies the change (pull
+requests from the cumulative base-to-head diff, push-to-main from the push
+diff; schedule, release, and dispatch events force `complete`), emits an
+immutable plan, and produces the canonical repository audit once. A
+documentation-class diff runs docs-guard in the plan job and skips the worker
+and aggregation jobs entirely. Matrix
+workers execute exact plan units and upload bound bundles; the aggregate job
+recomputes the shared-audit and embedded-report digests, rejects missing,
+duplicate, foreign, stale, or partial results, and uploads the report plus
+telemetry. The migration-era `goplint-legacy-reference` and `goplint-parity`
+jobs were removed after `soundness-report-compare` established byte-identical
+normalized evidence between the distributed lane and the hosted serial
+reference and the recorded wall-time acceptance passed;
+`cmd/soundness-report-compare` remains available for local parity diagnosis
+against the `plan-serial` executor. The
+scheduled oracle workflow runs its manifest-derived strict superset separately.
 
 ### Pre-commit hook
 
-The local hooks in `.pre-commit-config.yaml` block on `make check-baseline`,
-`make check-goplint-exceptions`, and `make check-goplint-soundness-core` for
-goplint-relevant changes. Install with `make install-hooks`.
+The consolidated local hook (`goplint-behavior`) runs
+`make check-goplint-soundness-routed`
+(`tools/goplint/scripts/check-routed-soundness.sh`) and is capped below the
+semantic tier: documentation diffs run docs-guard, consumer diffs execute one
+shared repository audit, and harness or analyzer-semantics diffs run the
+consumer tier locally while printing the authoritative CI tier and the
+explicit Make targets to run it by hand. `GOPLINT_FORCE_SEMANTIC=1` escalates
+any routed profile except `complete` to `semantic`, locally and in the CI
+plan job (one-release migration escape hatch). Install with
+`make install-hooks`.
 
 The retained exact-tree record is a completion artifact, not an ordinary CI
 input. Generate it from the reviewed temporary-index synthetic tree using the
-core profile, verify it with `make check-goplint-clean-tree-evidence`, then run
+semantic profile (or re-bind it after prose-only drift with
+`make rebind-goplint-clean-tree-evidence`), verify it with
+`make check-goplint-clean-tree-evidence`, then run
 `make check-goplint-soundness-complete`. Never make record generation invoke
 the complete profile: that would recurse into the record's own freshness
 check.

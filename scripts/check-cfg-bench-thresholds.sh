@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+PHASE="all"
+if [[ "${1:-}" == "--phase" ]]; then
+  PHASE="${2:-}"
+  shift 2
+fi
+if [[ "$PHASE" != "all" && "$PHASE" != "algorithms" && "$PHASE" != "full-scan" ]]; then
+  echo "invalid certification phase: $PHASE (want all, algorithms, or full-scan)" >&2
+  exit 2
+fi
 THRESHOLDS_FILE="${1:-${GOPLINT_BENCH_THRESHOLDS:-$ROOT_DIR/tools/goplint/bench/thresholds.toml}}"
 if [[ "$THRESHOLDS_FILE" != /* ]]; then
   THRESHOLDS_FILE="$ROOT_DIR/$THRESHOLDS_FILE"
@@ -11,6 +21,11 @@ if [[ ! -f "$THRESHOLDS_FILE" ]]; then
   echo "threshold file not found: $THRESHOLDS_FILE" >&2
   exit 1
 fi
+
+(
+  cd "$ROOT_DIR/tools/goplint"
+  go run ./cmd/benchmark-policy -manifest "$THRESHOLDS_FILE" -policy certification
+)
 
 toml_root_value() {
   local key="$1"
@@ -73,133 +88,146 @@ if [[ "$actual_toolchain" != "$expected_toolchain"* ]]; then
   echo "benchmark toolchain mismatch: got $actual_toolchain, manifest requires $expected_toolchain" >&2
   exit 1
 fi
-echo "Benchmark policy: toolchain=$actual_toolchain runner_class=$runner_class samples=$samples"
-
-benchmarks=(
-  BenchmarkProtocolCanonicalSolver
-  BenchmarkProtocolRecursiveTabulation
-  BenchmarkProtocolAliasJoin
-  BenchmarkProtocolRefinementEvidence
-  BenchmarkProtocolReferenceInterpreter
-  BenchmarkProtocolGeneratedAnalyzer
-  BenchmarkConstructorSuccessfulReturnClassification
-  BenchmarkProtocolPackageProcedureInventory
-)
-benchmark_pattern="^($(IFS='|'; echo "${benchmarks[*]}"))$"
-bench_output="$({
-  cd "$ROOT_DIR/tools/goplint"
-  go test -run '^$' -bench "$benchmark_pattern" -benchmem -count="$samples" ./goplint
-})"
-echo "$bench_output"
+echo "Benchmark policy: toolchain=$actual_toolchain runner_class=$runner_class samples=$samples phase=$PHASE"
 
 status=0
-for benchmark in "${benchmarks[@]}"; do
-  section="benchmarks.$benchmark"
-  max_ns="$(toml_section_value "$section" max_ns_per_op)"
-  max_bytes="$(toml_section_value "$section" max_bytes_per_op)"
-  max_allocs="$(toml_section_value "$section" max_allocs_per_op)"
-  if [[ -z "$max_ns" || -z "$max_bytes" || -z "$max_allocs" ]]; then
-    echo "missing time/bytes/allocations threshold for $benchmark" >&2
-    status=1
-    continue
-  fi
-  mapfile -t rows < <(
-    awk -v benchmark="$benchmark" '
-      $1 ~ ("^" benchmark "-") {
-        ns=""; bytes=""; allocs=""
-        for (i=2; i<=NF; i++) {
-          if ($i == "ns/op") ns=$(i-1)
-          if ($i == "B/op") bytes=$(i-1)
-          if ($i == "allocs/op") allocs=$(i-1)
-        }
-        print ns, bytes, allocs
-      }
-    ' <<<"$bench_output"
+if [[ "$PHASE" == "all" || "$PHASE" == "algorithms" ]]; then
+  benchmarks=(
+    BenchmarkProtocolCanonicalSolver
+    BenchmarkProtocolRecursiveTabulation
+    BenchmarkProtocolAliasJoin
+    BenchmarkProtocolRefinementEvidence
+    BenchmarkProtocolReferenceInterpreter
+    BenchmarkProtocolGeneratedAnalyzer
+    BenchmarkConstructorSuccessfulReturnClassification
+    BenchmarkProtocolPackageProcedureInventory
   )
-  if [[ ${#rows[@]} -ne 5 ]]; then
-    echo "$benchmark produced ${#rows[@]} samples, want 5" >&2
-    status=1
-    continue
-  fi
-  ns_samples=()
-  byte_samples=()
-  alloc_samples=()
-  for row in "${rows[@]}"; do
-    read -r ns bytes allocs <<<"$row"
-    ns_samples+=("$ns")
-    byte_samples+=("$bytes")
-    alloc_samples+=("$allocs")
-  done
-  compare_metric "$benchmark" ns_per_op "$(median_five "${ns_samples[@]}")" "$max_ns" || status=1
-  compare_metric "$benchmark" bytes_per_op "$(median_five "${byte_samples[@]}")" "$max_bytes" || status=1
-  compare_metric "$benchmark" allocs_per_op "$(median_five "${alloc_samples[@]}")" "$max_allocs" || status=1
+  benchmark_pattern="^($(IFS='|'; echo "${benchmarks[*]}"))$"
+  bench_output="$({
+    cd "$ROOT_DIR/tools/goplint"
+    "${SCRIPT_DIR}/soundness-go-test.sh" -run '^$' -bench "$benchmark_pattern" -benchmem -count="$samples" ./goplint
+  })"
+  echo "$bench_output"
 
-  if [[ "$benchmark" == "BenchmarkProtocolRecursiveTabulation" ]]; then
-    max_path_edges="$(toml_section_value "$section" max_path_edges_per_op)"
-    min_summary_reuses="$(toml_section_value "$section" min_summary_reuses_per_op)"
-    mapfile -t path_edge_samples < <(awk -v benchmark="$benchmark" '$1 ~ ("^" benchmark "-") { for (i=2; i<=NF; i++) if ($i == "path-edges/op") print $(i-1) }' <<<"$bench_output")
-    mapfile -t summary_reuse_samples < <(awk -v benchmark="$benchmark" '$1 ~ ("^" benchmark "-") { for (i=2; i<=NF; i++) if ($i == "summary-reuses/op") print $(i-1) }' <<<"$bench_output")
-    if [[ ${#path_edge_samples[@]} -ne 5 || ${#summary_reuse_samples[@]} -ne 5 || -z "$max_path_edges" || -z "$min_summary_reuses" ]]; then
-      echo "$benchmark missing reviewed state-count or summary-reuse evidence" >&2
+  for benchmark in "${benchmarks[@]}"; do
+    section="benchmarks.$benchmark"
+    max_ns="$(toml_section_value "$section" max_ns_per_op)"
+    max_bytes="$(toml_section_value "$section" max_bytes_per_op)"
+    max_allocs="$(toml_section_value "$section" max_allocs_per_op)"
+    if [[ -z "$max_ns" || -z "$max_bytes" || -z "$max_allocs" ]]; then
+      echo "missing time/bytes/allocations threshold for $benchmark" >&2
       status=1
-    else
-      compare_metric "$benchmark" path_edges_per_op "$(median_five "${path_edge_samples[@]}")" "$max_path_edges" || status=1
-      median_reuses="$(median_five "${summary_reuse_samples[@]}")"
-      if awk -v observed="$median_reuses" -v threshold="$min_summary_reuses" 'BEGIN { exit !(observed < threshold) }'; then
-        echo "$benchmark summary reuse median $median_reuses below required $min_summary_reuses" >&2
+      continue
+    fi
+    mapfile -t rows < <(
+      awk -v benchmark="$benchmark" '
+        $1 ~ ("^" benchmark "-") {
+          ns=""; bytes=""; allocs=""
+          for (i=2; i<=NF; i++) {
+            if ($i == "ns/op") ns=$(i-1)
+            if ($i == "B/op") bytes=$(i-1)
+            if ($i == "allocs/op") allocs=$(i-1)
+          }
+          print ns, bytes, allocs
+        }
+      ' <<<"$bench_output"
+    )
+    if [[ ${#rows[@]} -ne 5 ]]; then
+      echo "$benchmark produced ${#rows[@]} samples, want 5" >&2
+      status=1
+      continue
+    fi
+    ns_samples=()
+    byte_samples=()
+    alloc_samples=()
+    for row in "${rows[@]}"; do
+      read -r ns bytes allocs <<<"$row"
+      ns_samples+=("$ns")
+      byte_samples+=("$bytes")
+      alloc_samples+=("$allocs")
+    done
+    compare_metric "$benchmark" ns_per_op "$(median_five "${ns_samples[@]}")" "$max_ns" || status=1
+    compare_metric "$benchmark" bytes_per_op "$(median_five "${byte_samples[@]}")" "$max_bytes" || status=1
+    compare_metric "$benchmark" allocs_per_op "$(median_five "${alloc_samples[@]}")" "$max_allocs" || status=1
+
+    if [[ "$benchmark" == "BenchmarkProtocolRecursiveTabulation" ]]; then
+      max_path_edges="$(toml_section_value "$section" max_path_edges_per_op)"
+      min_summary_reuses="$(toml_section_value "$section" min_summary_reuses_per_op)"
+      mapfile -t path_edge_samples < <(awk -v benchmark="$benchmark" '$1 ~ ("^" benchmark "-") { for (i=2; i<=NF; i++) if ($i == "path-edges/op") print $(i-1) }' <<<"$bench_output")
+      mapfile -t summary_reuse_samples < <(awk -v benchmark="$benchmark" '$1 ~ ("^" benchmark "-") { for (i=2; i<=NF; i++) if ($i == "summary-reuses/op") print $(i-1) }' <<<"$bench_output")
+      if [[ ${#path_edge_samples[@]} -ne 5 || ${#summary_reuse_samples[@]} -ne 5 || -z "$max_path_edges" || -z "$min_summary_reuses" ]]; then
+        echo "$benchmark missing reviewed state-count or summary-reuse evidence" >&2
         status=1
       else
-        echo "$benchmark summary_reuses_per_op median: $median_reuses (minimum $min_summary_reuses)"
+        compare_metric "$benchmark" path_edges_per_op "$(median_five "${path_edge_samples[@]}")" "$max_path_edges" || status=1
+        median_reuses="$(median_five "${summary_reuse_samples[@]}")"
+        if awk -v observed="$median_reuses" -v threshold="$min_summary_reuses" 'BEGIN { exit !(observed < threshold) }'; then
+          echo "$benchmark summary reuse median $median_reuses below required $min_summary_reuses" >&2
+          status=1
+        else
+          echo "$benchmark summary_reuses_per_op median: $median_reuses (minimum $min_summary_reuses)"
+        fi
       fi
     fi
-  fi
-done
+  done
 
-if [[ ! -x /usr/bin/time ]]; then
-  echo "/usr/bin/time is required for repository full-scan thresholds" >&2
-  exit 1
+  if [[ $status -eq 0 ]]; then
+    (
+      cd "$ROOT_DIR/tools/goplint"
+      "${SCRIPT_DIR}/soundness-go-test.sh" -count=1 ./goplint -run '^TestEmitProtocolBenchmarkEvidence$'
+    )
+  fi
 fi
-make -s -C "$ROOT_DIR" build-goplint
-scan_wall_samples=()
-scan_rss_samples=()
-for _ in 1 2 3 4 5; do
-  time_file="$(mktemp)"
-  set +e
-  (cd "$ROOT_DIR" && /usr/bin/time -f 'goplint-bench-time %e %M' -o "$time_file" \
-    ./bin/goplint -test=false -check-all -check-enum-sync \
-    -baseline=tools/goplint/baseline.toml \
-    -config=tools/goplint/exceptions.toml \
-    ./cmd/... ./internal/... ./pkg/... >/dev/null 2>&1)
-  scan_status=$?
-  set -e
-  if [[ $scan_status -ne 0 && $scan_status -ne 3 ]]; then
-    rm -f "$time_file"
-    echo "canonical repository benchmark scan failed" >&2
+
+if [[ "$PHASE" == "all" || "$PHASE" == "full-scan" ]]; then
+  if [[ ! -x /usr/bin/time ]]; then
+    echo "/usr/bin/time is required for repository full-scan thresholds" >&2
     exit 1
   fi
-  time_metrics="$(awk '$1 == "goplint-bench-time" { print $2, $3 }' "$time_file" | tail -n 1)"
-  read -r elapsed_seconds peak_kib <<<"$time_metrics"
-  if [[ ! "$elapsed_seconds" =~ ^[0-9]+([.][0-9]+)?$ || ! "$peak_kib" =~ ^[0-9]+$ ]]; then
-    time_output="$(tr '\n' ' ' <"$time_file")"
+  make -s -C "$ROOT_DIR" build-goplint
+  scan_wall_samples=()
+  scan_rss_samples=()
+  scan_observation_args=()
+  for sample in 1 2 3 4 5; do
+    time_file="$(mktemp)"
+    set +e
+    (cd "$ROOT_DIR" && /usr/bin/time -f 'goplint-bench-time %e %M' -o "$time_file" \
+      ./bin/goplint -test=false -check-all -check-enum-sync \
+      -baseline=tools/goplint/baseline.toml \
+      -config=tools/goplint/exceptions.toml \
+      ./cmd/... ./internal/... ./pkg/... >/dev/null 2>&1)
+    scan_status=$?
+    set -e
+    if [[ $scan_status -ne 0 && $scan_status -ne 3 ]]; then
+      rm -f "$time_file"
+      echo "canonical repository benchmark scan failed" >&2
+      exit 1
+    fi
+    time_metrics="$(awk '$1 == "goplint-bench-time" { print $2, $3 }' "$time_file" | tail -n 1)"
+    read -r elapsed_seconds peak_kib <<<"$time_metrics"
+    if [[ ! "$elapsed_seconds" =~ ^[0-9]+([.][0-9]+)?$ || ! "$peak_kib" =~ ^[0-9]+$ ]]; then
+      time_output="$(tr '\n' ' ' <"$time_file")"
+      rm -f "$time_file"
+      echo "could not parse repository benchmark metrics: $time_output" >&2
+      exit 1
+    fi
     rm -f "$time_file"
-    echo "could not parse repository benchmark metrics: $time_output" >&2
-    exit 1
+    scan_wall_samples+=("$(awk -v seconds="$elapsed_seconds" 'BEGIN { printf "%.0f", seconds * 1000 }')")
+    scan_rss_samples+=("$((peak_kib * 1024))")
+    scan_observation_args+=("-observation" "certification-full-scans=sample-$sample")
+  done
+
+  max_scan_wall="$(toml_section_value repository_full_scan max_wall_ms)"
+  max_scan_bytes="$(toml_section_value repository_full_scan max_peak_bytes)"
+  compare_metric repository_full_scan wall_ms "$(median_five "${scan_wall_samples[@]}")" "$max_scan_wall" || status=1
+  compare_metric repository_full_scan peak_bytes "$(median_five "${scan_rss_samples[@]}")" "$max_scan_bytes" || status=1
+
+  if [[ $status -eq 0 ]]; then
+    (
+      cd "$ROOT_DIR/tools/goplint"
+      go run ./cmd/subgate-report "${scan_observation_args[@]}"
+    )
   fi
-  rm -f "$time_file"
-  scan_wall_samples+=("$(awk -v seconds="$elapsed_seconds" 'BEGIN { printf "%.0f", seconds * 1000 }')")
-  scan_rss_samples+=("$((peak_kib * 1024))")
-done
-
-max_scan_wall="$(toml_section_value repository_full_scan max_wall_ms)"
-max_scan_bytes="$(toml_section_value repository_full_scan max_peak_bytes)"
-compare_metric repository_full_scan wall_ms "$(median_five "${scan_wall_samples[@]}")" "$max_scan_wall" || status=1
-compare_metric repository_full_scan peak_bytes "$(median_five "${scan_rss_samples[@]}")" "$max_scan_bytes" || status=1
-
-if [[ $status -eq 0 ]]; then
-  (
-    cd "$ROOT_DIR/tools/goplint"
-    go test -count=1 ./goplint -run '^TestEmitProtocolBenchmarkEvidence$'
-  )
 fi
 
 exit "$status"

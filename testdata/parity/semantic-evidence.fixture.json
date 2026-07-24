@@ -1,0 +1,29 @@
+{
+  "format_version": 2,
+  "registrations": [
+    {
+      "id": "parity-fixture.artifact-parity",
+      "category": "parity-fixture",
+      "layer": "artifact-parity",
+      "feature_id": "harness-parity",
+      "producer_id": "fixture-alpha",
+      "test_id": "FixtureAlphaParityCase",
+      "boundary": "aggregate-adversarial",
+      "expected": {
+        "outcome": "route-executed",
+        "minimum_cases": 1,
+        "diagnostics": {
+          "minimum": 0
+        },
+        "required_stages": [
+          "source-extraction",
+          "reporting"
+        ],
+        "required_properties": [
+          "serial-parallel-parity"
+        ],
+        "required_dimensions": []
+      }
+    }
+  ]
+}

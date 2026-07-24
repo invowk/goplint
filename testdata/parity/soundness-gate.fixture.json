@@ -1,0 +1,129 @@
+{
+  "format_version": 1,
+  "registry_path": "testdata/parity/semantic-evidence.fixture.json",
+  "profiles": [
+    {
+      "id": "complete",
+      "subgate_ids": [
+        "clean-tree-freshness",
+        "fixture-alpha",
+        "fixture-beta"
+      ]
+    },
+    {
+      "id": "consumer",
+      "subgate_ids": [
+        "fixture-alpha"
+      ]
+    },
+    {
+      "id": "harness",
+      "subgate_ids": [
+        "fixture-alpha",
+        "fixture-beta"
+      ]
+    },
+    {
+      "id": "semantic",
+      "subgate_ids": [
+        "fixture-alpha",
+        "fixture-beta"
+      ]
+    }
+  ],
+  "subgates": [
+    {
+      "id": "clean-tree-freshness",
+      "working_directory": ".",
+      "command": [
+        "go",
+        "run",
+        "./cmd/harness-parity",
+        "-fixture-subgate",
+        "freshness"
+      ],
+      "dependencies": [],
+      "cpu_units": 1,
+      "estimated_peak_memory_bytes": 268435456,
+      "exclusivity_groups": [],
+      "distributable": true,
+      "profile_ids": [
+        "complete"
+      ],
+      "timeout_seconds": 120,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "verified-clean-tree-records",
+          "minimum": 1
+        }
+      ]
+    },
+    {
+      "id": "fixture-alpha",
+      "working_directory": ".",
+      "command": [
+        "go",
+        "run",
+        "./cmd/harness-parity",
+        "-fixture-subgate",
+        "alpha"
+      ],
+      "dependencies": [],
+      "cpu_units": 1,
+      "estimated_peak_memory_bytes": 268435456,
+      "exclusivity_groups": [],
+      "distributable": true,
+      "profile_ids": [
+        "complete",
+        "consumer",
+        "harness",
+        "semantic"
+      ],
+      "timeout_seconds": 120,
+      "report_file": "report.json",
+      "required_registration_ids": [
+        "parity-fixture.artifact-parity"
+      ],
+      "required_populations": [
+        {
+          "id": "fixture-cases",
+          "minimum": 2
+        }
+      ]
+    },
+    {
+      "id": "fixture-beta",
+      "working_directory": ".",
+      "command": [
+        "go",
+        "run",
+        "./cmd/harness-parity",
+        "-fixture-subgate",
+        "beta"
+      ],
+      "dependencies": [
+        "fixture-alpha"
+      ],
+      "cpu_units": 1,
+      "estimated_peak_memory_bytes": 268435456,
+      "exclusivity_groups": [],
+      "distributable": true,
+      "profile_ids": [
+        "complete",
+        "harness",
+        "semantic"
+      ],
+      "timeout_seconds": 120,
+      "report_file": "report.json",
+      "required_registration_ids": [],
+      "required_populations": [
+        {
+          "id": "fixture-echoes",
+          "minimum": 1
+        }
+      ]
+    }
+  ]
+}

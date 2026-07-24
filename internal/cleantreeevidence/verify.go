@@ -95,6 +95,7 @@ func Verify(ctx context.Context, options VerifyOptions) (resultErr error) {
 		ctx,
 		root,
 		pathsPath,
+		plan.OwnershipManifestPath,
 		record.Repository.BaseCommit,
 		true,
 	)
@@ -105,7 +106,18 @@ func Verify(ctx context.Context, options VerifyOptions) (resultErr error) {
 		resultErr = errors.Join(resultErr, materialization.Close(ctx))
 	}()
 	if !reflect.DeepEqual(record.Repository, materialization.Identity) {
+		if record.Repository.SemanticTreeDigest == materialization.Identity.SemanticTreeDigest {
+			return fmt.Errorf(
+				"repository identity is prose-stale while semantic content is unchanged: re-bind the retained record "+
+					"with 'make rebind-goplint-clean-tree-evidence': got %+v, current %+v",
+				record.Repository,
+				materialization.Identity,
+			)
+		}
 		return fmt.Errorf("repository identity is stale: got %+v, current %+v", record.Repository, materialization.Identity)
+	}
+	if err := validateProvenance(record); err != nil {
+		return err
 	}
 	inputs, err := collectInputs(root, planPath, pathsPath, plan)
 	if err != nil {
@@ -138,11 +150,16 @@ func Verify(ctx context.Context, options VerifyOptions) (resultErr error) {
 	if err := verifyCommands(plan, record.Commands); err != nil {
 		return err
 	}
+	expectedWorkspaceDigest := ""
+	if record.Provenance.Kind == ProvenanceRebound {
+		expectedWorkspaceDigest = record.Provenance.AggregateWorkspaceDigest
+	}
 	aggregateReport, err := validateAggregateReport(
 		ctx,
 		materialization.Worktree,
 		plan.AggregateReport,
 		record.AggregateReport.Report,
+		expectedWorkspaceDigest,
 	)
 	if err != nil {
 		return err
@@ -159,6 +176,59 @@ func Verify(ctx context.Context, options VerifyOptions) (resultErr error) {
 	}
 	if err := verifyMutationProofs(plan, record); err != nil {
 		return err
+	}
+	return nil
+}
+
+// validateProvenance requires the retained aggregate report to be
+// attributable to the exact semantic content of the verified tree. The
+// attribution chain is: the report binds the workspace that produced it, the
+// provenance binds that workspace to a semantic-content digest, and the
+// verified repository identity must carry the same semantic digest.
+func validateProvenance(record Record) error {
+	provenance := record.Provenance
+	if provenance.Kind != ProvenanceGenerated && provenance.Kind != ProvenanceRebound {
+		return fmt.Errorf("clean-tree provenance kind %q is unknown", provenance.Kind)
+	}
+	digests := []struct {
+		name  string
+		value string
+	}{
+		{name: "aggregate_semantic_tree_digest", value: provenance.AggregateSemanticTreeDigest},
+		{name: "aggregate_workspace_digest", value: provenance.AggregateWorkspaceDigest},
+		{name: "carried_report_sha256", value: provenance.CarriedReportSHA256},
+	}
+	for _, digest := range digests {
+		if err := soundnessevidence.ValidateDigest("clean-tree provenance "+digest.name, digest.value); err != nil {
+			return fmt.Errorf("validate clean-tree provenance digest %q: %w", digest.name, err)
+		}
+	}
+	if provenance.AggregateSemanticTreeDigest != record.Repository.SemanticTreeDigest {
+		return fmt.Errorf(
+			"retained aggregate report is bound to semantic content %s, but the verified tree has %s: "+
+				"regenerate the record with fresh gate execution",
+			provenance.AggregateSemanticTreeDigest,
+			record.Repository.SemanticTreeDigest,
+		)
+	}
+	if provenance.AggregateWorkspaceDigest != record.AggregateReport.Report.WorkspaceDigest {
+		return errors.New("clean-tree provenance workspace digest does not match the retained aggregate report")
+	}
+	if provenance.CarriedReportSHA256 != record.AggregateReport.SHA256 {
+		return errors.New("clean-tree provenance report digest does not match the retained aggregate report")
+	}
+	switch provenance.Kind {
+	case ProvenanceGenerated:
+		if provenance.PreviousProseDigest != "" {
+			return errors.New("generated clean-tree provenance must not carry a previous prose digest")
+		}
+	case ProvenanceRebound:
+		if err := soundnessevidence.ValidateDigest(
+			"clean-tree provenance previous_prose_digest",
+			provenance.PreviousProseDigest,
+		); err != nil {
+			return fmt.Errorf("validate clean-tree provenance digest %q: %w", "previous_prose_digest", err)
+		}
 	}
 	return nil
 }
@@ -253,7 +323,7 @@ func validateProofInputsSelected(
 	pathsPath string,
 	plan Plan,
 ) error {
-	required := []string{planPath, pathsPath, plan.Counterexamples.Path}
+	required := []string{planPath, pathsPath, plan.Counterexamples.Path, plan.OwnershipManifestPath}
 	for _, input := range plan.Inputs {
 		required = append(required, input.Path)
 	}

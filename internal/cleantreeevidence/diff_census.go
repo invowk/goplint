@@ -303,7 +303,7 @@ func pathCoveredBySelectionAtBase(
 		if !os.IsNotExist(err) {
 			return false, fmt.Errorf("inspect selected path %q: %w", selection, err)
 		}
-		objectType, typeErr := gitOutput(ctx, root, nil, nil, "git", "cat-file", "-t", baseCommit+":"+selection)
+		objectType, typeErr := gitOutput(ctx, root, nil, nil, "cat-file", "-t", baseCommit+":"+selection)
 		if typeErr == nil && objectType == "tree" {
 			return true, nil
 		}

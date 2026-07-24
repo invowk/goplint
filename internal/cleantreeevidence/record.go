@@ -60,7 +60,7 @@ func Capture(ctx context.Context, options CaptureOptions) (record Record, result
 		Status:        "failed",
 		StartedAt:     time.Now().UTC().Format(time.RFC3339Nano),
 	}
-	materialization, err := Materialize(ctx, root, pathsPath, true)
+	materialization, err := Materialize(ctx, root, pathsPath, plan.OwnershipManifestPath, true)
 	if err != nil {
 		return Record{}, err
 	}
@@ -131,6 +131,12 @@ func Capture(ctx context.Context, options CaptureOptions) (record Record, result
 	)
 	if err != nil {
 		allPassed = false
+	}
+	record.Provenance = ProvenanceIdentity{
+		Kind:                        ProvenanceGenerated,
+		AggregateSemanticTreeDigest: record.Repository.SemanticTreeDigest,
+		AggregateWorkspaceDigest:    record.AggregateReport.Report.WorkspaceDigest,
+		CarriedReportSHA256:         record.AggregateReport.SHA256,
 	}
 	var mutationErr error
 	record.MutationProofs, mutationErr = collectMutationProofs(plan, record.AggregateReport.Report)

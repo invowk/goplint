@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MPL-2.0
+
+format_version = 1
+policy = "consumer-smoke"
+samples = 1
+go_toolchain = "go1.26"
+runner_class = "github-hosted-ubuntu-x64-4cpu-reviewed"
+calibrated_on = "2026-07-19"
+required_analyzer_phases = []
+required_populations = ["consumer-performance-smoke"]
+
+[benchmarks.BenchmarkProtocolCanonicalSolver]
+max_ns_per_op = 10000000
+max_bytes_per_op = 5000000
+max_allocs_per_op = 50000
+
+[benchmarks.BenchmarkProtocolRecursiveTabulation]
+max_ns_per_op = 20000000
+max_bytes_per_op = 10000000
+max_allocs_per_op = 100000
+max_path_edges_per_op = 64
+min_summary_reuses_per_op = 1
+
+[repository_full_scan]
+max_wall_ms = 480000
+max_peak_bytes = 8589934592

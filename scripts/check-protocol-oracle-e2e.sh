@@ -6,5 +6,5 @@ MODULE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 cd "${MODULE_DIR}"
 echo "Running blocking generated-Go analyzer oracle..."
-GOCACHE="${GOCACHE:-/tmp/go-build}" go test -count=1 ./goplint \
+GOCACHE="${GOCACHE:-/tmp/go-build}" "${SCRIPT_DIR}/soundness-go-test.sh" -count=1 ./goplint \
   -run '^(TestProtocolOracleGeneratedGoEndToEnd|TestCategoryGeneratedEvidence)$'

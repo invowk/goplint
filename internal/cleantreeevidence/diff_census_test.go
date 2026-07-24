@@ -122,21 +122,36 @@ func TestCollectDiffCensusRequiresExactReviewedExclusions(t *testing.T) {
 	}
 }
 
-func TestPlanRejectsWrongDependencyOrderAndUnexpectedPredecessorPolicy(t *testing.T) {
+func TestCollectDiffCensusCoversDeletionsUnderDeletedSelectedDirectory(t *testing.T) {
 	t.Parallel()
 
-	fixture := newVerifyFixture(t)
-	plan, err := LoadPlan(resolveFromRoot(fixture.root, fixture.options.PlanPath))
+	root := initializeTestRepository(t)
+	writeTestFile(t, root, "moved/inner.txt", "moved content\n")
+	runTestGit(t, root, "add", "moved/inner.txt")
+	runTestGit(
+		t, root,
+		"-c", "user.name=test",
+		"-c", "user.email=test@invalid",
+		"commit", "--quiet", "-m", "add moved directory",
+	)
+	writeTestFile(t, root, "archive/moved/inner.txt", "moved content\n")
+	runTestGit(t, root, "add", "archive/moved/inner.txt")
+	runTestGit(t, root, "rm", "--quiet", "-r", "moved")
+
+	census, err := collectDiffCensus(
+		t.Context(),
+		root,
+		"HEAD",
+		[]string{"archive/moved", "moved", "tracked.txt"},
+		DiffReviewPlan{},
+		nil,
+	)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("collectDiffCensus() error = %v, want deletions under a deleted selected directory covered", err)
 	}
-	plan.TaskLedgers[0], plan.TaskLedgers[1] = plan.TaskLedgers[1], plan.TaskLedgers[0]
-	if err := plan.Validate(); err == nil || !strings.Contains(err.Error(), "dependency order") {
-		t.Fatalf("Validate() wrong archive order error = %v", err)
-	}
-	plan.TaskLedgers[0], plan.TaskLedgers[1] = plan.TaskLedgers[1], plan.TaskLedgers[0]
-	plan.TaskLedgers[0].ExpectedPending = []string{}
-	if err := plan.Validate(); err == nil || !strings.Contains(err.Error(), "dependency order") {
-		t.Fatalf("Validate() unexpected predecessor policy error = %v", err)
+	for _, change := range census.Changes {
+		if change.Disposition != diffDispositionSelected {
+			t.Fatalf("change %+v is not selected", change)
+		}
 	}
 }

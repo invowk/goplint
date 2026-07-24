@@ -6,7 +6,7 @@ require (
 	cuelang.org/go v0.16.1
 	github.com/BurntSushi/toml v1.6.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
-	golang.org/x/tools v0.46.0
+	golang.org/x/tools v0.47.0
 )
 
 require (
@@ -23,7 +23,7 @@ require (
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )

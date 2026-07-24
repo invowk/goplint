@@ -49,9 +49,12 @@ type baselineGenerator func(outputPath string, originalArgs []string) error
 
 type globalAuditRunner func(originalArgs []string) error
 
+type reviewDateAuditRunner func(originalArgs []string) error
+
 type dispatchDeps struct {
 	generateBaseline      baselineGenerator
 	auditExceptionsGlobal globalAuditRunner
+	auditReviewDates      reviewDateAuditRunner
 }
 
 func defaultRunCommand(cmd *exec.Cmd) error {
@@ -76,6 +79,7 @@ func dispatch(args []string, stderr io.Writer) (nextArgs []string, exitCode int,
 	return dispatchWithDeps(args, stderr, dispatchDeps{
 		generateBaseline:      generateBaseline,
 		auditExceptionsGlobal: auditExceptionsGlobal,
+		auditReviewDates:      auditReviewDatesConfiguration,
 	})
 }
 
@@ -85,6 +89,19 @@ func dispatchWithDeps(args []string, stderr io.Writer, deps dispatchDeps) (nextA
 	}
 	if deps.auditExceptionsGlobal == nil {
 		deps.auditExceptionsGlobal = auditExceptionsGlobal
+	}
+	if deps.auditReviewDates == nil {
+		deps.auditReviewDates = auditReviewDatesConfiguration
+	}
+
+	if hasFlag(args, "audit-review-dates") {
+		if err := deps.auditReviewDates(args); err != nil {
+			if writeErr := writeStderrf(stderr, "goplint: audit-review-dates: %v\n", err); writeErr != nil {
+				return nil, 1, true
+			}
+			return nil, 1, true
+		}
+		return nil, 0, true
 	}
 
 	// Detect --update-baseline before singlechecker takes over flag parsing.
@@ -140,9 +157,13 @@ func writeStderrf(stderr io.Writer, format string, args ...any) error {
 //
 // Returns "" if not found or if the flag is present without a value.
 func extractUpdateBaselinePath(args []string) string {
+	return extractFlagValue(args, "update-baseline")
+}
+
+func extractFlagValue(args []string, flagName string) string {
 	for i := range args {
 		arg := args[i]
-		matched, value, hasInlineValue := parseFlagToken(arg, "update-baseline")
+		matched, value, hasInlineValue := parseFlagToken(arg, flagName)
 		if !matched {
 			continue
 		}
@@ -155,6 +176,26 @@ func extractUpdateBaselinePath(args []string) string {
 		return ""
 	}
 	return ""
+}
+
+func auditReviewDatesConfiguration(args []string) error {
+	configPath := extractFlagValue(args, "config")
+	if configPath == "" {
+		return errors.New("config path is required")
+	}
+	findings, err := goplint.AuditExceptionReviewDates(configPath, time.Now())
+	if err != nil {
+		return fmt.Errorf("auditing exception review dates: %w", err)
+	}
+	for _, finding := range findings {
+		if _, err := fmt.Fprintln(os.Stdout, finding.Message); err != nil {
+			return fmt.Errorf("writing exception review finding: %w", err)
+		}
+	}
+	if len(findings) != 0 {
+		return fmt.Errorf("%d malformed or overdue exception review entries", len(findings))
+	}
+	return nil
 }
 
 // generateBaseline runs the analyzer as a subprocess with -json output,

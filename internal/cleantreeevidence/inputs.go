@@ -146,6 +146,7 @@ func readTaskLedger(path string) (_ TaskLedgerIdentity, resultErr error) {
 	if identity.Total == 0 {
 		return TaskLedgerIdentity{}, errors.New("task ledger has no checkboxes")
 	}
+	slices.Sort(identity.PendingIDs)
 	digest, err := digestFile(path)
 	if err != nil {
 		return TaskLedgerIdentity{}, err

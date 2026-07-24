@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 
 format_version = 2
+policy = "certification"
 samples = 5
 go_toolchain = "go1.26"
 runner_class = "github-hosted-ubuntu-x64-4cpu-reviewed"
 calibrated_on = "2026-07-19"
 calibration_source = "actions-run-29683768391"
+required_analyzer_phases = ["source-extraction", "identity", "graph-construction", "propagation", "refinement", "aggregation", "reporting"]
+required_populations = ["analyzer-benchmarks", "generated-programs"]
 
 [benchmarks.BenchmarkProtocolCanonicalSolver]
 observed_ns_per_op_samples = [92204, 77591, 77715, 78211, 78606]

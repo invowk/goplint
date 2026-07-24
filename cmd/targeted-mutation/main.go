@@ -156,9 +156,13 @@ type guardMismatchRecord struct {
 }
 
 type commandResult struct {
-	Output   string
-	Err      error
-	TimedOut bool
+	// Output is the structured stdout stream of the guard command. It must
+	// stay free of toolchain stderr noise so `go test -json` decoding cannot
+	// be corrupted by module or toolchain download notes.
+	Output      string
+	ErrorOutput string
+	Err         error
+	TimedOut    bool
 }
 
 type guardRunner func(workdir, testRegex string, count int) commandResult
@@ -300,7 +304,7 @@ func runControlGuards(
 				stage,
 				mutation.Guard.TestRegex,
 				controlErr,
-				compactOutput(result.Output),
+				guardDiagnostics(result),
 			)
 		}
 	}

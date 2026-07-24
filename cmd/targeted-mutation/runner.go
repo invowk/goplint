@@ -116,7 +116,7 @@ func executeMutationInWorkspace(
 		return invalidMutationResult(
 			mutation.ID,
 			mutationReasonCompile,
-			"mutant did not compile: "+compactOutput(compileResult.Output),
+			"mutant did not compile: "+guardDiagnostics(compileResult),
 		)
 	}
 
@@ -128,7 +128,7 @@ func executeMutationInWorkspace(
 			return invalidMutationResult(
 				mutation.ID,
 				mutationReasonMalformedAttribution,
-				traceErr.Error()+": "+compactOutput(guardResult.Output),
+				traceErr.Error()+": "+guardDiagnostics(guardResult),
 			)
 		}
 		classification := attributedGoTestFailures(mutation, trace, guardResult)
@@ -137,7 +137,7 @@ func executeMutationInWorkspace(
 				ID:         mutation.ID,
 				Status:     classification.Status,
 				ReasonCode: classification.ReasonCode,
-				Reason:     strings.TrimSpace(classification.Reason + ": " + compactOutput(guardResult.Output)),
+				Reason:     strings.TrimSpace(classification.Reason + ": " + guardDiagnostics(guardResult)),
 			}
 		}
 		if repeat == 0 {
@@ -474,8 +474,21 @@ func runGoTest(workdir, testRegex string, count int) commandResult {
 	command.Dir = workdir
 	command.Env = mutationGuardEnvironment()
 	command.WaitDelay = mutationProcessWaitDelay
-	output, err := command.CombinedOutput()
-	return commandResult{Output: string(output), Err: err, TimedOut: ctx.Err() != nil}
+	var stdout, stderr bytes.Buffer
+	command.Stdout = &stdout
+	command.Stderr = &stderr
+	err := command.Run()
+	return commandResult{
+		Output:      stdout.String(),
+		ErrorOutput: stderr.String(),
+		Err:         err,
+		TimedOut:    ctx.Err() != nil,
+	}
+}
+
+// guardDiagnostics joins both guard output streams for failure reasons.
+func guardDiagnostics(result commandResult) string {
+	return compactOutput(strings.TrimSpace(result.Output + "\n" + result.ErrorOutput))
 }
 
 func mutationGuardEnvironment() []string {

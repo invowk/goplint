@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://invowk.dev/schemas/soundness-ownership.v2.schema.json",
+  "title": "goplint soundness ownership",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "rules"],
+  "properties": {
+    "format_version": { "const": 2 },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pattern", "class"],
+        "properties": {
+          "pattern": { "type": "string", "minLength": 1 },
+          "class": { "enum": ["documentation", "consumer", "harness", "analyzer-semantics"] }
+        }
+      }
+    }
+  }
+}

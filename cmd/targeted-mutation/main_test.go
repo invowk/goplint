@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -657,4 +658,35 @@ func rootTest(testName string) string {
 func digestText(value string) string {
 	digest := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(digest[:])
+}
+
+func TestRunGoTestKeepsToolchainStderrOutOfStructuredGuardOutput(t *testing.T) {
+	if goruntime.GOOS == "windows" {
+		t.Skip("the stub go executable requires a POSIX shell")
+	}
+	binDir := t.TempDir()
+	stub := `#!/bin/sh
+echo 'go: downloading example.com/module v1.0.0' >&2
+printf '%s\n' '{"Action":"run","Test":"TestStubGuard"}'
+printf '%s\n' '{"Action":"pass","Test":"TestStubGuard"}'
+`
+	if err := os.WriteFile(filepath.Join(binDir, "go"), []byte(stub), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	result := runGoTest(t.TempDir(), "TestStubGuard", 1)
+	if result.Err != nil {
+		t.Fatalf("stub guard run failed: %v: %s", result.Err, result.ErrorOutput)
+	}
+	trace, err := parseGoTestTrace(result.Output)
+	if err != nil {
+		t.Fatalf("structured stdout must decode even with toolchain stderr noise: %v", err)
+	}
+	if trace.PassCounts["TestStubGuard"] != 1 {
+		t.Fatalf("trace pass counts = %v, want TestStubGuard passing once", trace.PassCounts)
+	}
+	if !strings.Contains(result.ErrorOutput, "go: downloading") {
+		t.Fatalf("toolchain noise must be retained for diagnostics, got %q", result.ErrorOutput)
+	}
 }

@@ -28,5 +28,5 @@ done
 
 cd "${MODULE_DIR}"
 echo "Running deterministic goplint fuzz seed corpora..."
-GOCACHE="${GOCACHE:-/tmp/go-build}" go test -count=1 ./goplint \
+GOCACHE="${GOCACHE:-/tmp/go-build}" "${SCRIPT_DIR}/soundness-go-test.sh" -count=1 ./goplint \
   -run '^(TestFuzzSeedCoverageMatchesAuditMatrix|TestCategoryFuzzSeedEvidence|FuzzInterprocSupergraphConstruction|FuzzIFDSTabulation|FuzzProtocolSummaryFactSerialization|FuzzSSAConstraintNormalizationEvidence|FuzzSemanticCatalogDecoding|FuzzFindingDeterminism|FuzzSemanticCategoryEvidence)$'

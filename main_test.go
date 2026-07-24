@@ -199,6 +199,31 @@ func TestDispatch(t *testing.T) {
 		}
 	})
 
+	t.Run("review dates use configuration-only handler", func(t *testing.T) {
+		t.Parallel()
+		called := false
+		deps := dispatchDeps{
+			generateBaseline:      func(_ string, _ []string) error { return nil },
+			auditExceptionsGlobal: func([]string) error { return nil },
+			auditReviewDates: func(args []string) error {
+				called = true
+				if !hasFlagToken(args, "audit-review-dates") {
+					t.Fatalf("configuration-only handler args = %q", args)
+				}
+				return nil
+			},
+		}
+		var stderr bytes.Buffer
+		nextArgs, code, handled := dispatchWithDeps(
+			[]string{"-audit-review-dates", "-config=exceptions.toml", "./..."},
+			&stderr,
+			deps,
+		)
+		if !handled || code != 0 || len(nextArgs) != 0 || !called {
+			t.Fatalf("configuration-only dispatch = (args=%v code=%d handled=%t called=%t)", nextArgs, code, handled, called)
+		}
+	})
+
 	t.Run("global false strips meta-flag and delegates to singlechecker", func(t *testing.T) {
 		t.Parallel()
 		var stderr bytes.Buffer

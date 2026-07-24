@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -55,6 +56,13 @@ type BaselineConfig struct {
 
 	// lookupByID is an O(1) index keyed by category → finding ID.
 	lookupByID map[string]map[string]bool
+}
+
+// BaselineEntry identifies one accepted category/id/message tuple.
+type BaselineEntry struct {
+	Category string `json:"category"`
+	ID       string `json:"id"`
+	Message  string `json:"message"`
 }
 
 type baselineCacheKey struct {
@@ -117,6 +125,34 @@ func loadBaseline(path string, strictMissing bool) (*BaselineConfig, error) {
 	cfg.buildLookup()
 
 	return &cfg, nil
+}
+
+// LoadBaseline strictly loads a baseline for repository-audit consumers.
+func LoadBaseline(path string) (*BaselineConfig, error) {
+	return loadBaseline(path, true)
+}
+
+// Entries returns a canonical copy of every accepted baseline entry.
+func (b *BaselineConfig) Entries() []BaselineEntry {
+	if b == nil {
+		return nil
+	}
+	entries := make([]BaselineEntry, 0, b.Count())
+	for _, category := range BaselinedCategoryNames() {
+		for _, entry := range b.categoryForName(category).Entries {
+			entries = append(entries, BaselineEntry{Category: category, ID: entry.ID, Message: entry.Message})
+		}
+	}
+	slices.SortFunc(entries, func(left, right BaselineEntry) int {
+		if compared := strings.Compare(left.Category, right.Category); compared != 0 {
+			return compared
+		}
+		if compared := strings.Compare(left.ID, right.ID); compared != 0 {
+			return compared
+		}
+		return strings.Compare(left.Message, right.Message)
+	})
+	return entries
 }
 
 // loadBaselineCached reads baseline data through a process-local cache.

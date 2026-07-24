@@ -12,6 +12,24 @@ import (
 	"github.com/invowk/invowk/tools/goplint/internal/gitenv"
 )
 
+// testOwnershipManifestPath is the fixture-repository location of the reviewed
+// ownership manifest that partitions the synthetic tree into semantic and
+// prose digests.
+const testOwnershipManifestPath = "tools/goplint/spec/soundness-ownership.v2.json"
+
+// testOwnershipManifest classifies fixture docs as documentation and leaves
+// every other fixture path ungoverned so it conservatively binds to the
+// semantic-content digest. Rules are strictly sorted by pattern and stay away
+// from the enumerated executable-input families.
+const testOwnershipManifest = `{
+  "format_version": 2,
+  "rules": [
+    {"pattern": "docs/**", "class": "documentation"},
+    {"pattern": "tools/goplint/spec/**", "class": "analyzer-semantics"}
+  ]
+}
+`
+
 func TestMaterializeUsesSelectedContentAndPreservesCaller(t *testing.T) {
 	t.Parallel()
 
@@ -23,7 +41,7 @@ func TestMaterializeUsesSelectedContentAndPreservesCaller(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	materialization, err := Materialize(t.Context(), root, pathsPath, true)
+	materialization, err := Materialize(t.Context(), root, pathsPath, testOwnershipManifestPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +69,7 @@ func TestMaterializeIdentityChangesOnlyForSelectedContent(t *testing.T) {
 
 	root := initializeTestRepository(t)
 	pathsPath := writeTestFile(t, root, "paths.txt", "tracked.txt\n")
-	first, err := Materialize(t.Context(), root, pathsPath, false)
+	first, err := Materialize(t.Context(), root, pathsPath, testOwnershipManifestPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +78,7 @@ func TestMaterializeIdentityChangesOnlyForSelectedContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeTestFile(t, root, "ignored.txt", "not selected\n")
-	second, err := Materialize(t.Context(), root, pathsPath, false)
+	second, err := Materialize(t.Context(), root, pathsPath, testOwnershipManifestPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +90,7 @@ func TestMaterializeIdentityChangesOnlyForSelectedContent(t *testing.T) {
 		t.Fatalf("unselected content changed tree: %s != %s", firstIdentity.SyntheticTree, secondIdentity.SyntheticTree)
 	}
 	writeTestFile(t, root, "tracked.txt", "selected drift\n")
-	third, err := Materialize(t.Context(), root, pathsPath, false)
+	third, err := Materialize(t.Context(), root, pathsPath, testOwnershipManifestPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +109,7 @@ func TestMaterializationCloseCompletesAfterCallerCancellation(t *testing.T) {
 
 	root := initializeTestRepository(t)
 	pathsPath := writeTestFile(t, root, "paths.txt", "tracked.txt\n")
-	materialization, err := Materialize(t.Context(), root, pathsPath, true)
+	materialization, err := Materialize(t.Context(), root, pathsPath, testOwnershipManifestPath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +163,8 @@ func initializeTestRepository(t *testing.T) string {
 	root := t.TempDir()
 	runTestGit(t, root, "init", "--quiet")
 	writeTestFile(t, root, "tracked.txt", "original\n")
-	runTestGit(t, root, "add", "tracked.txt")
+	writeTestFile(t, root, testOwnershipManifestPath, testOwnershipManifest)
+	runTestGit(t, root, "add", "tracked.txt", testOwnershipManifestPath)
 	command := exec.CommandContext(t.Context(), "git", "commit", "--quiet", "-m", "initial")
 	command.Dir = root
 	command.Env = append(gitenv.WithoutRepositoryLocal(os.Environ()),

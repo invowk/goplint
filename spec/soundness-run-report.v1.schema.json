@@ -19,8 +19,9 @@
     },
     "profile": {
       "enum": [
-        "core",
-        "complete"
+        "complete",
+        "consumer",
+        "semantic"
       ]
     },
     "run_id": {

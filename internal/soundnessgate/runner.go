@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -27,12 +28,14 @@ const commandWaitDelay = 10 * time.Second
 type (
 	// Options configures one aggregate soundness run.
 	Options struct {
-		Root         string
-		ManifestPath string
-		Profile      ProfileID
-		ReportPath   string
-		Stdout       io.Writer
-		Stderr       io.Writer
+		Root          string
+		ManifestPath  string
+		Profile       ProfileID
+		ReportPath    string
+		TelemetryPath string
+		Stdout        io.Writer
+		Stderr        io.Writer
+		executionPlan *ExecutionPlan
 	}
 
 	// Result identifies the exact workspace, manifest, and observations accepted
@@ -41,19 +44,27 @@ type (
 		Profile          ProfileID
 		Registry         soundnessevidence.Registry
 		Report           RunReport
+		Telemetry        RunTelemetry
 		RunID            string
 		WorkspaceDigest  string
 		ManifestDigest   string
 		ReportPath       string
+		TelemetryPath    string
 		SubgateCount     int
 		ObservationCount int
 	}
 
 	runnerDependencies struct {
 		workspaceDigest func(context.Context, string) (string, error)
-		execute         func(context.Context, string, []string, []string, io.Writer, io.Writer) error
+		execute         func(context.Context, string, []string, []string, io.Writer, io.Writer) (commandMetrics, error)
 		makeTempDir     func(string, string) (string, error)
 		newRunID        func() (string, error)
+		now             func() time.Time
+	}
+
+	commandMetrics struct {
+		CPUTimeNanoseconds int64
+		PeakRSSBytes       int64
 	}
 
 	workspaceEntry struct {
@@ -64,18 +75,9 @@ type (
 	}
 )
 
-// Run executes every reviewed manifest command in a fresh output root and
-// validates command-bound reports plus the bidirectional semantic census.
-func Run(ctx context.Context, options Options) (Result, error) {
-	dependencies := runnerDependencies{
-		workspaceDigest: WorkspaceDigest,
-		execute:         executeCommand,
-		makeTempDir:     os.MkdirTemp,
-		newRunID:        newRunID,
-	}
-	return run(ctx, options, dependencies)
-}
-
+// run executes every selected manifest command serially in a fresh output
+// root and validates command-bound reports plus the bidirectional semantic
+// census. It is the reference serial engine behind RunPlanSerial.
 func run(ctx context.Context, options Options, dependencies runnerDependencies) (Result, error) {
 	root, manifestPath, err := resolvePaths(options.Root, options.ManifestPath)
 	if err != nil {
@@ -101,6 +103,17 @@ func run(ctx context.Context, options Options, dependencies runnerDependencies) 
 	if err != nil {
 		return Result{}, err
 	}
+	selectedSubgates, err = dependencyOrderedSubgates(selectedSubgates)
+	if err != nil {
+		return Result{}, err
+	}
+	reservations := make(map[string]ResourceReservation, len(selectedSubgates))
+	if options.executionPlan != nil {
+		selectedSubgates, reservations, err = serialSubgatesFromPlan(*options.executionPlan)
+		if err != nil {
+			return Result{}, err
+		}
+	}
 	initialWorkspaceDigest, err := dependencies.workspaceDigest(ctx, root)
 	if err != nil {
 		return Result{}, fmt.Errorf("compute initial soundness workspace digest: %w", err)
@@ -114,6 +127,12 @@ func run(ctx context.Context, options Options, dependencies runnerDependencies) 
 		return Result{}, fmt.Errorf("create aggregate evidence root: %w", err)
 	}
 	defer os.RemoveAll(evidenceRoot) //nolint:errcheck // Cleanup of the private temporary evidence tree is intentionally best effort.
+	runStartedAt := dependencies.now().UTC()
+	legacyReservation := ResourceReservation{
+		CPUUnits:    runtime.GOMAXPROCS(0),
+		MemoryBytes: 0,
+		WorkerSlots: 1,
+	}
 
 	stdout := options.Stdout
 	if stdout == nil {
@@ -126,8 +145,14 @@ func run(ctx context.Context, options Options, dependencies runnerDependencies) 
 	expectedBindings := make(map[string]soundnessevidence.ObservationBinding, len(selectedSubgates))
 	observations := make([]soundnessevidence.SemanticObservation, 0, len(registry.Registrations))
 	subgateResults := make([]SubgateResult, 0, len(selectedSubgates))
+	subgateTelemetry := make([]SubgateTelemetry, 0, len(selectedSubgates))
 	for index := range selectedSubgates {
 		subgate := selectedSubgates[index]
+		reservation := legacyReservation
+		if plannedReservation, exists := reservations[subgate.ID]; exists {
+			reservation = plannedReservation
+		}
+		subgateStartedAt := dependencies.now().UTC()
 		binding, err := createSubgateBinding(runID, initialWorkspaceDigest, manifestDigest, subgate)
 		if err != nil {
 			return Result{}, err
@@ -139,17 +164,21 @@ func run(ctx context.Context, options Options, dependencies runnerDependencies) 
 			return Result{}, fmt.Errorf("create soundness subgate %q evidence directory: %w", subgate.ID, err)
 		}
 		reportPath := filepath.Join(subgateRoot, filepath.FromSlash(subgate.ReportFile))
-		environment := subgateEnvironment(os.Environ(), binding, observationRoot, reportPath)
+		environment := subgateEnvironment(
+			os.Environ(), binding, observationRoot, reportPath,
+			filepath.Join(evidenceRoot, "repository-audit.json"),
+		)
 		workingDirectory := filepath.Join(root, filepath.FromSlash(subgate.WorkingDirectory))
 		commandCtx, cancel := context.WithTimeout(ctx, time.Duration(subgate.TimeoutSeconds)*time.Second)
-		err = dependencies.execute(commandCtx, workingDirectory, subgate.Command, environment, stdout, stderr)
+		metrics, executeErr := dependencies.execute(commandCtx, workingDirectory, subgate.Command, environment, stdout, stderr)
+		subgateFinishedAt := dependencies.now().UTC()
 		commandErr := commandCtx.Err()
 		cancel()
 		if commandErr != nil {
 			return Result{}, fmt.Errorf("soundness subgate %q timed out or was canceled; no evidence accepted: %w", subgate.ID, commandErr)
 		}
-		if err != nil {
-			return Result{}, fmt.Errorf("soundness subgate %q command failed; no evidence accepted: %w", subgate.ID, err)
+		if executeErr != nil {
+			return Result{}, fmt.Errorf("soundness subgate %q command failed; no evidence accepted: %w", subgate.ID, executeErr)
 		}
 		report, reportDigest, err := loadReportWithDigest(ctx, reportPath)
 		if err != nil {
@@ -163,6 +192,21 @@ func run(ctx context.Context, options Options, dependencies runnerDependencies) 
 			CommandDigest: binding.CommandDigest,
 			ReportDigest:  reportDigest,
 			Populations:   slices.Clone(report.Populations),
+		})
+		subgateTelemetry = append(subgateTelemetry, SubgateTelemetry{
+			ID:                       subgate.ID,
+			QueuedAt:                 runStartedAt,
+			StartedAt:                subgateStartedAt,
+			FinishedAt:               subgateFinishedAt,
+			QueueDurationNanoseconds: subgateStartedAt.Sub(runStartedAt).Nanoseconds(),
+			WallDurationNanoseconds:  subgateFinishedAt.Sub(subgateStartedAt).Nanoseconds(),
+			CPUTimeNanoseconds:       metrics.CPUTimeNanoseconds,
+			PeakRSSBytes:             metrics.PeakRSSBytes,
+			ReservedResources:        reservation,
+			TimeoutSeconds:           subgate.TimeoutSeconds,
+			TimedOut:                 false,
+			TerminalStatus:           terminalStatusPassed,
+			Populations:              slices.Clone(report.Populations),
 		})
 		subgateObservations, err := soundnessevidence.LoadObservations(ctx, observationRoot)
 		if err != nil {
@@ -184,8 +228,15 @@ func run(ctx context.Context, options Options, dependencies runnerDependencies) 
 			finalWorkspaceDigest,
 		)
 	}
+	runFinishedAt := dependencies.now().UTC()
 	slices.SortFunc(observations, func(left, right soundnessevidence.SemanticObservation) int {
 		return strings.Compare(left.RegistrationID, right.RegistrationID)
+	})
+	slices.SortFunc(subgateResults, func(left, right SubgateResult) int {
+		return strings.Compare(left.ID, right.ID)
+	})
+	slices.SortFunc(subgateTelemetry, func(left, right SubgateTelemetry) int {
+		return strings.Compare(left.ID, right.ID)
 	})
 	runReport := RunReport{
 		FormatVersion:   RunReportFormatVersion,
@@ -208,14 +259,42 @@ func run(ctx context.Context, options Options, dependencies runnerDependencies) 
 			return Result{}, fmt.Errorf("retain aggregate soundness report: %w", err)
 		}
 	}
+	telemetry := RunTelemetry{
+		FormatVersion:           TelemetryFormatVersion,
+		RunID:                   runID,
+		Profile:                 profile,
+		WorkspaceDigest:         initialWorkspaceDigest,
+		ManifestDigest:          manifestDigest,
+		StartedAt:               runStartedAt,
+		FinishedAt:              runFinishedAt,
+		WallDurationNanoseconds: runFinishedAt.Sub(runStartedAt).Nanoseconds(),
+		CriticalPathNanoseconds: runFinishedAt.Sub(runStartedAt).Nanoseconds(),
+		MaxReservedCPUUnits:     maximumReservedCPU(subgateTelemetry),
+		MaxReservedMemoryBytes:  maximumReservedMemory(subgateTelemetry),
+		Subgates:                subgateTelemetry,
+	}
+	if err := telemetry.Validate(); err != nil {
+		return Result{}, fmt.Errorf("validate aggregate telemetry: %w", err)
+	}
+	retainedTelemetryPath, err := resolveExternalArtifactPath(root, options.TelemetryPath, EnvTelemetryPath, "aggregate soundness telemetry")
+	if err != nil {
+		return Result{}, err
+	}
+	if retainedTelemetryPath != "" {
+		if err := writeExclusiveJSON(ctx, retainedTelemetryPath, telemetry); err != nil {
+			return Result{}, fmt.Errorf("retain aggregate soundness telemetry: %w", err)
+		}
+	}
 	return Result{
 		Profile:          profile,
 		Registry:         registry,
 		Report:           runReport,
+		Telemetry:        telemetry,
 		RunID:            runID,
 		WorkspaceDigest:  initialWorkspaceDigest,
 		ManifestDigest:   manifestDigest,
 		ReportPath:       retainedReportPath,
+		TelemetryPath:    retainedTelemetryPath,
 		SubgateCount:     len(selectedSubgates),
 		ObservationCount: len(observations),
 	}, nil
@@ -291,23 +370,27 @@ func resolvePaths(root, manifestPath string) (string, string, error) {
 }
 
 func resolveReportPath(root, explicitPath string) (string, error) {
-	reportPath := explicitPath
-	if reportPath == "" {
-		reportPath = os.Getenv(EnvReportPath)
+	return resolveExternalArtifactPath(root, explicitPath, EnvReportPath, "aggregate soundness report")
+}
+
+func resolveExternalArtifactPath(root, explicitPath, environmentKey, description string) (string, error) {
+	artifactPath := explicitPath
+	if artifactPath == "" {
+		artifactPath = os.Getenv(environmentKey)
 	}
-	if reportPath == "" {
+	if artifactPath == "" {
 		return "", nil
 	}
-	if !filepath.IsAbs(reportPath) {
-		return "", fmt.Errorf("aggregate soundness report path %q must be absolute", reportPath)
+	if !filepath.IsAbs(artifactPath) {
+		return "", fmt.Errorf("%s path %q must be absolute", description, artifactPath)
 	}
-	cleanPath := filepath.Clean(reportPath)
+	cleanPath := filepath.Clean(artifactPath)
 	relative, err := filepath.Rel(root, cleanPath)
 	if err != nil {
-		return "", fmt.Errorf("relativize aggregate soundness report path: %w", err)
+		return "", fmt.Errorf("relativize %s path: %w", description, err)
 	}
 	if relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("aggregate soundness report path %q must be outside the hashed workspace", reportPath)
+		return "", fmt.Errorf("%s path %q must be outside the hashed workspace", description, artifactPath)
 	}
 	return cleanPath, nil
 }
@@ -335,11 +418,52 @@ func createSubgateBinding(
 	return binding, nil
 }
 
+// dependencyOrderedSubgates returns a deterministic topological order so a
+// serial execution always runs producers before their dependents. Ready
+// subgates are admitted in ascending ID order; in-profile dependency cycles
+// or dangling references fail closed.
+func dependencyOrderedSubgates(subgates []Subgate) ([]Subgate, error) {
+	byID := make(map[string]Subgate, len(subgates))
+	pending := make(map[string][]string, len(subgates))
+	for _, subgate := range subgates {
+		byID[subgate.ID] = subgate
+		pending[subgate.ID] = slices.Clone(subgate.Dependencies)
+	}
+	ordered := make([]Subgate, 0, len(subgates))
+	completed := make(map[string]bool, len(subgates))
+	for len(ordered) < len(subgates) {
+		ready := make([]string, 0, len(pending))
+		for id, requires := range pending {
+			satisfied := true
+			for _, dependency := range requires {
+				if _, selected := byID[dependency]; selected && !completed[dependency] {
+					satisfied = false
+					break
+				}
+			}
+			if satisfied {
+				ready = append(ready, id)
+			}
+		}
+		if len(ready) == 0 {
+			return nil, errors.New("soundness serial execution found a subgate dependency cycle")
+		}
+		slices.Sort(ready)
+		for _, id := range ready {
+			ordered = append(ordered, byID[id])
+			completed[id] = true
+			delete(pending, id)
+		}
+	}
+	return ordered, nil
+}
+
 func subgateEnvironment(
 	environment []string,
 	binding soundnessevidence.ObservationBinding,
 	observationRoot string,
 	reportPath string,
+	repositoryAuditPath string,
 ) []string {
 	replacements := []struct {
 		key   string
@@ -352,6 +476,7 @@ func subgateEnvironment(
 		{key: soundnessevidence.EnvSubgateID, value: binding.SubgateID},
 		{key: soundnessevidence.EnvEvidenceDir, value: observationRoot},
 		{key: EnvSubgateReportPath, value: reportPath},
+		{key: EnvRepositoryAuditPath, value: repositoryAuditPath},
 	}
 	result := slices.DeleteFunc(slices.Clone(environment), func(entry string) bool {
 		return strings.HasPrefix(entry, EnvReportPath+"=")
@@ -407,7 +532,7 @@ func executeCommand(
 	environment []string,
 	stdout io.Writer,
 	stderr io.Writer,
-) error {
+) (commandMetrics, error) {
 	command := exec.CommandContext(ctx, commandVector[0], commandVector[1:]...)
 	command.Dir = workingDirectory
 	command.Env = gitenv.WithoutRepositoryLocal(environment)
@@ -415,9 +540,12 @@ func executeCommand(
 	command.Stderr = stderr
 	command.WaitDelay = commandWaitDelay
 	if err := command.Run(); err != nil {
-		return fmt.Errorf("execute %q: %w", commandVector, err)
+		return commandMetrics{}, fmt.Errorf("execute %q: %w", commandVector, err)
 	}
-	return nil
+	return commandMetrics{
+		CPUTimeNanoseconds: command.ProcessState.UserTime().Nanoseconds() + command.ProcessState.SystemTime().Nanoseconds(),
+		PeakRSSBytes:       peakRSSBytes(command.ProcessState.SysUsage()),
+	}, nil
 }
 
 func newRunID() (string, error) {

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://invowk.dev/schemas/goplint-test-timings.v1.schema.json",
+  "title": "goplint analyzer test timing manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "package",
+    "toolchain",
+    "generated_at",
+    "default_weight_nanoseconds",
+    "reviewed_internal_shard_ids",
+    "environment",
+    "entries"
+  ],
+  "properties": {
+    "format_version": { "const": 1 },
+    "package": { "type": "string", "minLength": 1 },
+    "toolchain": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "default_weight_nanoseconds": { "type": "integer", "minimum": 1 },
+    "reviewed_internal_shard_ids": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^(Test|Fuzz|Example)[A-Za-z0-9_]*$" },
+      "uniqueItems": true
+    },
+    "environment": {
+      "type": "array",
+      "const": ["GOPLINT_PROTOCOL_ORACLE_PROFILE=scheduled"]
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "duration_weight_nanoseconds",
+          "sample_count",
+          "nested_case_count",
+          "maximum_nested_case_nanoseconds"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^(Test|Fuzz|Example)[A-Za-z0-9_]*$" },
+          "kind": { "enum": ["test", "fuzz", "example"] },
+          "duration_weight_nanoseconds": { "type": "integer", "minimum": 1 },
+          "sample_count": { "type": "integer", "minimum": 1 },
+          "nested_case_count": { "type": "integer", "minimum": 0 },
+          "maximum_nested_case_nanoseconds": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

@@ -56,17 +56,25 @@ func validGateRegistry() soundnessevidence.Registry {
 }
 
 func validGateManifest() Manifest {
-	return Manifest{
+	manifest := Manifest{
 		FormatVersion: ManifestFormatVersion,
 		RegistryPath:  "spec/semantic-evidence.v2.json",
 		Profiles: []Profile{
 			{
-				ID:         ProfileCore,
-				SubgateIDs: []string{"semantic-production-a", "semantic-production-b", "targeted-mutation"},
-			},
-			{
 				ID:         ProfileComplete,
 				SubgateIDs: []string{"clean-tree-freshness", "semantic-production-a", "semantic-production-b", "targeted-mutation"},
+			},
+			{
+				ID:         ProfileConsumer,
+				SubgateIDs: []string{"semantic-production-a"},
+			},
+			{
+				ID:         ProfileHarness,
+				SubgateIDs: []string{"semantic-production-a"},
+			},
+			{
+				ID:         ProfileSemantic,
+				SubgateIDs: []string{"semantic-production-a", "semantic-production-b", "targeted-mutation"},
 			},
 		},
 		Subgates: []Subgate{
@@ -108,6 +116,23 @@ func validGateManifest() Manifest {
 			},
 		},
 	}
+	for index := range manifest.Subgates {
+		subgate := &manifest.Subgates[index]
+		subgate.Dependencies = []string{}
+		subgate.CPUUnits = 1
+		subgate.EstimatedPeakMemoryBytes = 1024
+		subgate.ExclusivityGroups = []string{}
+		subgate.Distributable = true
+		switch subgate.ID {
+		case cleanTreeFreshnessID:
+			subgate.ProfileIDs = []ProfileID{ProfileComplete}
+		case "semantic-production-a":
+			subgate.ProfileIDs = []ProfileID{ProfileComplete, ProfileConsumer, ProfileHarness, ProfileSemantic}
+		default:
+			subgate.ProfileIDs = []ProfileID{ProfileComplete, ProfileSemantic}
+		}
+	}
+	return manifest
 }
 
 func validGateBinding(subgate Subgate) soundnessevidence.ObservationBinding {
