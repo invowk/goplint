@@ -6,9 +6,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -23,15 +23,13 @@ func Load(ctx context.Context, path string) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("read repository audit %s: %w", path, err)
 	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
+	// json/v2 rejects duplicate object members, invalid UTF-8, unknown
+	// members, and trailing content after the top-level value. Field-name
+	// matching is case-sensitive; audit records are produced by writers in
+	// this package with snake_case tags, so casing is controlled.
 	var result Result
-	if err := decoder.Decode(&result); err != nil {
+	if err := jsonv2.Unmarshal(data, &result, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return Result{}, fmt.Errorf("decode repository audit %s: %w", path, err)
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
-		return Result{}, fmt.Errorf("decode repository audit %s: trailing JSON content", path)
 	}
 	if err := result.Validate(); err != nil {
 		return Result{}, fmt.Errorf("validate repository audit %s: %w", path, err)

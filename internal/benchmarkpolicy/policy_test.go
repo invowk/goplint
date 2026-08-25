@@ -33,7 +33,7 @@ func TestManifestValidateRejectsRelabelingAndWeakenedCertification(t *testing.T)
 			manifest.Benchmarks = make(map[string]BenchmarkThreshold, len(valid.Benchmarks))
 			maps.Copy(manifest.Benchmarks, valid.Benchmarks)
 			testCase.mutate(&manifest)
-			if err := manifest.Validate(PolicyCertification, "go1.26.5", "github-4cpu"); err == nil {
+			if err := manifest.Validate(PolicyCertification, "go1.27.0", "github-4cpu"); err == nil {
 				t.Fatal("Validate() accepted weakened or mismatched certification")
 			}
 		})
@@ -51,7 +51,7 @@ func validCertificationPolicy() Manifest {
 	benchmarks["BenchmarkProtocolRecursiveTabulation"] = recursive
 	return Manifest{
 		FormatVersion: 2, Policy: PolicyCertification, Samples: 5,
-		GoToolchain: "go1.26", RunnerClass: "github-4cpu",
+		GoToolchain: "go1.27", RunnerClass: "github-4cpu",
 		RequiredAnalyzerPhases: slices.Clone(requiredPhases),
 		RequiredPopulations:    []string{"analyzer-benchmarks", "generated-programs"},
 		Benchmarks:             benchmarks,

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -401,8 +402,13 @@ func forEachFindingsRecord(data []byte, fn func(record FindingStreamRecord) erro
 		}
 		line = bytes.TrimSpace(line)
 		if len(line) > 0 {
+			// json/v2 rejects duplicate object members and invalid UTF-8 in
+			// each findings record; FindingStreamRecord tags are snake_case
+			// and match the writer output exactly, so case-sensitive matching
+			// is safe. RejectUnknownMembers stays off: this stream carries
+			// forward-compatible record kinds beyond "finding".
 			var record FindingStreamRecord
-			if unmarshalErr := json.Unmarshal(line, &record); unmarshalErr != nil {
+			if unmarshalErr := jsonv2.Unmarshal(line, &record); unmarshalErr != nil {
 				return fmt.Errorf("decoding findings record: %w", unmarshalErr)
 			}
 			if fn != nil {

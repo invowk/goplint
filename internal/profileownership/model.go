@@ -4,8 +4,7 @@
 package profileownership
 
 import (
-	"bytes"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -98,12 +97,14 @@ func Load(path string) (Manifest, error) {
 	return Decode(data)
 }
 
-// Decode strictly decodes and validates ownership manifest bytes.
+// Decode strictly decodes and validates ownership manifest bytes. The
+// json/v2 decoder rejects duplicate object members, invalid UTF-8, and
+// unknown members. Field-name matching is case-sensitive; manifest tags are
+// snake_case and produced by writers in this package, so casing is
+// controlled.
 func Decode(data []byte) (Manifest, error) {
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
 	var manifest Manifest
-	if err := decoder.Decode(&manifest); err != nil {
+	if err := jsonv2.Unmarshal(data, &manifest, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return Manifest{}, fmt.Errorf("decoding ownership manifest: %w", err)
 	}
 	if err := manifest.Validate(); err != nil {

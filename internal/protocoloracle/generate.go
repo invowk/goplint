@@ -3,10 +3,9 @@
 package protocoloracle
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -81,10 +80,12 @@ func LoadBoundsManifest(path string) (BoundsManifest, error) {
 	if err != nil {
 		return BoundsManifest{}, fmt.Errorf("read protocol oracle bounds %s: %w", path, err)
 	}
+	// json/v2 rejects duplicate object members, invalid UTF-8, and unknown
+	// members. Field-name matching is case-sensitive; bounds manifests are
+	// produced by writers in this repository with snake_case tags, so casing
+	// is controlled.
 	var manifest BoundsManifest
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&manifest); err != nil {
+	if err := jsonv2.Unmarshal(data, &manifest, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return BoundsManifest{}, fmt.Errorf("decode protocol oracle bounds %s: %w", path, err)
 	}
 	if err := validateManifest(manifest); err != nil {

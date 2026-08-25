@@ -98,7 +98,7 @@
         "go",
         "version"
       ],
-      "required_version_re": "^go version go1\\.26\\.[0-9]+ linux/amd64$"
+      "required_version_re": "^go version go1\\.27\\.[0-9]+ linux/amd64$"
     },
     {
       "name": "golangci-lint",
@@ -106,7 +106,7 @@
         "./scripts/golangci-lint.sh",
         "version"
       ],
-      "required_version_re": "^golangci-lint has version 2\\.12\\.2 .*$"
+      "required_version_re": "^golangci-lint has version 2\\.13\\.1 .*$"
     },
     {
       "name": "make",

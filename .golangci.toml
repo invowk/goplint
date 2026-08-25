@@ -239,15 +239,16 @@ max-same-issues = 0
 uniq-by-line = false
 
 [formatters]
+# NOTE: The `gofmt` and `goimports` formatters are intentionally NOT enabled.
+# `gofumpt` is a strict superset of `gofmt` and handles import grouping via
+# `module-path`. Under Go 1.27 the `gofmt` fork and `goimports` bundled in
+# golangci-lint v2.13.1 lag upstream `gofmt` on multi-value composite-literal
+# indentation, producing rewrites that the `gofumpt` linter (v0.11.0, current
+# with Go 1.27) then rejects. We keep `gofumpt` as the single authoritative
+# Go formatter until the golangci-lint bundled forks catch up with Go 1.27.
 enable = [
-    # gofmt: Standard Go formatter.
-    "gofmt",
-
-    # gofumpt: Stricter gofmt-compatible formatter.
+    # gofumpt: Stricter gofmt-compatible formatter (also handles imports).
     "gofumpt",
-
-    # goimports: Formats and fixes imports.
-    "goimports",
 ]
 
 [formatters.settings.gofumpt]

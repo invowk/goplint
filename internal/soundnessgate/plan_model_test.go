@@ -106,7 +106,7 @@ func TestExecutionPlanBindingsInvalidateIdentity(t *testing.T) {
 		{name: "workspace", mutate: func(plan *ExecutionPlan) { plan.Workspace.Digest = runnerChangedDigest }},
 		{name: "manifest", mutate: func(plan *ExecutionPlan) { plan.Manifest.Digest = runnerChangedDigest }},
 		{name: "registry", mutate: func(plan *ExecutionPlan) { plan.Registry.Digest = runnerChangedDigest }},
-		{name: "toolchain", mutate: func(plan *ExecutionPlan) { plan.Toolchain.GoVersion = "go1.26.6" }},
+		{name: "toolchain", mutate: func(plan *ExecutionPlan) { plan.Toolchain.GoVersion = "go1.27.9" }},
 		{name: "command", mutate: func(plan *ExecutionPlan) { plan.Commands[0].Command[1] = "vet" }},
 		{name: "binary", mutate: func(plan *ExecutionPlan) { plan.Commands[0].BinaryDigest = runnerChangedDigest }},
 		{name: "census", mutate: func(plan *ExecutionPlan) { plan.Censuses[0].MemberIDs[0] = "test-changed" }},
@@ -185,7 +185,7 @@ func validExecutionPlan() ExecutionPlan {
 		GoVersion string `json:"go_version"`
 		GOOS      string `json:"goos"`
 		GOARCH    string `json:"goarch"`
-	}{GoVersion: "go1.26.5", GOOS: "linux", GOARCH: "amd64"})
+	}{GoVersion: "go1.27.0", GOOS: "linux", GOARCH: "amd64"})
 	censusDigest := mustBindingDigest(struct {
 		ID        string   `json:"id"`
 		Kind      string   `json:"kind"`
@@ -207,7 +207,7 @@ func validExecutionPlan() ExecutionPlan {
 			Digest: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 		},
 		Toolchain: ToolchainBinding{
-			GoVersion: "go1.26.5",
+			GoVersion: "go1.27.0",
 			GOOS:      "linux",
 			GOARCH:    "amd64",
 			Digest:    toolchainDigest,

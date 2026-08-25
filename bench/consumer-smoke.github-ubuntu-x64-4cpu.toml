@@ -3,7 +3,7 @@
 format_version = 1
 policy = "consumer-smoke"
 samples = 1
-go_toolchain = "go1.26"
+go_toolchain = "go1.27"
 runner_class = "github-hosted-ubuntu-x64-4cpu-reviewed"
 calibrated_on = "2026-07-19"
 required_analyzer_phases = []

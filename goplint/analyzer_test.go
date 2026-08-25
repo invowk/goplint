@@ -25,5 +25,6 @@ func TestAnalyzer(t *testing.T) {
 		"skipfuncs",
 		"edgecases",
 		"generics",
+		"generic_methods",
 	)
 }

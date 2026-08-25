@@ -5,6 +5,7 @@ package goplint
 import (
 	"context"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -77,8 +78,12 @@ func ValidateSemanticCatalogInconclusivePolicy(ctx context.Context, catalogPath 
 	if err != nil {
 		return fmt.Errorf("read semantic catalog: %w", err)
 	}
+	// json/v2 rejects duplicate object members and invalid UTF-8 by default.
+	// Case-sensitive matching aligns with the snake_case tags emitted by the
+	// catalog writer. RejectUnknownMembers stays off so forward-compatible
+	// catalog additions do not fail this validator.
 	var catalog semanticCoverageCatalog
-	if err := json.Unmarshal(data, &catalog); err != nil {
+	if err := jsonv2.Unmarshal(data, &catalog); err != nil {
 		return fmt.Errorf("decode semantic catalog: %w", err)
 	}
 	if err := validateProtocolInconclusivePolicy(

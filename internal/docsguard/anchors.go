@@ -3,7 +3,7 @@
 package docsguard
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"io/fs"
 	"os"
@@ -192,7 +192,12 @@ func loadGateIdentifiers(manifestPath string, identifiers map[string]struct{}) e
 		return fmt.Errorf("read soundness-gate manifest %s: %w", manifestPath, err)
 	}
 	manifest := gateManifest{}
-	if err := json.Unmarshal(data, &manifest); err != nil {
+	// json/v2 rejects duplicate object members and invalid UTF-8 by default.
+	// Case-sensitive matching aligns with the snake_case tags produced by
+	// writers in this repository. RejectUnknownMembers stays off: the local
+	// shape only covers the fields docsguard reads; unknown fields are
+	// forward-compatible.
+	if err := jsonv2.Unmarshal(data, &manifest); err != nil {
 		return fmt.Errorf("parse soundness-gate manifest %s: %w", manifestPath, err)
 	}
 	for _, profile := range manifest.Profiles {
@@ -215,7 +220,9 @@ func loadEvidenceIdentifiers(registryPath string, identifiers map[string]struct{
 		return fmt.Errorf("read semantic evidence registry %s: %w", registryPath, err)
 	}
 	registry := evidenceRegistry{}
-	if err := json.Unmarshal(data, &registry); err != nil {
+	// json/v2 rejects duplicate object members and invalid UTF-8 by default.
+	// See loadGateIdentifiers for the rationale on RejectUnknownMembers.
+	if err := jsonv2.Unmarshal(data, &registry); err != nil {
 		return fmt.Errorf("parse semantic evidence registry %s: %w", registryPath, err)
 	}
 	for _, registration := range registry.Registrations {

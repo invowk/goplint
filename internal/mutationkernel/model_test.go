@@ -151,7 +151,7 @@ func TestLoadRejectsUnknownFieldsAndTrailingJSON(t *testing.T) {
   "mutant_catalog": "mutants.json",
   "unexpected": true
 }`,
-			want: "unknown field",
+			want: "unknown object member",
 		},
 		{
 			name: "trailing value",
@@ -162,7 +162,18 @@ func TestLoadRejectsUnknownFieldsAndTrailingJSON(t *testing.T) {
   "mutant_catalog": "mutants.json"
 }
 {}`,
-			want: "trailing JSON value",
+			want: "after top-level value",
+		},
+		{
+			name: "duplicate object member",
+			content: `{
+  "format_version": 1,
+  "format_version": 2,
+  "semantic_rules": "rules.json",
+  "blocking_profile": "profile.json",
+  "mutant_catalog": "mutants.json"
+}`,
+			want: "duplicate object member",
 		},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -139,16 +140,18 @@ func CanonicalTimingJSON(manifest TimingManifest) ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-// LoadTimingManifest strictly decodes the reviewed timing manifest.
+// LoadTimingManifest strictly decodes the reviewed timing manifest. The
+// json/v2 decoder rejects duplicate object members, invalid UTF-8, and
+// unknown members; field-name matching is case-sensitive. This manifest is
+// produced by json.Marshal in this package with snake_case tags, so
+// case-sensitive matching is safe.
 func LoadTimingManifest(path string) (TimingManifest, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return TimingManifest{}, fmt.Errorf("read race/repeat timing manifest %s: %w", path, err)
 	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
 	var manifest TimingManifest
-	if err := decoder.Decode(&manifest); err != nil {
+	if err := jsonv2.Unmarshal(data, &manifest, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return TimingManifest{}, fmt.Errorf("decode race/repeat timing manifest %s: %w", path, err)
 	}
 	if err := manifest.Validate(); err != nil {

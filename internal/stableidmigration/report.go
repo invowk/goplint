@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"slices"
 	"strings"
@@ -319,8 +320,12 @@ func parseFindings(scan string, data []byte) ([]findingRecord, error) {
 		if len(bytes.TrimSpace(scanner.Bytes())) == 0 {
 			continue
 		}
+		// json/v2 rejects duplicate object members and invalid UTF-8 in each
+		// JSONL record; findings tags are snake_case matching writer output,
+		// so case-sensitive matching is safe. RejectUnknownMembers stays off
+		// so forward-compatible record kinds beyond "finding" survive.
 		var record findingRecord
-		if err := json.Unmarshal(scanner.Bytes(), &record); err != nil {
+		if err := jsonv2.Unmarshal(scanner.Bytes(), &record); err != nil {
 			return nil, fmt.Errorf("decode %s scan line %d: %w", scan, line, err)
 		}
 		if record.Kind != "" && record.Kind != "finding" {

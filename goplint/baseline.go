@@ -287,7 +287,7 @@ func (b *BaselineConfig) categoriesByName() map[string]BaselineCategory {
 		if tag == "" || tag == "-" {
 			continue
 		}
-		category, ok := value.Field(i).Interface().(BaselineCategory)
+		category, ok := reflect.TypeAssert[BaselineCategory](value.Field(i))
 		if !ok {
 			continue
 		}

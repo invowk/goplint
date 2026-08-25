@@ -6,9 +6,9 @@ package mutationguard
 
 import (
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
-	"io"
 	"regexp"
 	"strings"
 )
@@ -87,18 +87,14 @@ func DecodeOutputLine(line string) (event AssertionEvent, found bool, err error)
 	if !found {
 		return AssertionEvent{}, false, nil
 	}
+	// json/v2 rejects duplicate object members, invalid UTF-8, and content
+	// after the top-level value. Field-name matching is case-sensitive; guard
+	// events are produced by EncodeEvent above (writer) so tag casing is
+	// controlled. RejectUnknownMembers keeps the previous DisallowUnknownFields
+	// semantics.
 	payload = strings.TrimSpace(payload)
-	decoder := json.NewDecoder(strings.NewReader(payload))
-	decoder.DisallowUnknownFields()
-	if decodeErr := decoder.Decode(&event); decodeErr != nil {
+	if decodeErr := jsonv2.Unmarshal([]byte(payload), &event, jsonv2.RejectUnknownMembers(true)); decodeErr != nil {
 		return AssertionEvent{}, true, fmt.Errorf("decode guard event: %w", decodeErr)
-	}
-	var trailing any
-	if decodeErr := decoder.Decode(&trailing); !errors.Is(decodeErr, io.EOF) {
-		if decodeErr == nil {
-			return AssertionEvent{}, true, errors.New("decode guard event: trailing JSON value")
-		}
-		return AssertionEvent{}, true, fmt.Errorf("decode guard event trailing data: %w", decodeErr)
 	}
 	if validateErr := event.Validate(); validateErr != nil {
 		return AssertionEvent{}, true, validateErr

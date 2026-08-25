@@ -4,10 +4,8 @@ package mutationkernel
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
+	jsonv2 "encoding/json/v2"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -52,27 +50,19 @@ func Load(ctx context.Context, root, manifestPath string) (Result, error) {
 	return evaluate(definition, rules, profile, catalog)
 }
 
+// decodeStrictJSON decodes an integrity-sensitive manifest with json/v2
+// semantics: duplicate object members and invalid UTF-8 are rejected by
+// default, unknown members are rejected, and trailing content after the
+// top-level value is rejected. Field-name matching is case-sensitive;
+// manifests read here are produced by writers in this repository with
+// snake_case tags, so casing is controlled.
 func decodeStrictJSON(filePath string, target any) (returnErr error) {
-	file, err := os.Open(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("open %q: %w", filePath, err)
 	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			returnErr = errors.Join(returnErr, fmt.Errorf("close %q: %w", filePath, closeErr))
-		}
-	}()
-	decoder := json.NewDecoder(file)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
+	if err := jsonv2.Unmarshal(data, target, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return fmt.Errorf("decode %q: %w", filePath, err)
-	}
-	var trailing any
-	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
-		if err == nil {
-			return fmt.Errorf("decode %q: trailing JSON value", filePath)
-		}
-		return fmt.Errorf("decode %q trailing data: %w", filePath, err)
 	}
 	return nil
 }

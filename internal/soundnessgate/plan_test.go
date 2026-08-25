@@ -121,7 +121,7 @@ func TestCanonicalPlanJSONNormalizesSetOrdering(t *testing.T) {
 }
 
 func deterministicPlanDependencies() planDependencies {
-	toolchain := ToolchainBinding{GoVersion: "go1.26.5", GOOS: "linux", GOARCH: "amd64"}
+	toolchain := ToolchainBinding{GoVersion: "go1.27.0", GOOS: "linux", GOARCH: "amd64"}
 	digest, err := toolchainDigest(toolchain)
 	if err != nil {
 		panic(err)

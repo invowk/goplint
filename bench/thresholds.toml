@@ -3,7 +3,7 @@
 format_version = 2
 policy = "certification"
 samples = 5
-go_toolchain = "go1.26"
+go_toolchain = "go1.27"
 runner_class = "fedora-44-x86_64-24cpu-reviewed"
 calibrated_on = "2026-07-18"
 required_analyzer_phases = ["source-extraction", "identity", "graph-construction", "propagation", "refinement", "aggregation", "reporting"]

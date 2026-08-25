@@ -3,12 +3,11 @@
 package soundnessgate
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -167,17 +166,16 @@ func readFile(ctx context.Context, path string) ([]byte, error) {
 	return data, nil
 }
 
+// decodeStrictJSON decodes an integrity-sensitive record with json/v2
+// semantics: duplicate object members and invalid UTF-8 are rejected by
+// default, field-name matching is case-sensitive, unknown members are
+// rejected, and trailing content after the top-level value is rejected. All
+// integrity-sensitive records read here are produced by writers in the same
+// package (json.Marshal output is stable across v1/v2), so case-sensitive
+// matching aligns with the emitted snake_case tags.
 func decodeStrictJSON(data []byte, target any) error {
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
+	if err := jsonv2.Unmarshal(data, target, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return fmt.Errorf("decode JSON: %w", err)
-	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		if err == nil {
-			return errors.New("multiple JSON values are not allowed")
-		}
-		return fmt.Errorf("decode trailing JSON: %w", err)
 	}
 	return nil
 }

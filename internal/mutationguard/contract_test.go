@@ -64,6 +64,12 @@ func TestDecodeOutputLineRejectsMalformedEvents(t *testing.T) {
 				`"actual":{"subject":"s","state":"mutated"}} {}`,
 		},
 		{
+			name: "duplicate object member",
+			line: EventPrefix +
+				`{"format_version":1,"format_version":2,"assertion_id":"a",` +
+				`"expected":{"subject":"s","state":"clean"},"actual":{"subject":"s","state":"mutated"}}`,
+		},
+		{
 			name: "identical observations",
 			line: EventPrefix +
 				`{"format_version":1,"assertion_id":"a","expected":{"subject":"s","state":"same"},` +

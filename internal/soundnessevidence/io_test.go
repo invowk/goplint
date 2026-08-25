@@ -20,12 +20,17 @@ func TestLoadRegistryRejectsUnknownAndTrailingJSON(t *testing.T) {
 		{
 			name:      "unknown field",
 			content:   `{"format_version":2,"registrations":[],"marker_only":true}`,
-			wantError: "unknown field",
+			wantError: "unknown object member",
 		},
 		{
 			name:      "trailing object",
 			content:   `{"format_version":2,"registrations":[]} {}`,
-			wantError: "multiple JSON values",
+			wantError: "after top-level value",
+		},
+		{
+			name:      "duplicate object member",
+			content:   `{"format_version":2,"format_version":1,"registrations":[]}`,
+			wantError: "duplicate object member",
 		},
 	}
 	for _, test := range tests {
@@ -61,7 +66,7 @@ func TestLoadObservationsRejectsUnknownFields(t *testing.T) {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 	_, err := LoadObservations(t.Context(), root)
-	assertErrorContains(t, err, "unknown field")
+	assertErrorContains(t, err, "unknown object member")
 }
 
 func TestEmitObservationDisabledWithoutAggregateEnvironment(t *testing.T) {

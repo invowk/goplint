@@ -22,7 +22,7 @@ func TestBuildTimingManifestAndResolveLiveCensus(t *testing.T) {
 			`{"Action":"pass","Test":"FuzzBeta","Elapsed":0.2}` + "\n" +
 			`{"Action":"pass","Test":"ExampleGamma","Elapsed":0.1}` + "\n",
 	)
-	manifest, err := BuildTimingManifest("./goplint", "go1.26.5", time.Now(), census, sample)
+	manifest, err := BuildTimingManifest("./goplint", "go1.27.0", time.Now(), census, sample)
 	if err != nil {
 		t.Fatalf("BuildTimingManifest() error = %v", err)
 	}
@@ -46,7 +46,7 @@ func TestBuildTimingManifestPromotesDominatingNestedCaseToShardWeight(t *testing
 		`{"Action":"pass","Test":"TestParallelFamily/case","Elapsed":4.2}` + "\n" +
 			`{"Action":"pass","Test":"TestParallelFamily","Elapsed":0}` + "\n",
 	)
-	manifest, err := BuildTimingManifest("./goplint", "go1.26.5", time.Now(), census, sample)
+	manifest, err := BuildTimingManifest("./goplint", "go1.27.0", time.Now(), census, sample)
 	if err != nil {
 		t.Fatalf("BuildTimingManifest() error = %v", err)
 	}
@@ -125,7 +125,7 @@ func TestAllocateLPTIsCompleteDeterministicAndBetterThanModulo(t *testing.T) {
 
 func testTimingManifest() TimingManifest {
 	return TimingManifest{
-		FormatVersion: TimingFormatVersion, Package: "./goplint", Toolchain: "go1.26.5",
+		FormatVersion: TimingFormatVersion, Package: "./goplint", Toolchain: "go1.27.0",
 		GeneratedAt:              time.Date(2026, time.July, 19, 0, 0, 0, 0, time.UTC),
 		DefaultWeightNanoseconds: 20, ReviewedInternalShardIDs: []string{},
 		Environment: []string{ScheduledOracleEnvironment},

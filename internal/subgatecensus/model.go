@@ -5,7 +5,7 @@
 package subgatecensus
 
 import (
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -58,10 +58,11 @@ func Load(path string) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, fmt.Errorf("read census manifest: %w", err)
 	}
+	// json/v2 rejects duplicate object members and invalid UTF-8 by default
+	// and matches JSON tags case-sensitively; the manifest's snake_case tags
+	// come from writers in this package, so case-sensitive matching is safe.
 	var manifest Manifest
-	decoder := json.NewDecoder(strings.NewReader(string(data)))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&manifest); err != nil {
+	if err := jsonv2.Unmarshal(data, &manifest, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return Manifest{}, fmt.Errorf("decode census manifest: %w", err)
 	}
 	if err := manifest.Validate(); err != nil {

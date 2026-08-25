@@ -1,9 +1,9 @@
 {
   "format_version": 1,
   "package": "./goplint",
-  "toolchain": "go1.26.5",
-  "generated_at": "2026-07-19T19:54:08.618022987Z",
-  "default_weight_nanoseconds": 147970000000,
+  "toolchain": "go1.27.0",
+  "generated_at": "2026-08-24T19:07:20.570890117Z",
+  "default_weight_nanoseconds": 232250000000,
   "reviewed_internal_shard_ids": [],
   "environment": [
     "GOPLINT_PROTOCOL_ORACLE_PROFILE=scheduled"
@@ -20,10 +20,10 @@
     {
       "id": "FuzzIFDSTabulation",
       "kind": "fuzz",
-      "duration_weight_nanoseconds": 1100000000,
+      "duration_weight_nanoseconds": 1690000000,
       "sample_count": 3,
       "nested_case_count": 21,
-      "maximum_nested_case_nanoseconds": 170000000
+      "maximum_nested_case_nanoseconds": 200000000
     },
     {
       "id": "FuzzInterprocSupergraphConstruction",
@@ -84,7 +84,7 @@
     {
       "id": "TestAmbiguousAliasPreservingSummaryIsIrrelevant",
       "kind": "test",
-      "duration_weight_nanoseconds": 14850000000,
+      "duration_weight_nanoseconds": 12840000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -108,7 +108,7 @@
     {
       "id": "TestAnalyzer",
       "kind": "test",
-      "duration_weight_nanoseconds": 980000000,
+      "duration_weight_nanoseconds": 850000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -116,7 +116,7 @@
     {
       "id": "TestAnalyzerWithConfig",
       "kind": "test",
-      "duration_weight_nanoseconds": 16110000000,
+      "duration_weight_nanoseconds": 26140000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -124,7 +124,7 @@
     {
       "id": "TestAnalyzerWithRealExceptionsToml",
       "kind": "test",
-      "duration_weight_nanoseconds": 14030000000,
+      "duration_weight_nanoseconds": 26940000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -140,7 +140,7 @@
     {
       "id": "TestAuditExceptions",
       "kind": "test",
-      "duration_weight_nanoseconds": 20680000000,
+      "duration_weight_nanoseconds": 19300000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -148,7 +148,7 @@
     {
       "id": "TestAuditExceptionsMultiPackage",
       "kind": "test",
-      "duration_weight_nanoseconds": 21450000000,
+      "duration_weight_nanoseconds": 24170000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -156,7 +156,7 @@
     {
       "id": "TestAuditReviewDates",
       "kind": "test",
-      "duration_weight_nanoseconds": 15360000000,
+      "duration_weight_nanoseconds": 6850000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -212,7 +212,7 @@
     {
       "id": "TestBaselineSupplementaryCategories",
       "kind": "test",
-      "duration_weight_nanoseconds": 20370000000,
+      "duration_weight_nanoseconds": 30540000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -220,7 +220,7 @@
     {
       "id": "TestBaselineSuppression",
       "kind": "test",
-      "duration_weight_nanoseconds": 16719999999,
+      "duration_weight_nanoseconds": 26940000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -252,7 +252,7 @@
     {
       "id": "TestBoundaryRequestInconclusiveIgnoresConfigException",
       "kind": "test",
-      "duration_weight_nanoseconds": 22710000000,
+      "duration_weight_nanoseconds": 30570000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -572,7 +572,7 @@
     {
       "id": "TestCanonicalRepoPatternsStayClean",
       "kind": "test",
-      "duration_weight_nanoseconds": 66120000000,
+      "duration_weight_nanoseconds": 81760000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -604,39 +604,39 @@
     {
       "id": "TestCategoryDeterminismEvidence",
       "kind": "test",
-      "duration_weight_nanoseconds": 147970000000,
+      "duration_weight_nanoseconds": 216780000000,
       "sample_count": 3,
       "nested_case_count": 8,
-      "maximum_nested_case_nanoseconds": 147970000000
+      "maximum_nested_case_nanoseconds": 216780000000
     },
     {
       "id": "TestCategoryFuzzSeedEvidence",
       "kind": "test",
-      "duration_weight_nanoseconds": 84550000000,
+      "duration_weight_nanoseconds": 200230000000,
       "sample_count": 3,
       "nested_case_count": 8,
-      "maximum_nested_case_nanoseconds": 84550000000
+      "maximum_nested_case_nanoseconds": 200230000000
     },
     {
       "id": "TestCategoryGeneratedEvidence",
       "kind": "test",
-      "duration_weight_nanoseconds": 74880000000,
+      "duration_weight_nanoseconds": 172610000000,
       "sample_count": 3,
       "nested_case_count": 8,
-      "maximum_nested_case_nanoseconds": 74880000000
+      "maximum_nested_case_nanoseconds": 172610000000
     },
     {
       "id": "TestCategoryMetamorphicEvidence",
       "kind": "test",
-      "duration_weight_nanoseconds": 20000000,
+      "duration_weight_nanoseconds": 50000000,
       "sample_count": 3,
       "nested_case_count": 8,
-      "maximum_nested_case_nanoseconds": 20000000
+      "maximum_nested_case_nanoseconds": 50000000
     },
     {
       "id": "TestCategoryMutationGuardMissingConstructorValidate",
       "kind": "test",
-      "duration_weight_nanoseconds": 25420000000,
+      "duration_weight_nanoseconds": 40890000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -644,7 +644,7 @@
     {
       "id": "TestCategoryMutationGuardMissingConstructorValidateInconclusive",
       "kind": "test",
-      "duration_weight_nanoseconds": 25420000000,
+      "duration_weight_nanoseconds": 32590000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -652,7 +652,7 @@
     {
       "id": "TestCategoryMutationGuardUnvalidatedBoundaryRequest",
       "kind": "test",
-      "duration_weight_nanoseconds": 17710000000,
+      "duration_weight_nanoseconds": 16809999999,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -660,7 +660,7 @@
     {
       "id": "TestCategoryMutationGuardUnvalidatedCast",
       "kind": "test",
-      "duration_weight_nanoseconds": 70640000000,
+      "duration_weight_nanoseconds": 64290000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -668,7 +668,7 @@
     {
       "id": "TestCategoryMutationGuardUnvalidatedCastInconclusive",
       "kind": "test",
-      "duration_weight_nanoseconds": 29500000000,
+      "duration_weight_nanoseconds": 46190000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -676,7 +676,7 @@
     {
       "id": "TestCategoryMutationGuardUseBeforeValidateCrossBlock",
       "kind": "test",
-      "duration_weight_nanoseconds": 61470000000,
+      "duration_weight_nanoseconds": 51770000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -684,7 +684,7 @@
     {
       "id": "TestCategoryMutationGuardUseBeforeValidateInconclusive",
       "kind": "test",
-      "duration_weight_nanoseconds": 28830000000,
+      "duration_weight_nanoseconds": 12600000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -692,7 +692,7 @@
     {
       "id": "TestCategoryMutationGuardUseBeforeValidateSameBlock",
       "kind": "test",
-      "duration_weight_nanoseconds": 28460000000,
+      "duration_weight_nanoseconds": 34470000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -700,7 +700,7 @@
     {
       "id": "TestCheckAll",
       "kind": "test",
-      "duration_weight_nanoseconds": 26040000000,
+      "duration_weight_nanoseconds": 23180000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -716,7 +716,7 @@
     {
       "id": "TestCheckBoundaryRequestValidation",
       "kind": "test",
-      "duration_weight_nanoseconds": 21660000000,
+      "duration_weight_nanoseconds": 32030000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -724,7 +724,7 @@
     {
       "id": "TestCheckCastValidation",
       "kind": "test",
-      "duration_weight_nanoseconds": 23390000000,
+      "duration_weight_nanoseconds": 32939999999,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -732,7 +732,7 @@
     {
       "id": "TestCheckCastValidationCFA",
       "kind": "test",
-      "duration_weight_nanoseconds": 46390000000,
+      "duration_weight_nanoseconds": 44590000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -740,7 +740,7 @@
     {
       "id": "TestCheckCastValidationCFAClosure",
       "kind": "test",
-      "duration_weight_nanoseconds": 40440000000,
+      "duration_weight_nanoseconds": 52730000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -748,7 +748,7 @@
     {
       "id": "TestCheckCastValidationCFAClosureVarAlias",
       "kind": "test",
-      "duration_weight_nanoseconds": 35360000000,
+      "duration_weight_nanoseconds": 46010000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -756,7 +756,7 @@
     {
       "id": "TestCheckCastValidationCFAClosureVarRebind",
       "kind": "test",
-      "duration_weight_nanoseconds": 27140000000,
+      "duration_weight_nanoseconds": 26350000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -764,7 +764,7 @@
     {
       "id": "TestCheckCastValidationCFAConditionalContexts",
       "kind": "test",
-      "duration_weight_nanoseconds": 35340000000,
+      "duration_weight_nanoseconds": 35220000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -772,7 +772,7 @@
     {
       "id": "TestCheckCastValidationCFADetachedClosure",
       "kind": "test",
-      "duration_weight_nanoseconds": 31390000000,
+      "duration_weight_nanoseconds": 26940000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -780,7 +780,7 @@
     {
       "id": "TestCheckCastValidationCFAExecutableClosureVar",
       "kind": "test",
-      "duration_weight_nanoseconds": 30060000000,
+      "duration_weight_nanoseconds": 32720000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -788,7 +788,7 @@
     {
       "id": "TestCheckCastValidationCFAHonorsExcludedProcedurePaths",
       "kind": "test",
-      "duration_weight_nanoseconds": 39060000000,
+      "duration_weight_nanoseconds": 41480000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -796,7 +796,7 @@
     {
       "id": "TestCheckCastValidationCFAMethodValue",
       "kind": "test",
-      "duration_weight_nanoseconds": 38200000000,
+      "duration_weight_nanoseconds": 46490000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -804,7 +804,7 @@
     {
       "id": "TestCheckCastValidationCFANoReturnTerminator",
       "kind": "test",
-      "duration_weight_nanoseconds": 23270000000,
+      "duration_weight_nanoseconds": 20500000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -812,7 +812,7 @@
     {
       "id": "TestCheckCastValidationCFASelectorCanonicalization",
       "kind": "test",
-      "duration_weight_nanoseconds": 34940000000,
+      "duration_weight_nanoseconds": 45470000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -820,7 +820,7 @@
     {
       "id": "TestCheckCastValidationCFASelectorShadowing",
       "kind": "test",
-      "duration_weight_nanoseconds": 32950000000,
+      "duration_weight_nanoseconds": 44870000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -828,7 +828,7 @@
     {
       "id": "TestCheckCastValidationCFAShortCircuit",
       "kind": "test",
-      "duration_weight_nanoseconds": 31770000000,
+      "duration_weight_nanoseconds": 39030000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -836,7 +836,7 @@
     {
       "id": "TestCheckCastValidationInconclusiveCooperativeTimeout",
       "kind": "test",
-      "duration_weight_nanoseconds": 16200000000,
+      "duration_weight_nanoseconds": 29730000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -844,7 +844,7 @@
     {
       "id": "TestCheckConstructorErrorUsage",
       "kind": "test",
-      "duration_weight_nanoseconds": 18320000000,
+      "duration_weight_nanoseconds": 25550000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -852,7 +852,7 @@
     {
       "id": "TestCheckConstructorErrorUsageCrossPackageSelector",
       "kind": "test",
-      "duration_weight_nanoseconds": 11870000000,
+      "duration_weight_nanoseconds": 15680000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -860,7 +860,7 @@
     {
       "id": "TestCheckConstructorErrorUsageSuppression",
       "kind": "test",
-      "duration_weight_nanoseconds": 12230000000,
+      "duration_weight_nanoseconds": 16600000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -868,7 +868,7 @@
     {
       "id": "TestCheckConstructorReturnError",
       "kind": "test",
-      "duration_weight_nanoseconds": 21410000000,
+      "duration_weight_nanoseconds": 24040000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -876,7 +876,7 @@
     {
       "id": "TestCheckConstructorReturnErrorAlias",
       "kind": "test",
-      "duration_weight_nanoseconds": 20820000000,
+      "duration_weight_nanoseconds": 28280000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -884,7 +884,7 @@
     {
       "id": "TestCheckConstructorReturnErrorCrossPackage",
       "kind": "test",
-      "duration_weight_nanoseconds": 21300000000,
+      "duration_weight_nanoseconds": 23650000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -892,7 +892,7 @@
     {
       "id": "TestCheckConstructorSig",
       "kind": "test",
-      "duration_weight_nanoseconds": 21570000000,
+      "duration_weight_nanoseconds": 23310000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -900,7 +900,7 @@
     {
       "id": "TestCheckConstructorValidates",
       "kind": "test",
-      "duration_weight_nanoseconds": 23080000000,
+      "duration_weight_nanoseconds": 28480000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -908,7 +908,7 @@
     {
       "id": "TestCheckConstructorValidatesCFABackendSSAHandlesNoReturn",
       "kind": "test",
-      "duration_weight_nanoseconds": 19540000000,
+      "duration_weight_nanoseconds": 29890000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -916,7 +916,7 @@
     {
       "id": "TestCheckConstructorValidatesInconclusiveStateBudget",
       "kind": "test",
-      "duration_weight_nanoseconds": 10530000000,
+      "duration_weight_nanoseconds": 22820000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -924,7 +924,7 @@
     {
       "id": "TestCheckConstructorValidatesMethodValue",
       "kind": "test",
-      "duration_weight_nanoseconds": 20330000000,
+      "duration_weight_nanoseconds": 34810000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -932,7 +932,7 @@
     {
       "id": "TestCheckConstructors",
       "kind": "test",
-      "duration_weight_nanoseconds": 17520000000,
+      "duration_weight_nanoseconds": 17170000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -940,7 +940,7 @@
     {
       "id": "TestCheckCrossPlatformPath",
       "kind": "test",
-      "duration_weight_nanoseconds": 11070000000,
+      "duration_weight_nanoseconds": 18120000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -948,7 +948,7 @@
     {
       "id": "TestCheckEnumSync",
       "kind": "test",
-      "duration_weight_nanoseconds": 18180000000,
+      "duration_weight_nanoseconds": 17740000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -956,7 +956,7 @@
     {
       "id": "TestCheckEnumSyncCueErrorExceptionSuppression",
       "kind": "test",
-      "duration_weight_nanoseconds": 14650000000,
+      "duration_weight_nanoseconds": 6110000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -964,7 +964,7 @@
     {
       "id": "TestCheckEnumSyncIntMembers",
       "kind": "test",
-      "duration_weight_nanoseconds": 13180000000,
+      "duration_weight_nanoseconds": 17970000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -972,7 +972,7 @@
     {
       "id": "TestCheckEnumSyncMultiFile",
       "kind": "test",
-      "duration_weight_nanoseconds": 14010000000,
+      "duration_weight_nanoseconds": 1070000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -980,7 +980,7 @@
     {
       "id": "TestCheckEnumSyncNoSchema",
       "kind": "test",
-      "duration_weight_nanoseconds": 17350000000,
+      "duration_weight_nanoseconds": 17490000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -988,7 +988,7 @@
     {
       "id": "TestCheckEnumSyncNoSchemaBaselineSuppression",
       "kind": "test",
-      "duration_weight_nanoseconds": 15480000000,
+      "duration_weight_nanoseconds": 6840000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -996,7 +996,7 @@
     {
       "id": "TestCheckEnumSyncNoSchemaExceptionSuppression",
       "kind": "test",
-      "duration_weight_nanoseconds": 15600000000,
+      "duration_weight_nanoseconds": 16280000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1004,7 +1004,7 @@
     {
       "id": "TestCheckEnumSyncQualifiedConstCases",
       "kind": "test",
-      "duration_weight_nanoseconds": 13130000000,
+      "duration_weight_nanoseconds": 18610000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1012,7 +1012,7 @@
     {
       "id": "TestCheckEnumSyncScopedSwitches",
       "kind": "test",
-      "duration_weight_nanoseconds": 14090000000,
+      "duration_weight_nanoseconds": 140000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1020,7 +1020,7 @@
     {
       "id": "TestCheckEnumSyncSwitchTagConversion",
       "kind": "test",
-      "duration_weight_nanoseconds": 14590000000,
+      "duration_weight_nanoseconds": 18160000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1028,7 +1028,7 @@
     {
       "id": "TestCheckFuncOptions",
       "kind": "test",
-      "duration_weight_nanoseconds": 21660000000,
+      "duration_weight_nanoseconds": 25030000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1036,7 +1036,7 @@
     {
       "id": "TestCheckImmutability",
       "kind": "test",
-      "duration_weight_nanoseconds": 22760000000,
+      "duration_weight_nanoseconds": 23280000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1044,7 +1044,7 @@
     {
       "id": "TestCheckNonZero",
       "kind": "test",
-      "duration_weight_nanoseconds": 11250000000,
+      "duration_weight_nanoseconds": 17860000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1052,7 +1052,7 @@
     {
       "id": "TestCheckPathmatrixDivergent",
       "kind": "test",
-      "duration_weight_nanoseconds": 10850000000,
+      "duration_weight_nanoseconds": 16870000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1060,7 +1060,7 @@
     {
       "id": "TestCheckRedundantConversion",
       "kind": "test",
-      "duration_weight_nanoseconds": 11240000000,
+      "duration_weight_nanoseconds": 17670000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1068,7 +1068,7 @@
     {
       "id": "TestCheckStringer",
       "kind": "test",
-      "duration_weight_nanoseconds": 17530000000,
+      "duration_weight_nanoseconds": 21900000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1076,7 +1076,7 @@
     {
       "id": "TestCheckStructValidate",
       "kind": "test",
-      "duration_weight_nanoseconds": 18610000000,
+      "duration_weight_nanoseconds": 18360000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1084,7 +1084,7 @@
     {
       "id": "TestCheckTestHomeEnvPlatform",
       "kind": "test",
-      "duration_weight_nanoseconds": 10850000000,
+      "duration_weight_nanoseconds": 18010000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1092,7 +1092,7 @@
     {
       "id": "TestCheckUseBeforeValidateCFA",
       "kind": "test",
-      "duration_weight_nanoseconds": 32270000000,
+      "duration_weight_nanoseconds": 40600000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1100,7 +1100,7 @@
     {
       "id": "TestCheckUseBeforeValidateClosureCFA",
       "kind": "test",
-      "duration_weight_nanoseconds": 32259999999,
+      "duration_weight_nanoseconds": 33950000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1108,7 +1108,7 @@
     {
       "id": "TestCheckUseBeforeValidateClosureVarCall",
       "kind": "test",
-      "duration_weight_nanoseconds": 26800000000,
+      "duration_weight_nanoseconds": 25650000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1116,7 +1116,7 @@
     {
       "id": "TestCheckUseBeforeValidateCrossCFA",
       "kind": "test",
-      "duration_weight_nanoseconds": 35150000000,
+      "duration_weight_nanoseconds": 39760000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1124,7 +1124,7 @@
     {
       "id": "TestCheckUseBeforeValidateMethodValue",
       "kind": "test",
-      "duration_weight_nanoseconds": 24380000000,
+      "duration_weight_nanoseconds": 20230000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1132,7 +1132,7 @@
     {
       "id": "TestCheckValidate",
       "kind": "test",
-      "duration_weight_nanoseconds": 18250000000,
+      "duration_weight_nanoseconds": 18700000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1140,7 +1140,7 @@
     {
       "id": "TestCheckValidateDelegation",
       "kind": "test",
-      "duration_weight_nanoseconds": 18480000000,
+      "duration_weight_nanoseconds": 25670000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1148,7 +1148,7 @@
     {
       "id": "TestCheckValidateDelegationEmbeddedImportedPointer",
       "kind": "test",
-      "duration_weight_nanoseconds": 17450000000,
+      "duration_weight_nanoseconds": 19210000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1156,7 +1156,7 @@
     {
       "id": "TestCheckValidateDelegationHelperCycle",
       "kind": "test",
-      "duration_weight_nanoseconds": 16969999999,
+      "duration_weight_nanoseconds": 18500000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1164,7 +1164,7 @@
     {
       "id": "TestCheckValidateDelegationHelperFunction",
       "kind": "test",
-      "duration_weight_nanoseconds": 17520000000,
+      "duration_weight_nanoseconds": 19180000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1172,7 +1172,7 @@
     {
       "id": "TestCheckValidateDelegationMultiFile",
       "kind": "test",
-      "duration_weight_nanoseconds": 22220000000,
+      "duration_weight_nanoseconds": 24880000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1180,7 +1180,7 @@
     {
       "id": "TestCheckValidateDelegationUniversal",
       "kind": "test",
-      "duration_weight_nanoseconds": 14700000000,
+      "duration_weight_nanoseconds": 1060000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1188,7 +1188,7 @@
     {
       "id": "TestCheckValidateDelegationVarAlias",
       "kind": "test",
-      "duration_weight_nanoseconds": 18800000000,
+      "duration_weight_nanoseconds": 24130000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1196,7 +1196,7 @@
     {
       "id": "TestCheckValidateUsage",
       "kind": "test",
-      "duration_weight_nanoseconds": 17890000000,
+      "duration_weight_nanoseconds": 31270000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1204,7 +1204,7 @@
     {
       "id": "TestCheckWindowsPitfalls",
       "kind": "test",
-      "duration_weight_nanoseconds": 14430000000,
+      "duration_weight_nanoseconds": 17630000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1364,7 +1364,7 @@
     {
       "id": "TestComputeMustAliasKeys_CopyAlias",
       "kind": "test",
-      "duration_weight_nanoseconds": 13120000000,
+      "duration_weight_nanoseconds": 6880000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1372,7 +1372,7 @@
     {
       "id": "TestComputeMustAliasKeys_NestedCallPrefersCast",
       "kind": "test",
-      "duration_weight_nanoseconds": 12080000000,
+      "duration_weight_nanoseconds": 27310000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1380,7 +1380,7 @@
     {
       "id": "TestComputeMustAliasKeys_OverflowReturnsNil",
       "kind": "test",
-      "duration_weight_nanoseconds": 10380000000,
+      "duration_weight_nanoseconds": 12430000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1388,7 +1388,7 @@
     {
       "id": "TestComputeMustAliasKeys_Reassignment",
       "kind": "test",
-      "duration_weight_nanoseconds": 11240000000,
+      "duration_weight_nanoseconds": 11300000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1412,7 +1412,7 @@
     {
       "id": "TestConstructorReturnRelationUsesExactSSAEdge",
       "kind": "test",
-      "duration_weight_nanoseconds": 20000000,
+      "duration_weight_nanoseconds": 30000000,
       "sample_count": 3,
       "nested_case_count": 10,
       "maximum_nested_case_nanoseconds": 0
@@ -1492,7 +1492,7 @@
     {
       "id": "TestConstructorValidatesCrossPackage",
       "kind": "test",
-      "duration_weight_nanoseconds": 22140000000,
+      "duration_weight_nanoseconds": 29710000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1500,7 +1500,7 @@
     {
       "id": "TestConstructorValidatesCrossPackageThirdPartyType",
       "kind": "test",
-      "duration_weight_nanoseconds": 20400000000,
+      "duration_weight_nanoseconds": 25040000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1508,7 +1508,7 @@
     {
       "id": "TestConstructorValidatesException",
       "kind": "test",
-      "duration_weight_nanoseconds": 14820000000,
+      "duration_weight_nanoseconds": 17670000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1516,7 +1516,7 @@
     {
       "id": "TestConstructorValidatesGenericInstantiation",
       "kind": "test",
-      "duration_weight_nanoseconds": 20210000000,
+      "duration_weight_nanoseconds": 18160000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1524,7 +1524,7 @@
     {
       "id": "TestConstructorValidatesPackageCollision",
       "kind": "test",
-      "duration_weight_nanoseconds": 18110000000,
+      "duration_weight_nanoseconds": 23710000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1628,7 +1628,7 @@
     {
       "id": "TestEmitProtocolBenchmarkEvidence",
       "kind": "test",
-      "duration_weight_nanoseconds": 640000000,
+      "duration_weight_nanoseconds": 790000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1684,7 +1684,7 @@
     {
       "id": "TestFilteredCrossPackageGenericProtocolFacts",
       "kind": "test",
-      "duration_weight_nanoseconds": 5150000000,
+      "duration_weight_nanoseconds": 17040000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1692,7 +1692,7 @@
     {
       "id": "TestFilteredPackageExportsProtocolSummaryFact",
       "kind": "test",
-      "duration_weight_nanoseconds": 9790000000,
+      "duration_weight_nanoseconds": 13610000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1756,7 +1756,7 @@
     {
       "id": "TestFuzzSeedCoverageMatchesAuditMatrix",
       "kind": "test",
-      "duration_weight_nanoseconds": 490000000,
+      "duration_weight_nanoseconds": 260000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1780,7 +1780,7 @@
     {
       "id": "TestGeneratedAnalyzerEvidenceCorruptionEntersBeforeCheckingAndAggregation",
       "kind": "test",
-      "duration_weight_nanoseconds": 540000000,
+      "duration_weight_nanoseconds": 830000000,
       "sample_count": 3,
       "nested_case_count": 4,
       "maximum_nested_case_nanoseconds": 10000000
@@ -1804,7 +1804,7 @@
     {
       "id": "TestGenericConstraintCastCFA",
       "kind": "test",
-      "duration_weight_nanoseconds": 42050000000,
+      "duration_weight_nanoseconds": 42190000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1812,7 +1812,7 @@
     {
       "id": "TestGenericsStructural",
       "kind": "test",
-      "duration_weight_nanoseconds": 25430000000,
+      "duration_weight_nanoseconds": 22360000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -1996,7 +1996,7 @@
     {
       "id": "TestIncludePackagesFactExportOnly",
       "kind": "test",
-      "duration_weight_nanoseconds": 15070000000,
+      "duration_weight_nanoseconds": 18830000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2068,7 +2068,7 @@
     {
       "id": "TestInterprocGraphPrunesKnownNonReturningCallsAndAliases",
       "kind": "test",
-      "duration_weight_nanoseconds": 40000000,
+      "duration_weight_nanoseconds": 30000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2396,10 +2396,10 @@
     {
       "id": "TestLoadBaseline",
       "kind": "test",
-      "duration_weight_nanoseconds": 1,
+      "duration_weight_nanoseconds": 10000000,
       "sample_count": 3,
       "nested_case_count": 10,
-      "maximum_nested_case_nanoseconds": 0
+      "maximum_nested_case_nanoseconds": 10000000
     },
     {
       "id": "TestLoadBaselineCached_ReusesConfig",
@@ -2524,7 +2524,7 @@
     {
       "id": "TestMatchesExprWithAliasSet",
       "kind": "test",
-      "duration_weight_nanoseconds": 12730000000,
+      "duration_weight_nanoseconds": 12210000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2668,7 +2668,7 @@
     {
       "id": "TestPostValidationEscapeProductionBoundaries",
       "kind": "test",
-      "duration_weight_nanoseconds": 39850000000,
+      "duration_weight_nanoseconds": 48750000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2692,7 +2692,7 @@
     {
       "id": "TestPostValidationRecursiveMutationUsesLocalSummaryOnce",
       "kind": "test",
-      "duration_weight_nanoseconds": 10000000,
+      "duration_weight_nanoseconds": 1,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2740,10 +2740,10 @@
     {
       "id": "TestProtocolAdaptersFailClosedForTypedSSAUnavailability",
       "kind": "test",
-      "duration_weight_nanoseconds": 39490000000,
+      "duration_weight_nanoseconds": 111480000000,
       "sample_count": 3,
       "nested_case_count": 3,
-      "maximum_nested_case_nanoseconds": 39490000000
+      "maximum_nested_case_nanoseconds": 111480000000
     },
     {
       "id": "TestProtocolAliasAnalysisEscapeAndClosureSemantics",
@@ -2764,7 +2764,7 @@
     {
       "id": "TestProtocolAliasCounterexamples",
       "kind": "test",
-      "duration_weight_nanoseconds": 38760000000,
+      "duration_weight_nanoseconds": 49610000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2796,10 +2796,10 @@
     {
       "id": "TestProtocolCounterexamplesBlackBox",
       "kind": "test",
-      "duration_weight_nanoseconds": 7660000000,
+      "duration_weight_nanoseconds": 8690000000,
       "sample_count": 3,
       "nested_case_count": 5,
-      "maximum_nested_case_nanoseconds": 7660000000
+      "maximum_nested_case_nanoseconds": 8690000000
     },
     {
       "id": "TestProtocolDeterminismAcrossWorklistAndPackageOrder",
@@ -2828,7 +2828,7 @@
     {
       "id": "TestProtocolFindingPolicyIsConsultedOnlyAfterClassification",
       "kind": "test",
-      "duration_weight_nanoseconds": 130000000,
+      "duration_weight_nanoseconds": 120000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2884,7 +2884,7 @@
     {
       "id": "TestProtocolJoinRefinementCounterexamples",
       "kind": "test",
-      "duration_weight_nanoseconds": 39670000000,
+      "duration_weight_nanoseconds": 49490000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2900,7 +2900,7 @@
     {
       "id": "TestProtocolOracleEvidence",
       "kind": "test",
-      "duration_weight_nanoseconds": 910000000,
+      "duration_weight_nanoseconds": 790000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2908,7 +2908,7 @@
     {
       "id": "TestProtocolOracleGeneratedGoEndToEnd",
       "kind": "test",
-      "duration_weight_nanoseconds": 970000000,
+      "duration_weight_nanoseconds": 1060000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2916,7 +2916,7 @@
     {
       "id": "TestProtocolOracleGeneratedGoPerturbationsAreDetected",
       "kind": "test",
-      "duration_weight_nanoseconds": 880000000,
+      "duration_weight_nanoseconds": 790000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2932,7 +2932,7 @@
     {
       "id": "TestProtocolOracleScheduledGeneratedGo",
       "kind": "test",
-      "duration_weight_nanoseconds": 44120000000,
+      "duration_weight_nanoseconds": 56200000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2940,7 +2940,7 @@
     {
       "id": "TestProtocolOracleSolverCoreComponent",
       "kind": "test",
-      "duration_weight_nanoseconds": 590000000,
+      "duration_weight_nanoseconds": 800000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2948,7 +2948,7 @@
     {
       "id": "TestProtocolOracleUNSATNodeDoesNotPruneSiblingBranch",
       "kind": "test",
-      "duration_weight_nanoseconds": 150000000,
+      "duration_weight_nanoseconds": 90000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2956,7 +2956,7 @@
     {
       "id": "TestProtocolOracleUNSATWitnessIsDischargedEndToEnd",
       "kind": "test",
-      "duration_weight_nanoseconds": 1460000000,
+      "duration_weight_nanoseconds": 1640000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2988,7 +2988,7 @@
     {
       "id": "TestProtocolProductionArchitecture",
       "kind": "test",
-      "duration_weight_nanoseconds": 960000000,
+      "duration_weight_nanoseconds": 900000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -2996,7 +2996,7 @@
     {
       "id": "TestProtocolProductionDomainReachability",
       "kind": "test",
-      "duration_weight_nanoseconds": 280000000,
+      "duration_weight_nanoseconds": 220000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3004,23 +3004,23 @@
     {
       "id": "TestProtocolProductionRoutingEvidence",
       "kind": "test",
-      "duration_weight_nanoseconds": 102110000000,
+      "duration_weight_nanoseconds": 227990000000,
       "sample_count": 3,
       "nested_case_count": 8,
-      "maximum_nested_case_nanoseconds": 102110000000
+      "maximum_nested_case_nanoseconds": 227990000000
     },
     {
       "id": "TestProtocolRedBaselineBlackBox",
       "kind": "test",
-      "duration_weight_nanoseconds": 6750000000,
+      "duration_weight_nanoseconds": 11940000000,
       "sample_count": 3,
       "nested_case_count": 7,
-      "maximum_nested_case_nanoseconds": 6750000000
+      "maximum_nested_case_nanoseconds": 11940000000
     },
     {
       "id": "TestProtocolRedBaselineMetaContracts",
       "kind": "test",
-      "duration_weight_nanoseconds": 280000000,
+      "duration_weight_nanoseconds": 210000000,
       "sample_count": 3,
       "nested_case_count": 13,
       "maximum_nested_case_nanoseconds": 0
@@ -3060,7 +3060,7 @@
     {
       "id": "TestProtocolSummaryEffectsApplyAcrossPackages",
       "kind": "test",
-      "duration_weight_nanoseconds": 5170000000,
+      "duration_weight_nanoseconds": 17420000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3116,7 +3116,7 @@
     {
       "id": "TestProtocolSummaryFactsExportAllExplicitEffects",
       "kind": "test",
-      "duration_weight_nanoseconds": 5180000000,
+      "duration_weight_nanoseconds": 17230000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3132,7 +3132,7 @@
     {
       "id": "TestProtocolTestsUseCanonicalComponents",
       "kind": "test",
-      "duration_weight_nanoseconds": 50000000,
+      "duration_weight_nanoseconds": 20000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3156,7 +3156,7 @@
     {
       "id": "TestProtocolUnknownEffectsAfterValidation",
       "kind": "test",
-      "duration_weight_nanoseconds": 43360000000,
+      "duration_weight_nanoseconds": 53850000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3172,7 +3172,7 @@
     {
       "id": "TestProtocolValidationContinueDoesNotHideFailureBranchUse",
       "kind": "test",
-      "duration_weight_nanoseconds": 1,
+      "duration_weight_nanoseconds": 10000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3180,7 +3180,7 @@
     {
       "id": "TestProtocolValidationContinueGuardsCurrentIteration",
       "kind": "test",
-      "duration_weight_nanoseconds": 1,
+      "duration_weight_nanoseconds": 10000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3188,7 +3188,7 @@
     {
       "id": "TestProtocolValidationCounterexamplesUseConditionalSuccessEdges",
       "kind": "test",
-      "duration_weight_nanoseconds": 21570000000,
+      "duration_weight_nanoseconds": 20660000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3260,7 +3260,7 @@
     {
       "id": "TestRealAnalyzerDeterminismAcrossPackageFileAndScheduleOrder",
       "kind": "test",
-      "duration_weight_nanoseconds": 200000000,
+      "duration_weight_nanoseconds": 90000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3268,7 +3268,7 @@
     {
       "id": "TestRealAnalyzerRejectsCorruptRefinementEvidence",
       "kind": "test",
-      "duration_weight_nanoseconds": 16059999999,
+      "duration_weight_nanoseconds": 13220000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3276,7 +3276,7 @@
     {
       "id": "TestRealAnalyzerReportsRefinementIterationLimit",
       "kind": "test",
-      "duration_weight_nanoseconds": 12280000000,
+      "duration_weight_nanoseconds": 14020000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3284,7 +3284,7 @@
     {
       "id": "TestRealAnalyzerReportsRefinementQueryLimit",
       "kind": "test",
-      "duration_weight_nanoseconds": 12230000000,
+      "duration_weight_nanoseconds": 20490000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3324,7 +3324,7 @@
     {
       "id": "TestRecursiveSummaryCFA",
       "kind": "test",
-      "duration_weight_nanoseconds": 47150000000,
+      "duration_weight_nanoseconds": 60340000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3412,7 +3412,7 @@
     {
       "id": "TestSSABuilderProducesDebugRefs",
       "kind": "test",
-      "duration_weight_nanoseconds": 12080000000,
+      "duration_weight_nanoseconds": 8520000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3428,7 +3428,7 @@
     {
       "id": "TestSSAFlowAliasAddressResolution",
       "kind": "test",
-      "duration_weight_nanoseconds": 15780000000,
+      "duration_weight_nanoseconds": 13060000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3436,23 +3436,23 @@
     {
       "id": "TestSSAFlowAliasResolution",
       "kind": "test",
-      "duration_weight_nanoseconds": 29730000000,
+      "duration_weight_nanoseconds": 82480000000,
       "sample_count": 3,
       "nested_case_count": 7,
-      "maximum_nested_case_nanoseconds": 29730000000
+      "maximum_nested_case_nanoseconds": 82480000000
     },
     {
       "id": "TestSSAFlowAliasStructuralRebinding",
       "kind": "test",
-      "duration_weight_nanoseconds": 33540000000,
+      "duration_weight_nanoseconds": 79660000000,
       "sample_count": 3,
       "nested_case_count": 2,
-      "maximum_nested_case_nanoseconds": 33540000000
+      "maximum_nested_case_nanoseconds": 79660000000
     },
     {
       "id": "TestSSAFlowAliasValidateBeforeUseTransfer",
       "kind": "test",
-      "duration_weight_nanoseconds": 16780000000,
+      "duration_weight_nanoseconds": 13280000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3484,7 +3484,7 @@
     {
       "id": "TestSemanticCategorySeedRejectsUnrelatedNonemptyInput",
       "kind": "test",
-      "duration_weight_nanoseconds": 1,
+      "duration_weight_nanoseconds": 20000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3492,7 +3492,7 @@
     {
       "id": "TestSemanticCoverageCensusIsTotalAndDeterministic",
       "kind": "test",
-      "duration_weight_nanoseconds": 1,
+      "duration_weight_nanoseconds": 10000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3508,7 +3508,7 @@
     {
       "id": "TestSemanticEvidenceContract",
       "kind": "test",
-      "duration_weight_nanoseconds": 1,
+      "duration_weight_nanoseconds": 20000000,
       "sample_count": 3,
       "nested_case_count": 16,
       "maximum_nested_case_nanoseconds": 0
@@ -3516,10 +3516,10 @@
     {
       "id": "TestSemanticEvidenceProduction",
       "kind": "test",
-      "duration_weight_nanoseconds": 111310000000,
+      "duration_weight_nanoseconds": 232250000000,
       "sample_count": 3,
       "nested_case_count": 40,
-      "maximum_nested_case_nanoseconds": 111310000000
+      "maximum_nested_case_nanoseconds": 232250000000
     },
     {
       "id": "TestSemanticNodeKeyIgnoresUnrelatedSourceLayoutDrift",
@@ -3540,7 +3540,7 @@
     {
       "id": "TestSemanticSpecCFARulesRequireResourceControls",
       "kind": "test",
-      "duration_weight_nanoseconds": 10000000,
+      "duration_weight_nanoseconds": 1,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3548,15 +3548,15 @@
     {
       "id": "TestSemanticSpecHistoricalMissOracleBehavior",
       "kind": "test",
-      "duration_weight_nanoseconds": 41720000000,
+      "duration_weight_nanoseconds": 64430000000,
       "sample_count": 3,
       "nested_case_count": 6,
-      "maximum_nested_case_nanoseconds": 41720000000
+      "maximum_nested_case_nanoseconds": 64430000000
     },
     {
       "id": "TestSemanticSpecInconclusiveMetaContract",
       "kind": "test",
-      "duration_weight_nanoseconds": 30000000,
+      "duration_weight_nanoseconds": 1,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3564,7 +3564,7 @@
     {
       "id": "TestSemanticSpecInconclusiveReasonContract",
       "kind": "test",
-      "duration_weight_nanoseconds": 20000000,
+      "duration_weight_nanoseconds": 10000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3580,10 +3580,10 @@
     {
       "id": "TestSemanticSpecOracleBehavior",
       "kind": "test",
-      "duration_weight_nanoseconds": 40130000000,
+      "duration_weight_nanoseconds": 46820000000,
       "sample_count": 3,
       "nested_case_count": 28,
-      "maximum_nested_case_nanoseconds": 40130000000
+      "maximum_nested_case_nanoseconds": 46820000000
     },
     {
       "id": "TestSemanticSpecOracleCoverageSync",
@@ -3596,7 +3596,7 @@
     {
       "id": "TestSemanticSpecOracleFixturesExist",
       "kind": "test",
-      "duration_weight_nanoseconds": 60000000,
+      "duration_weight_nanoseconds": 50000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3604,7 +3604,7 @@
     {
       "id": "TestSemanticSpecRefinementMetaContract",
       "kind": "test",
-      "duration_weight_nanoseconds": 10000000,
+      "duration_weight_nanoseconds": 1,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3612,7 +3612,7 @@
     {
       "id": "TestSemanticSpecRefinementStatusContract",
       "kind": "test",
-      "duration_weight_nanoseconds": 20000000,
+      "duration_weight_nanoseconds": 1,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0
@@ -3708,7 +3708,7 @@
     {
       "id": "TestSuggestValidateAll",
       "kind": "test",
-      "duration_weight_nanoseconds": 15030000000,
+      "duration_weight_nanoseconds": 18700000000,
       "sample_count": 3,
       "nested_case_count": 0,
       "maximum_nested_case_nanoseconds": 0

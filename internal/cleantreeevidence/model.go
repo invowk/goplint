@@ -5,11 +5,9 @@
 package cleantreeevidence
 
 import (
-	"bytes"
-	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -534,6 +532,13 @@ func isCanonicalIdentifier(value string) bool {
 	return value != "" && value == strings.TrimSpace(value)
 }
 
+// decodeStrictJSONFile reads an integrity-sensitive record with json/v2
+// semantics: duplicate object members and invalid UTF-8 are rejected by
+// default, field-name matching is case-sensitive, unknown members are
+// rejected, and trailing content after the top-level value is rejected. All
+// records read here are produced by writers in this package (json.Marshal
+// output is stable across v1/v2), so case-sensitive matching aligns with the
+// emitted snake_case tags.
 func decodeStrictJSONFile(path string, target any) error {
 	if err := requireRegularFile(path); err != nil {
 		return err
@@ -542,16 +547,8 @@ func decodeStrictJSONFile(path string, target any) error {
 	if err != nil {
 		return fmt.Errorf("read JSON file %q: %w", path, err)
 	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
+	if err := jsonv2.Unmarshal(data, target, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return fmt.Errorf("decode JSON file %q: %w", path, err)
-	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		if err == nil {
-			return errors.New("multiple JSON values are not allowed")
-		}
-		return fmt.Errorf("decode trailing JSON: %w", err)
 	}
 	return nil
 }

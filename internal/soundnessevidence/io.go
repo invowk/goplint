@@ -3,14 +3,13 @@
 package soundnessevidence
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -185,6 +184,12 @@ func bindingFromLookup(lookupEnv func(string) (string, bool)) (ObservationBindin
 	return binding, nil
 }
 
+// readStrictJSONFile decodes an integrity-sensitive evidence record with
+// json/v2 semantics: duplicate object members and invalid UTF-8 are rejected
+// by default, field-name matching is case-sensitive, unknown members are
+// rejected, and trailing content after the top-level value is rejected.
+// Evidence records are produced by writers in this package with snake_case
+// tags, so case-sensitive matching aligns with emitted output.
 func readStrictJSONFile(ctx context.Context, path string, target any) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("read JSON file %s before I/O: %w", path, err)
@@ -196,16 +201,8 @@ func readStrictJSONFile(ctx context.Context, path string, target any) error {
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("read JSON file %s after I/O: %w", path, err)
 	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(target); err != nil {
+	if err := jsonv2.Unmarshal(data, target, jsonv2.RejectUnknownMembers(true)); err != nil {
 		return fmt.Errorf("decode JSON: %w", err)
-	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		if err == nil {
-			return errors.New("multiple JSON values are not allowed")
-		}
-		return fmt.Errorf("decode trailing JSON: %w", err)
 	}
 	return nil
 }
