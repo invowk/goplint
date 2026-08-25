@@ -79,6 +79,9 @@ if [[ -n "${GOPLINT_REPOSITORY_AUDIT_PATH:-}" ]]; then
     echo "bound repository audit is missing: $GOPLINT_REPOSITORY_AUDIT_PATH" >&2
     exit 1
   fi
+  # The consumer binding digests bin/goplint; rebuild it so a distributed
+  # worker on a fresh checkout reproduces the producer's analyzer digest.
+  make -s -C "$ROOT_DIR" build-goplint
   (
     cd "$ROOT_DIR/tools/goplint"
     go run ./cmd/repository-audit -mode full-scan
