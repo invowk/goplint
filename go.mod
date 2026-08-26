@@ -3,7 +3,7 @@ module github.com/invowk/goplint
 go 1.27.0
 
 require (
-	cuelang.org/go v0.16.1
+	cuelang.org/go v0.17.1
 	github.com/BurntSushi/toml v1.6.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	golang.org/x/tools v0.49.0
