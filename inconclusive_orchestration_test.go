@@ -27,7 +27,7 @@ func TestInconclusiveSuppressionOrchestration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("os.Getwd() error: %v", err)
 	}
-	repositoryRoot := filepath.Clean(filepath.Join(moduleRoot, "..", ".."))
+	repositoryRoot := moduleRoot
 
 	t.Run("real analyzer ignores matching mixed-category baseline", func(t *testing.T) {
 		proveRealAnalyzerInconclusiveIgnoresBaseline(t, moduleRoot)
@@ -232,7 +232,7 @@ func proveCISurface(t *testing.T, repositoryRoot string) {
 func proveAggregateSurface(t *testing.T, repositoryRoot string) {
 	t.Helper()
 
-	manifestPath := filepath.Join(repositoryRoot, "tools", "goplint", "spec", "soundness-gate.v1.json")
+	manifestPath := filepath.Join(repositoryRoot, "spec", "soundness-gate.v1.json")
 	manifest, _, err := soundnessgate.LoadManifest(t.Context(), manifestPath)
 	if err != nil {
 		t.Fatalf("LoadManifest() error: %v", err)
@@ -264,7 +264,7 @@ func proveAggregateSurface(t *testing.T, repositoryRoot string) {
 	}
 	makeOutput := makeDryRun(t, repositoryRoot, "check-goplint-soundness-semantic")
 	line := commandLineContaining(t, makeOutput, "go run ./cmd/soundness-gate")
-	if !strings.Contains(line, "-profile semantic") || !strings.Contains(line, "-manifest tools/goplint/spec/soundness-gate.v1.json") {
+	if !strings.Contains(line, "-profile semantic") || !strings.Contains(line, "-manifest spec/soundness-gate.v1.json") {
 		t.Fatalf("semantic Make target does not execute reviewed aggregate manifest: %s", line)
 	}
 }

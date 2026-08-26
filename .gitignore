@@ -3,3 +3,7 @@
 
 # Build output
 /bin/
+
+# Stray compiled command binaries
+/repository-audit
+/soundness-gate

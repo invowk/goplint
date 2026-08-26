@@ -23,7 +23,7 @@ import (
 
 func main() {
 	moduleRoot := flag.String("module-root", ".", "goplint Go module root")
-	repositoryRoot := flag.String("repository-root", "../..", "repository root for exact-tree binding")
+	repositoryRoot := flag.String("repository-root", ".", "repository root for exact-tree binding")
 	packagePath := flag.String("package", "./goplint", "analyzer package")
 	timingPath := flag.String("timings", "spec/goplint-test-timings.v1.json", "reviewed timing manifest")
 	shardCount := flag.Int("shards", racerepeat.DefaultShardCount, "analyzer shard count")

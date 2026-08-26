@@ -4,14 +4,14 @@
   "checks": [
     {
       "target": "check-goplint-gate-contract",
-      "evidence": "tools/goplint/cmd/gate-contract/main.go",
+      "evidence": "cmd/gate-contract/main.go",
       "markers": [
         "validateContract"
       ]
     },
     {
       "target": "check-goplint-production-integration",
-      "evidence": "tools/goplint/testdata/subgates/production-integration.v1.json",
+      "evidence": "testdata/subgates/production-integration.v1.json",
       "markers": [
         "production-tests",
         "TestRealAnalyzerDeterminismAcrossPackageFileAndScheduleOrder",
@@ -25,37 +25,37 @@
       "tests": [
         {
           "name": "TestRealAnalyzerDeterminismAcrossPackageFileAndScheduleOrder",
-          "evidence": "tools/goplint/goplint/protocol_real_determinism_test.go"
+          "evidence": "goplint/protocol_real_determinism_test.go"
         },
         {
           "name": "TestProtocolProductionDomainReachability",
-          "evidence": "tools/goplint/goplint/protocol_production_integration_test.go"
+          "evidence": "goplint/protocol_production_integration_test.go"
         },
         {
           "name": "TestProtocolValidationCounterexamplesUseConditionalSuccessEdges",
-          "evidence": "tools/goplint/goplint/integration_supplementary_test.go"
+          "evidence": "goplint/integration_supplementary_test.go"
         },
         {
           "name": "TestProtocolUnknownEffectsAfterValidation",
-          "evidence": "tools/goplint/goplint/cfa_integration_test.go"
+          "evidence": "goplint/cfa_integration_test.go"
         },
         {
           "name": "TestTypedSSAAvailabilityDistinguishesFailureClasses",
-          "evidence": "tools/goplint/goplint/cfa_ssa_builder_test.go"
+          "evidence": "goplint/cfa_ssa_builder_test.go"
         },
         {
           "name": "TestRecursiveSummaryCFA",
-          "evidence": "tools/goplint/goplint/cfa_integration_test.go"
+          "evidence": "goplint/cfa_integration_test.go"
         },
         {
           "name": "TestGenericConstraintCastCFA",
-          "evidence": "tools/goplint/goplint/cfa_integration_test.go"
+          "evidence": "goplint/cfa_integration_test.go"
         }
       ]
     },
     {
       "target": "check-goplint-counterexamples",
-      "evidence": "tools/goplint/testdata/subgates/counterexamples.v1.json",
+      "evidence": "testdata/subgates/counterexamples.v1.json",
       "markers": [
         "counterexamples",
         "TestProtocolRedBaselineBlackBox",
@@ -74,57 +74,57 @@
       "tests": [
         {
           "name": "TestProtocolRedBaselineBlackBox",
-          "evidence": "tools/goplint/goplint/protocol_red_baseline_test.go"
+          "evidence": "goplint/protocol_red_baseline_test.go"
         },
         {
           "name": "TestProtocolRedBaselineMetaContracts",
-          "evidence": "tools/goplint/goplint/protocol_red_baseline_meta_test.go"
+          "evidence": "goplint/protocol_red_baseline_meta_test.go"
         },
         {
           "name": "TestProtocolCounterexamplesBlackBox",
-          "evidence": "tools/goplint/goplint/protocol_counterexamples_blackbox_test.go"
+          "evidence": "goplint/protocol_counterexamples_blackbox_test.go"
         },
         {
           "name": "TestProtocolValidationCounterexamplesUseConditionalSuccessEdges",
-          "evidence": "tools/goplint/goplint/integration_supplementary_test.go"
+          "evidence": "goplint/integration_supplementary_test.go"
         },
         {
           "name": "TestConstructorSSAIdentityUsesReachingReturnObject",
-          "evidence": "tools/goplint/goplint/constructor_ssa_identity_test.go"
+          "evidence": "goplint/constructor_ssa_identity_test.go"
         },
         {
           "name": "TestProtocolJoinRefinementCounterexamples",
-          "evidence": "tools/goplint/goplint/cfa_integration_test.go"
+          "evidence": "goplint/cfa_integration_test.go"
         },
         {
           "name": "TestTypedSSAAvailabilityDistinguishesFailureClasses",
-          "evidence": "tools/goplint/goplint/cfa_ssa_builder_test.go"
+          "evidence": "goplint/cfa_ssa_builder_test.go"
         },
         {
           "name": "TestRecursiveSummaryCFA",
-          "evidence": "tools/goplint/goplint/cfa_integration_test.go"
+          "evidence": "goplint/cfa_integration_test.go"
         },
         {
           "name": "TestGenericConstraintCastCFA",
-          "evidence": "tools/goplint/goplint/cfa_integration_test.go"
+          "evidence": "goplint/cfa_integration_test.go"
         },
         {
           "name": "TestProtocolUnknownEffectsAfterValidation",
-          "evidence": "tools/goplint/goplint/cfa_integration_test.go"
+          "evidence": "goplint/cfa_integration_test.go"
         },
         {
           "name": "TestSSAConstraintExtractionStopsCooperatively",
-          "evidence": "tools/goplint/goplint/cfa_cooperative_control_test.go"
+          "evidence": "goplint/cfa_cooperative_control_test.go"
         },
         {
           "name": "TestIFDSTabulationStopsCooperativelyBeforeAcceptingSafe",
-          "evidence": "tools/goplint/goplint/cfa_cooperative_control_test.go"
+          "evidence": "goplint/cfa_cooperative_control_test.go"
         }
       ]
     },
     {
       "target": "check-goplint-architecture",
-      "evidence": "tools/goplint/testdata/subgates/architecture.v1.json",
+      "evidence": "testdata/subgates/architecture.v1.json",
       "markers": [
         "TestProtocolProductionArchitecture",
         "TestProtocolFindingPolicyIsConsultedOnlyAfterClassification",
@@ -133,35 +133,35 @@
     },
     {
       "target": "check-goplint-catalog",
-      "evidence": "tools/goplint/scripts/check-semantic-spec.sh",
+      "evidence": "scripts/check-semantic-spec.sh",
       "markers": [
         "TestSemanticSpec"
       ]
     },
     {
       "target": "check-goplint-protocol-oracle",
-      "evidence": "tools/goplint/scripts/check-protocol-oracle.sh",
+      "evidence": "scripts/check-protocol-oracle.sh",
       "markers": [
         "TestProtocolOracleSolverCoreComponent"
       ]
     },
     {
       "target": "check-goplint-end-to-end-oracle",
-      "evidence": "tools/goplint/scripts/check-protocol-oracle-e2e.sh",
+      "evidence": "scripts/check-protocol-oracle-e2e.sh",
       "markers": [
         "TestProtocolOracleGeneratedGoEndToEnd"
       ]
     },
     {
       "target": "check-goplint-fuzz-seeds",
-      "evidence": "tools/goplint/scripts/check-fuzz-seeds.sh",
+      "evidence": "scripts/check-fuzz-seeds.sh",
       "markers": [
         "TestFuzzSeedCoverageMatchesAuditMatrix"
       ]
     },
     {
       "target": "check-cfg-refinement",
-      "evidence": "tools/goplint/testdata/subgates/cfg-refinement.v1.json",
+      "evidence": "testdata/subgates/cfg-refinement.v1.json",
       "markers": [
         "TestProtocolJoinRefinementCounterexamples",
         "TestParseFindingsJSONLIgnoresNonFindingKinds"
@@ -169,7 +169,7 @@
     },
     {
       "target": "check-goplint-determinism",
-      "evidence": "tools/goplint/testdata/subgates/determinism.v1.json",
+      "evidence": "testdata/subgates/determinism.v1.json",
       "markers": [
         "TestRealAnalyzerDeterminismAcrossPackageFileAndScheduleOrder",
         "TestCategoryDeterminismEvidence"
@@ -177,14 +177,14 @@
     },
     {
       "target": "check-goplint-targeted-mutation",
-      "evidence": "tools/goplint/cmd/targeted-mutation/runner.go",
+      "evidence": "cmd/targeted-mutation/runner.go",
       "markers": [
         "runControlGuards"
       ]
     },
     {
       "target": "check-goplint-race-repeat",
-      "evidence": "tools/goplint/scripts/check-race-repeat.sh",
+      "evidence": "scripts/check-race-repeat.sh",
       "markers": [
         "-race"
       ]
@@ -198,7 +198,7 @@
     },
     {
       "target": "check-goplint-benchmarks",
-      "evidence": "tools/goplint/scripts/check-cfg-bench-thresholds.sh",
+      "evidence": "scripts/check-cfg-bench-thresholds.sh",
       "markers": [
         "median_five"
       ]
@@ -206,31 +206,26 @@
   ],
   "non_vacuity_markers": [
     {
-      "evidence": "tools/goplint/goplint/protocol_oracle_generated_test.go",
+      "evidence": "goplint/protocol_oracle_generated_test.go",
       "marker": "solver-core component corpus is empty"
     },
     {
-      "evidence": "tools/goplint/goplint/semantic_catalog_registry_test.go",
+      "evidence": "goplint/semantic_catalog_registry_test.go",
       "marker": "has no categories"
     },
     {
-      "evidence": "tools/goplint/cmd/targeted-mutation/runner.go",
+      "evidence": "cmd/targeted-mutation/runner.go",
       "marker": "post-mutation control"
     },
     {
-      "evidence": "tools/goplint/cmd/targeted-mutation/runner.go",
+      "evidence": "cmd/targeted-mutation/runner.go",
       "marker": "attributedGoTestFailures"
     }
   ],
   "required_ci_triggers": [
-    ".github/workflows/**",
-    "docs/goplint/**",
-    "openspec/changes/**",
-    "openspec/specs/goplint-soundness-assurance/**",
-    ".github/workflows/goplint-fuzz.yml",
-    ".github/workflows/mutation-testing.yml",
     "overwrite: true",
     "schedule:",
-    "soundness-aggregate-output/telemetry.json"
+    "soundness-aggregate-output/telemetry.json",
+    "workflow_dispatch:"
   ]
 }

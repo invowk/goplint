@@ -1,6 +1,6 @@
 {
   "format_version": 2,
-  "audit_matrix": "../../../../../openspec/changes/archive/2026-07-19-complete-goplint-soundness-hardening/evidence/audit-matrix.v1.json",
+  "audit_matrix": "../../../spec/evidence/audit-matrix.v1.json",
   "entries": [
     {"finding": "conditional-validation-edge", "registration_id": "unvalidated-cast.fuzz", "target": "FuzzIFDSTabulation", "seed": "conditional-validation-edge", "seed_digest": "sha256:eb1a5f14cca302f0185006b213f56f22270b116db12956d4449d53a60a938e14", "feature_ids": ["alias-none", "call-sites-1", "condition-non-nil", "constraint-none", "fact-0-needs-validation", "fact-1-needs-validation", "matched-return", "operation-validate", "procedures-2", "topology-call-return", "unknown-none"], "property": "integrated-analyzer-reference-agreement", "expected_observation": "violation-detected"},
     {"finding": "constructor-return-identity", "target": "FuzzInterprocSupergraphConstruction", "seed": "constructor-return-identity", "seed_digest": "sha256:f0a92c4e2451295f9f701a59e32196470aa2b1d5cc9618a99a68d93e255c1fec", "feature_ids": ["alias-source", "matched-call-return", "multi-procedure", "validation-source"], "property": "typed-supergraph-preserves-generated-topology", "expected_observation": "call-return-observed"},

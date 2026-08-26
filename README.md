@@ -71,7 +71,7 @@ make check-goplint-soundness-complete
 
 Generation consumes the reviewed v4 path selection and command plan, invokes
 the `semantic` profile rather than `complete` to avoid recursive freshness
-verification, and writes only the retained `clean-tree-run.v4.json`
+verification, and writes only the retained `clean-tree-run.v5.json`
 dual-digest record. When only documentation-class prose drifted since a valid
 record, `make rebind-goplint-clean-tree-evidence` re-binds it in seconds;
 semantic-content drift makes re-binding fail closed naming the drifted paths.
@@ -81,7 +81,7 @@ inline-ignored.
 Profile routing, resource discovery and overrides, timing refresh, smoke versus
 certification, immutable plan/bundle schemas, CI reproduction, telemetry, and
 distributed failure diagnostics are documented in
-[`../../docs/goplint/soundness-gate-execution.md`](../../docs/goplint/soundness-gate-execution.md).
+[`../../docs/goplint/soundness-gate-execution.md`](docs/goplint/soundness-gate-execution.md).
 
 The mutation-kernel coverage subgate binds the semantic-rules catalog, the
 blocking v2 profile, and its mutant catalog. Each category whose semantic rule
@@ -183,7 +183,7 @@ analyzer for the authoritative list of structural check flags.
 
 ## Exceptions
 
-Intentional boundaries belong in `tools/goplint/exceptions.toml`:
+Intentional boundaries belong in `exceptions.toml`:
 
 ```toml
 [[exceptions]]
@@ -204,7 +204,7 @@ dates. Prefer precise patterns and actionable reasons.
 
 ## Baseline semantics
 
-`tools/goplint/baseline.toml` records accepted findings by stable semantic ID:
+`baseline.toml` records accepted findings by stable semantic ID:
 
 ```toml
 [primitive]
@@ -329,8 +329,8 @@ Important implementation surfaces:
   limits separate; allocation, memory, state-count, and population checks stay
   blocking in both policies.
 
-See [the current semantic reference](../../docs/goplint/current-techniques-and-semantics.md)
-and [the evidence index](../../docs/goplint/evidence-index.md) for the maintained
+See [the current semantic reference](docs/goplint/current-techniques-and-semantics.md)
+and [the evidence index](docs/goplint/evidence-index.md) for the maintained
 design boundary and verification map.
 
 ## License

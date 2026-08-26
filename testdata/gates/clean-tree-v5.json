@@ -1,86 +1,38 @@
 {
   "format_version": 4,
-  "ownership_manifest_path": "tools/goplint/spec/soundness-ownership.v2.json",
+  "ownership_manifest_path": "spec/soundness-ownership.v2.json",
   "inputs": [
     {
       "name": "benchmark-thresholds",
-      "path": "tools/goplint/bench/thresholds.toml"
-    },
-    {
-      "name": "change-dependencies",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/change-dependencies.v1.json"
+      "path": "bench/thresholds.toml"
     },
     {
       "name": "evidence-index",
       "path": "docs/goplint/evidence-index.md"
     },
     {
-      "name": "finding-id-inventory",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/finding-id-producer-inventory.v1.json"
-    },
-    {
-      "name": "mutation-manifest",
-      "path": "tools/goplint/testdata/mutation/soundness-mutants-v2.json"
-    },
-    {
-      "name": "mutation-profile",
-      "path": "tools/goplint/testdata/mutation/profiles/blocking-v2.json"
-    },
-    {
-      "name": "protocol-oracle-bounds",
-      "path": "tools/goplint/spec/protocol-oracle-bounds.v1.json"
-    },
-    {
-      "name": "red-baseline-patch",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/red-baseline-probes.v1.patch"
-    },
-    {
-      "name": "red-baseline-reconstruction",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/red-baseline-reconstruction.v1.json"
-    },
-    {
-      "name": "residual-finding-inventory",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/residual-finding-inventory.v1.json"
-    },
-    {
-      "name": "review-gap-reconciliation",
-      "path": "openspec/changes/archive/2026-07-19-close-goplint-soundness-review-gaps/evidence/cross-change-reconciliation.v2.json"
-    },
-    {
-      "name": "review-gap-red-observations",
-      "path": "openspec/changes/archive/2026-07-19-close-goplint-soundness-review-gaps/evidence/review-gap-red-observations.v1.json"
-    },
-    {
       "name": "semantic-reference",
       "path": "docs/goplint/current-techniques-and-semantics.md"
     },
     {
+      "name": "mutation-manifest",
+      "path": "testdata/mutation/soundness-mutants-v2.json"
+    },
+    {
+      "name": "mutation-profile",
+      "path": "testdata/mutation/profiles/blocking-v2.json"
+    },
+    {
+      "name": "protocol-oracle-bounds",
+      "path": "spec/protocol-oracle-bounds.v1.json"
+    },
+    {
       "name": "soundness-ownership",
-      "path": "tools/goplint/spec/soundness-ownership.v2.json"
+      "path": "spec/soundness-ownership.v2.json"
     },
     {
-      "name": "stable-id-migration",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/stable-id-migration.v2.json"
-    },
-    {
-      "name": "stable-id-population-review",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/stable-id-population-review.v1.json"
-    },
-    {
-      "name": "stable-id-pre-v4",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/stable-id-pre-v4.jsonl"
-    },
-    {
-      "name": "stable-id-v4-scan-1",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/stable-id-v4-scan-1.jsonl"
-    },
-    {
-      "name": "stable-id-v4-scan-2",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/stable-id-v4-scan-2.jsonl"
-    },
-    {
-      "name": "targeted-mutation-run",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/targeted-mutation-run.v1.json"
+      "name": "audit-matrix",
+      "path": "spec/evidence/audit-matrix.v1.json"
     }
   ],
   "toolchain": [
@@ -119,28 +71,8 @@
   ],
   "task_ledgers": [
     {
-      "name": "complete-goplint-soundness-hardening",
-      "path": "openspec/changes/archive/2026-07-19-complete-goplint-soundness-hardening/tasks.md",
-      "expected_pending": []
-    },
-    {
-      "name": "close-goplint-soundness-review-gaps",
-      "path": "openspec/changes/archive/2026-07-19-close-goplint-soundness-review-gaps/tasks.md",
-      "expected_pending": []
-    },
-    {
-      "name": "close-residual-goplint-soundness-gaps",
-      "path": "openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/tasks.md",
-      "expected_pending": []
-    },
-    {
-      "name": "accelerate-goplint-soundness-gates",
-      "path": "openspec/changes/archive/2026-07-23-accelerate-goplint-soundness-gates/tasks.md",
-      "expected_pending": []
-    },
-    {
-      "name": "rescope-goplint-soundness-triggers",
-      "path": "openspec/changes/archive/2026-07-24-rescope-goplint-soundness-triggers/tasks.md",
+      "name": "bootstrap-standalone-goplint",
+      "path": "docs/ledgers/bootstrap-standalone-goplint/tasks.md",
       "expected_pending": []
     }
   ],
@@ -148,7 +80,7 @@
     "reviewed_exclusions": []
   },
   "counterexamples": {
-    "path": "tools/goplint/testdata/gates/clean-tree-counterexamples-v4.json",
+    "path": "testdata/gates/clean-tree-counterexamples-v4.json",
     "required": [
       {
         "id": "conditional-summary-result",
@@ -213,44 +145,23 @@
       "name": "build",
       "args": [
         "make",
-        "build",
         "build-goplint"
       ],
       "timeout_minutes": 20
     },
     {
-      "name": "root-tests",
-      "args": [
-        "make",
-        "test"
-      ],
-      "timeout_minutes": 90
-    },
-    {
-      "name": "goplint-tests",
-      "directory": "tools/goplint",
+      "name": "module-tests",
       "args": [
         "go",
         "test",
         "-count=1",
-        "-timeout=20m",
+        "-timeout=25m",
         "./..."
       ],
-      "timeout_minutes": 30
+      "timeout_minutes": 40
     },
     {
-      "name": "root-tidy-diff",
-      "args": [
-        "go",
-        "mod",
-        "tidy",
-        "-diff"
-      ],
-      "timeout_minutes": 10
-    },
-    {
-      "name": "goplint-tidy-diff",
-      "directory": "tools/goplint",
+      "name": "tidy-diff",
       "args": [
         "go",
         "mod",
@@ -300,35 +211,10 @@
       "timeout_minutes": 10
     },
     {
-      "name": "agent-docs",
+      "name": "docs-guard",
       "args": [
         "make",
-        "check-agent-docs"
-      ],
-      "timeout_minutes": 10
-    },
-    {
-      "name": "openspec-all",
-      "args": [
-        "openspec",
-        "validate",
-        "--all",
-        "--strict",
-        "--no-interactive"
-      ],
-      "timeout_minutes": 10
-    },
-    {
-      "name": "diff-check",
-      "args": [
-        "git",
-        "diff",
-        "--check",
-        "HEAD^",
-        "HEAD",
-        "--",
-        ".",
-        ":(exclude)openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence/red-baseline-probes.v1.patch"
+        "check-goplint-docs"
       ],
       "timeout_minutes": 10
     },
@@ -344,8 +230,8 @@
   "aggregate_report": {
     "command_name": "soundness-semantic",
     "output_file": "soundness-semantic.json",
-    "manifest_path": "tools/goplint/spec/soundness-gate.v1.json",
-    "registry_path": "tools/goplint/spec/semantic-evidence.v2.json",
+    "manifest_path": "spec/soundness-gate.v1.json",
+    "registry_path": "spec/semantic-evidence.v2.json",
     "profile": "semantic"
   },
   "mutation_proofs": [

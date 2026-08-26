@@ -117,7 +117,7 @@ func resolveClaimToken(index *artifactIndex, document, docDir string, lineNumber
 // countPlainWordAnchors counts identifier-shaped plain words in a claim row
 // that name known artifacts: exact manifest identifiers (any shape, since the
 // registry is finite and curated), or camel-case/underscore words occurring
-// in the tools/goplint Go sources. Plain lowercase prose never anchors
+// in the module Go sources. Plain lowercase prose never anchors
 // through the Go identifier scan.
 func countPlainWordAnchors(index *artifactIndex, claimText string) int {
 	anchors := 0

@@ -21,8 +21,8 @@ import (
 )
 
 func main() {
-	root := flag.String("root", "../..", "repository root")
-	manifest := flag.String("manifest", "tools/goplint/spec/soundness-gate.v1.json", "root-relative aggregate manifest")
+	root := flag.String("root", ".", "repository root")
+	manifest := flag.String("manifest", "spec/soundness-gate.v1.json", "root-relative aggregate manifest")
 	profile := flag.String("profile", string(soundnessgate.ProfileSemantic), "reviewed manifest profile: consumer, semantic, or complete")
 	telemetry := flag.String("telemetry", "", "absolute path outside the workspace for versioned execution telemetry")
 	executor := flag.String("executor", executorDefault(), "executor: plan-serial or parallel")

@@ -85,7 +85,7 @@ func TestProductionReportersCannotReintroduceLiteralPopulationCounts(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	repositoryRoot := filepath.Clean(filepath.Join(moduleRoot, "..", ".."))
+	repositoryRoot := moduleRoot
 	paths := []string{filepath.Join(repositoryRoot, "Makefile")}
 	scripts, err := filepath.Glob(filepath.Join(moduleRoot, "scripts", "*.sh"))
 	if err != nil {

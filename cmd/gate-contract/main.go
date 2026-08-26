@@ -47,7 +47,7 @@ type fileReader func(path string) ([]byte, error)
 
 func main() {
 	contractPath := flag.String("contract", "testdata/gates/soundness-v1.json", "soundness gate contract")
-	root := flag.String("root", "../..", "repository root")
+	root := flag.String("root", ".", "repository root")
 	flag.Parse()
 	contract, err := loadContract(*contractPath)
 	if err == nil {

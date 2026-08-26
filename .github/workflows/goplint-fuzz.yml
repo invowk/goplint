@@ -1,0 +1,106 @@
+name: Goplint Fuzz
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      fuzztime:
+        description: "Fuzz duration per target"
+        type: choice
+        default: "10m"
+        options:
+          - "1m"
+          - "5m"
+          - "10m"
+          - "30m"
+
+permissions:
+  contents: read
+
+jobs:
+  scheduled-oracle-contract:
+    name: Scheduled oracle contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Validate manifest-derived corpus
+        run: go test -count=1 ./internal/protocoloracle -run '^TestScheduledProfileIsStrictBlockingSuperset$'
+
+  scheduled-oracle:
+    name: Scheduled oracle shard ${{ matrix.shard }}
+    needs: scheduled-oracle-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: goplint-scheduled-oracle-${{ github.ref }}-${{ matrix.shard }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Compare generated programs with production analyzer
+        env:
+          GOPLINT_PROTOCOL_ORACLE_SHARD: ${{ matrix.shard }}
+        run: make check-goplint-protocol-oracle-scheduled
+
+  fuzz:
+    name: ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: goplint-fuzz-${{ github.ref }}-${{ matrix.target }}
+      cancel-in-progress: true
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - FuzzInterprocSupergraphConstruction
+          - FuzzIFDSTabulation
+          - FuzzProtocolSummaryFactSerialization
+          - FuzzSSAConstraintNormalizationEvidence
+          - FuzzSemanticCatalogDecoding
+          - FuzzFindingDeterminism
+          - FuzzSemanticCategoryEvidence
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run bounded fuzz target
+        env:
+          FUZZ_TIME: ${{ inputs.fuzztime || '10m' }}
+          FUZZ_TARGET: ${{ matrix.target }}
+        run: go test ./goplint -run '^$' -fuzz="^${FUZZ_TARGET}$" -fuzztime="${FUZZ_TIME}" -parallel=2 -timeout=35m
+
+      - name: Upload fuzz reproducers
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-reproducer-${{ matrix.target }}
+          path: goplint/testdata/fuzz/${{ matrix.target }}/
+          if-no-files-found: warn

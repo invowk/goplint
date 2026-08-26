@@ -1927,6 +1927,10 @@
         {
           "fixture": "constructorvalidates",
           "symbol": "NewDiscardedHelperResult"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewHelperOriginUnchecked"
         }
       ],
       "must_not_report": [
@@ -1945,6 +1949,18 @@
         {
           "fixture": "constructorvalidates",
           "symbol": "NewInverseValidationGuard"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewHelperOriginChecked"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewHelperOriginPassthroughChecked"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewHelperOriginPointerChecked"
         }
       ],
       "must_be_inconclusive": [
@@ -1966,6 +1982,10 @@
         {
           "fixture": "constructorvalidates",
           "symbol": "NewConfig"
+        },
+        {
+          "fixture": "constructorvalidates",
+          "symbol": "NewHelperOriginChecked"
         }
       ],
       "must_be_inconclusive": [

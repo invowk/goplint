@@ -2,14 +2,14 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # The repository full-scan target is parameterizable so a standalone goplint
 # checkout can certify against an external consumer corpus. Defaults preserve
 # this repository's canonical invowk scan.
 SCAN_ROOT="${GOPLINT_SCAN_ROOT:-$ROOT_DIR}"
-SCAN_BASELINE="${GOPLINT_SCAN_BASELINE:-tools/goplint/baseline.toml}"
-SCAN_EXCEPTIONS="${GOPLINT_SCAN_EXCEPTIONS:-tools/goplint/exceptions.toml}"
-read -r -a SCAN_PACKAGES <<<"${GOPLINT_SCAN_PACKAGES:-./cmd/... ./internal/... ./pkg/...}"
+SCAN_BASELINE="${GOPLINT_SCAN_BASELINE:-baseline.toml}"
+SCAN_EXCEPTIONS="${GOPLINT_SCAN_EXCEPTIONS:-exceptions.toml}"
+read -r -a SCAN_PACKAGES <<<"${GOPLINT_SCAN_PACKAGES:-./...}"
 PHASE="all"
 if [[ "${1:-}" == "--phase" ]]; then
   PHASE="${2:-}"
@@ -19,7 +19,7 @@ if [[ "$PHASE" != "all" && "$PHASE" != "algorithms" && "$PHASE" != "full-scan" ]
   echo "invalid certification phase: $PHASE (want all, algorithms, or full-scan)" >&2
   exit 2
 fi
-THRESHOLDS_FILE="${1:-${GOPLINT_BENCH_THRESHOLDS:-$ROOT_DIR/tools/goplint/bench/thresholds.toml}}"
+THRESHOLDS_FILE="${1:-${GOPLINT_BENCH_THRESHOLDS:-$ROOT_DIR/bench/thresholds.toml}}"
 if [[ "$THRESHOLDS_FILE" != /* ]]; then
   THRESHOLDS_FILE="$ROOT_DIR/$THRESHOLDS_FILE"
 fi
@@ -30,7 +30,7 @@ if [[ ! -f "$THRESHOLDS_FILE" ]]; then
 fi
 
 (
-  cd "$ROOT_DIR/tools/goplint"
+  cd "$ROOT_DIR"
   go run ./cmd/benchmark-policy -manifest "$THRESHOLDS_FILE" -policy certification
 )
 
@@ -111,7 +111,7 @@ if [[ "$PHASE" == "all" || "$PHASE" == "algorithms" ]]; then
   )
   benchmark_pattern="^($(IFS='|'; echo "${benchmarks[*]}"))$"
   bench_output="$({
-    cd "$ROOT_DIR/tools/goplint"
+    cd "$ROOT_DIR"
     "${SCRIPT_DIR}/soundness-go-test.sh" -run '^$' -bench "$benchmark_pattern" -benchmem -count="$samples" ./goplint
   })"
   echo "$bench_output"
@@ -180,7 +180,7 @@ if [[ "$PHASE" == "all" || "$PHASE" == "algorithms" ]]; then
 
   if [[ $status -eq 0 ]]; then
     (
-      cd "$ROOT_DIR/tools/goplint"
+      cd "$ROOT_DIR"
       "${SCRIPT_DIR}/soundness-go-test.sh" -count=1 ./goplint -run '^TestEmitProtocolBenchmarkEvidence$'
     )
   fi
@@ -231,7 +231,7 @@ if [[ "$PHASE" == "all" || "$PHASE" == "full-scan" ]]; then
 
   if [[ $status -eq 0 ]]; then
     (
-      cd "$ROOT_DIR/tools/goplint"
+      cd "$ROOT_DIR"
       go run ./cmd/subgate-report "${scan_observation_args[@]}"
     )
   fi

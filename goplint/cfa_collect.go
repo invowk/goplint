@@ -244,14 +244,18 @@ func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) ma
 		return key, event, true
 	}
 
+	// pendingClosureBinding stages parallel-assignment resolutions so binding maps
+	// update only after all right-hand sides resolve against pre-assignment
+	// state. Declared once per function: duplicate local type names collide in
+	// stable finding identities.
+	type pendingClosureBinding struct {
+		key   string
+		event closureBindingEvent
+	}
 	ast.Inspect(body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
-			type pendingBinding struct {
-				key   string
-				event closureBindingEvent
-			}
-			pending := make([]pendingBinding, 0, len(node.Rhs))
+			pending := make([]pendingClosureBinding, 0, len(node.Rhs))
 			for i, rhs := range node.Rhs {
 				if i >= len(node.Lhs) {
 					break
@@ -264,17 +268,13 @@ func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) ma
 				if !ok {
 					continue
 				}
-				pending = append(pending, pendingBinding{key: key, event: event})
+				pending = append(pending, pendingClosureBinding{key: key, event: event})
 			}
 			for _, entry := range pending {
 				bindings[entry.key] = append(bindings[entry.key], entry.event)
 			}
 		case *ast.ValueSpec:
-			type pendingBinding struct {
-				key   string
-				event closureBindingEvent
-			}
-			pending := make([]pendingBinding, 0, len(node.Values))
+			pending := make([]pendingClosureBinding, 0, len(node.Values))
 			for i, rhs := range node.Values {
 				if i >= len(node.Names) {
 					break
@@ -283,7 +283,7 @@ func collectClosureVarBindingEvents(pass *analysis.Pass, body *ast.BlockStmt) ma
 				if !ok {
 					continue
 				}
-				pending = append(pending, pendingBinding{key: key, event: event})
+				pending = append(pending, pendingClosureBinding{key: key, event: event})
 			}
 			for _, entry := range pending {
 				bindings[entry.key] = append(bindings[entry.key], entry.event)
@@ -355,14 +355,18 @@ func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.Bloc
 		return lhsKey, event, true
 	}
 
+	// pendingMethodValueBinding stages parallel-assignment resolutions so binding maps
+	// update only after all right-hand sides resolve against pre-assignment
+	// state. Declared once per function: duplicate local type names collide in
+	// stable finding identities.
+	type pendingMethodValueBinding struct {
+		key   string
+		event validateMethodValueBindingEvent
+	}
 	ast.Inspect(body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
-			type pendingBinding struct {
-				key   string
-				event validateMethodValueBindingEvent
-			}
-			pending := make([]pendingBinding, 0, len(node.Rhs))
+			pending := make([]pendingMethodValueBinding, 0, len(node.Rhs))
 			for i, rhs := range node.Rhs {
 				if i >= len(node.Lhs) {
 					break
@@ -371,7 +375,7 @@ func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.Bloc
 				if !ok {
 					continue
 				}
-				pending = append(pending, pendingBinding{
+				pending = append(pending, pendingMethodValueBinding{
 					key:   key,
 					event: event,
 				})
@@ -380,11 +384,7 @@ func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.Bloc
 				bindings[entry.key] = append(bindings[entry.key], entry.event)
 			}
 		case *ast.ValueSpec:
-			type pendingBinding struct {
-				key   string
-				event validateMethodValueBindingEvent
-			}
-			pending := make([]pendingBinding, 0, len(node.Values))
+			pending := make([]pendingMethodValueBinding, 0, len(node.Values))
 			for i, rhs := range node.Values {
 				if i >= len(node.Names) {
 					break
@@ -393,7 +393,7 @@ func collectValidateMethodValueBindingEvents(pass *analysis.Pass, body *ast.Bloc
 				if !ok {
 					continue
 				}
-				pending = append(pending, pendingBinding{
+				pending = append(pending, pendingMethodValueBinding{
 					key:   key,
 					event: event,
 				})

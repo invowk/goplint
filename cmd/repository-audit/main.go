@@ -21,12 +21,12 @@ import (
 
 func main() {
 	mode := flag.String("mode", "produce", "operation: produce, full-scan, baseline, exceptions, or review-dates")
-	root := flag.String("root", "../..", "repository root")
+	root := flag.String("root", ".", "repository root")
 	analyzer := flag.String("analyzer", "bin/goplint", "root-relative analyzer binary")
-	baseline := flag.String("baseline", "tools/goplint/baseline.toml", "root-relative baseline")
-	exceptions := flag.String("exceptions", "tools/goplint/exceptions.toml", "root-relative exceptions config")
-	manifest := flag.String("semantic-manifest", "tools/goplint/spec/soundness-gate.v1.json", "root-relative governing semantic manifest")
-	packages := flag.String("packages", "./cmd/...,./internal/...,./pkg/...", "comma-separated canonical package patterns")
+	baseline := flag.String("baseline", "baseline.toml", "root-relative baseline")
+	exceptions := flag.String("exceptions", "exceptions.toml", "root-relative exceptions config")
+	manifest := flag.String("semantic-manifest", "spec/soundness-gate.v1.json", "root-relative governing semantic manifest")
+	packages := flag.String("packages", "./...", "comma-separated canonical package patterns")
 	cachePolicy := flag.String("cache-policy", "inherited", "reviewed analyzer cache policy label")
 	output := flag.String("output", os.Getenv("GOPLINT_REPOSITORY_AUDIT_PATH"), "absolute immutable repository-audit path")
 	flag.Parse()

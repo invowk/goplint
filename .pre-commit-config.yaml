@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MPL-2.0
+#
+# Install with: pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: golangci-lint
+        name: normalized golangci-lint gate
+        entry: "bash -c 'make lint 2>&1'"
+        language: system
+        pass_filenames: false
+        always_run: true
+        verbose: true
+
+      - id: goplint-behavior
+        name: conservatively routed goplint soundness gate (capped at the consumer tier locally)
+        entry: "bash -c 'make check-goplint-soundness-routed 2>&1'"
+        language: system
+        pass_filenames: false
+        files: '^(goplint/|internal/|cmd/|spec/|testdata/|bench/|scripts/|docs/goplint/|main\.go$|AGENTS\.md$|CLAUDE\.md$|README\.md$|Makefile$|baseline\.toml$|exceptions\.toml$|\.golangci\.toml$|\.pre-commit-config\.yaml$|\.github/workflows/.*\.yml$)'
+        always_run: true
+        verbose: true

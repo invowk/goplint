@@ -2,21 +2,21 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # The repository smoke-scan target is parameterizable so a standalone goplint
 # checkout can smoke against an external consumer corpus. Defaults preserve
 # this repository's canonical invowk scan.
 SCAN_ROOT="${GOPLINT_SCAN_ROOT:-$ROOT_DIR}"
-SCAN_BASELINE="${GOPLINT_SCAN_BASELINE:-tools/goplint/baseline.toml}"
-SCAN_EXCEPTIONS="${GOPLINT_SCAN_EXCEPTIONS:-tools/goplint/exceptions.toml}"
-read -r -a SCAN_PACKAGES <<<"${GOPLINT_SCAN_PACKAGES:-./cmd/... ./internal/... ./pkg/...}"
-POLICY_FILE="${1:-${GOPLINT_BENCH_SMOKE_POLICY:-$ROOT_DIR/tools/goplint/bench/consumer-smoke.github-ubuntu-x64-4cpu.toml}}"
+SCAN_BASELINE="${GOPLINT_SCAN_BASELINE:-baseline.toml}"
+SCAN_EXCEPTIONS="${GOPLINT_SCAN_EXCEPTIONS:-exceptions.toml}"
+read -r -a SCAN_PACKAGES <<<"${GOPLINT_SCAN_PACKAGES:-./...}"
+POLICY_FILE="${1:-${GOPLINT_BENCH_SMOKE_POLICY:-$ROOT_DIR/bench/consumer-smoke.github-ubuntu-x64-4cpu.toml}}"
 if [[ "$POLICY_FILE" != /* ]]; then
   POLICY_FILE="$ROOT_DIR/$POLICY_FILE"
 fi
 
 (
-  cd "$ROOT_DIR/tools/goplint"
+  cd "$ROOT_DIR"
   go run ./cmd/benchmark-policy -manifest "$POLICY_FILE" -policy consumer-smoke
 )
 
@@ -50,7 +50,7 @@ compare_upper() {
 benchmarks=(BenchmarkProtocolCanonicalSolver BenchmarkProtocolRecursiveTabulation)
 benchmark_pattern="^($(IFS='|'; echo "${benchmarks[*]}"))$"
 bench_output="$({
-  cd "$ROOT_DIR/tools/goplint"
+  cd "$ROOT_DIR"
   "${SCRIPT_DIR}/soundness-go-test.sh" -run '^$' -bench "$benchmark_pattern" -benchmem -benchtime=1x -count=1 ./goplint
 })"
 echo "$bench_output"
@@ -90,7 +90,7 @@ if [[ -n "${GOPLINT_REPOSITORY_AUDIT_PATH:-}" ]]; then
   # worker on a fresh checkout reproduces the producer's analyzer digest.
   make -s -C "$SCAN_ROOT" build-goplint
   (
-    cd "$ROOT_DIR/tools/goplint"
+    cd "$ROOT_DIR"
     go run ./cmd/repository-audit -mode full-scan
   )
   wall_ns="$(jq -er '.scan.wall_duration_nanoseconds' "$GOPLINT_REPOSITORY_AUDIT_PATH")"
@@ -123,5 +123,5 @@ fi
 compare_upper repository_full_scan wall_ms "$wall_ms" "$(toml_section_value repository_full_scan max_wall_ms)"
 compare_upper repository_full_scan peak_bytes "$peak_bytes" "$(toml_section_value repository_full_scan max_peak_bytes)"
 
-cd "$ROOT_DIR/tools/goplint"
+cd "$ROOT_DIR"
 go run ./cmd/subgate-report -observation consumer-performance-smoke=single-sample

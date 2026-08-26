@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "registry_path": "tools/goplint/spec/semantic-evidence.v2.json",
+  "registry_path": "spec/semantic-evidence.v2.json",
   "profiles": [
     {
       "id": "complete",
@@ -97,7 +97,7 @@
   "subgates": [
     {
       "id": "aggregate-contract",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-aggregate-contract.sh"
       ],
@@ -122,7 +122,7 @@
     },
     {
       "id": "architecture",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-production-architecture.sh"
       ],
@@ -177,7 +177,7 @@
     },
     {
       "id": "benchmark-full-scan",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-cfg-bench-thresholds.sh",
         "--phase",
@@ -204,7 +204,7 @@
     },
     {
       "id": "benchmarks",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-cfg-bench-thresholds.sh",
         "--phase",
@@ -235,7 +235,7 @@
     },
     {
       "id": "catalog",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-semantic-spec.sh"
       ],
@@ -297,7 +297,7 @@
     },
     {
       "id": "cfg-refinement",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-cfg-refinement.sh"
       ],
@@ -322,19 +322,19 @@
     },
     {
       "id": "clean-tree-freshness",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "go",
         "run",
         "./cmd/check-clean-tree-evidence",
         "-root",
-        "../..",
+        ".",
         "-paths",
-        "tools/goplint/testdata/gates/clean-tree-v4.paths",
+        "testdata/gates/clean-tree-v5.paths",
         "-plan",
-        "tools/goplint/testdata/gates/clean-tree-v4.json",
+        "testdata/gates/clean-tree-v5.json",
         "-evidence",
-        "tools/goplint/testdata/gates/clean-tree-run.v4.json"
+        "testdata/gates/clean-tree-run.v5.json"
       ],
       "dependencies": [],
       "cpu_units": 1,
@@ -356,7 +356,7 @@
     },
     {
       "id": "counterexamples",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-counterexamples.sh"
       ],
@@ -381,7 +381,7 @@
     },
     {
       "id": "determinism",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-protocol-determinism.sh"
       ],
@@ -419,7 +419,7 @@
     },
     {
       "id": "end-to-end-oracle",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-protocol-oracle-e2e.sh"
       ],
@@ -517,7 +517,7 @@
     },
     {
       "id": "fuzz-seeds",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-fuzz-seeds.sh"
       ],
@@ -559,7 +559,7 @@
     },
     {
       "id": "harness-parity",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "go",
         "run",
@@ -587,7 +587,7 @@
     },
     {
       "id": "inconclusive-suppression",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-inconclusive-suppression.sh"
       ],
@@ -612,7 +612,7 @@
     },
     {
       "id": "module-tests",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-module-tests.sh"
       ],
@@ -638,7 +638,7 @@
     },
     {
       "id": "mutation-kernel-coverage",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "go",
         "run",
@@ -677,7 +677,7 @@
     },
     {
       "id": "performance-smoke",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-performance-smoke.sh"
       ],
@@ -704,7 +704,7 @@
     },
     {
       "id": "production-integration",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-production-integration.sh"
       ],
@@ -750,7 +750,7 @@
     },
     {
       "id": "protocol-oracle",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-protocol-oracle.sh"
       ],
@@ -788,7 +788,7 @@
     },
     {
       "id": "race-repeat-1",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-race-repeat.sh",
         "--phase",
@@ -821,7 +821,7 @@
     },
     {
       "id": "race-repeat-2",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-race-repeat.sh",
         "--phase",
@@ -854,7 +854,7 @@
     },
     {
       "id": "race-repeat-3",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-race-repeat.sh",
         "--phase",
@@ -887,7 +887,7 @@
     },
     {
       "id": "race-repeat-4",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-race-repeat.sh",
         "--phase",
@@ -920,7 +920,7 @@
     },
     {
       "id": "race-repeat-5",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-race-repeat.sh",
         "--phase",
@@ -953,7 +953,7 @@
     },
     {
       "id": "race-repeat-6",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-race-repeat.sh",
         "--phase",
@@ -986,7 +986,7 @@
     },
     {
       "id": "race-repeat-supporting",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-race-repeat.sh",
         "--phase",
@@ -1047,7 +1047,7 @@
     },
     {
       "id": "scheduled-oracle",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "./scripts/check-protocol-oracle-scheduled.sh"
       ],
@@ -1076,7 +1076,7 @@
     },
     {
       "id": "targeted-mutation",
-      "working_directory": "tools/goplint",
+      "working_directory": ".",
       "command": [
         "go",
         "run",

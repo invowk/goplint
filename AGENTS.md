@@ -45,26 +45,26 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | **Check baseline (regression gate)** | **`make check-baseline`** |
 | **Check exception governance** | **`make check-goplint-exceptions`** |
 | **Update baseline** | **`make update-baseline`** |
-| Run tests | `cd tools/goplint && go test ./goplint/` |
-| Run tests (race) | `cd tools/goplint && go test -race ./goplint/` |
-| Check missing Validate | `make build-goplint && ./bin/goplint -check-validate -config=tools/goplint/exceptions.toml ./...` |
-| Check missing String | `make build-goplint && ./bin/goplint -check-stringer -config=tools/goplint/exceptions.toml ./...` |
-| Check missing constructors | `make build-goplint && ./bin/goplint -check-constructors -config=tools/goplint/exceptions.toml ./...` |
-| Check constructor signatures | `make build-goplint && ./bin/goplint -check-constructor-sig -config=tools/goplint/exceptions.toml ./...` |
-| Check functional options | `make build-goplint && ./bin/goplint -check-func-options -config=tools/goplint/exceptions.toml ./...` |
-| Check immutability | `make build-goplint && ./bin/goplint -check-immutability -config=tools/goplint/exceptions.toml ./...` |
-| Check struct Validate | `make build-goplint && ./bin/goplint -check-struct-validate -config=tools/goplint/exceptions.toml ./...` |
-| Check cast validation | `make build-goplint && ./bin/goplint -check-cast-validation -config=tools/goplint/exceptions.toml ./...` |
-| Check Validate usage | `make build-goplint && ./bin/goplint -check-validate-usage -config=tools/goplint/exceptions.toml ./...` |
-| Check constructor error usage | `make build-goplint && ./bin/goplint -check-constructor-error-usage -config=tools/goplint/exceptions.toml ./...` |
-| Check constructor validates | `make build-goplint && ./bin/goplint -check-constructor-validates -config=tools/goplint/exceptions.toml ./...` |
-| Check validate delegation | `make build-goplint && ./bin/goplint -check-validate-delegation -config=tools/goplint/exceptions.toml ./...` |
-| Check nonzero fields | `make build-goplint && ./bin/goplint -check-nonzero -config=tools/goplint/exceptions.toml ./...` |
-| Check redundant conversions | `make build-goplint && ./bin/goplint -check-redundant-conversion -config=tools/goplint/exceptions.toml ./...` |
-| Check cross-platform paths | `make build-goplint && ./bin/goplint -check-cross-platform-paths -config=tools/goplint/exceptions.toml ./...` |
-| Check boundary request validation | `make build-goplint && ./bin/goplint -check-boundary-request-validation -config=tools/goplint/exceptions.toml ./...` |
-| Check enum CUE sync | `make build-goplint && ./bin/goplint -check-enum-sync -config=tools/goplint/exceptions.toml ./...` |
-| Canonical cast validation | `make build-goplint && ./bin/goplint -check-cast-validation -config=tools/goplint/exceptions.toml ./...` |
+| Run tests | `go test ./goplint/` |
+| Run tests (race) | `go test -race ./goplint/` |
+| Check missing Validate | `make build-goplint && ./bin/goplint -check-validate -config=exceptions.toml ./...` |
+| Check missing String | `make build-goplint && ./bin/goplint -check-stringer -config=exceptions.toml ./...` |
+| Check missing constructors | `make build-goplint && ./bin/goplint -check-constructors -config=exceptions.toml ./...` |
+| Check constructor signatures | `make build-goplint && ./bin/goplint -check-constructor-sig -config=exceptions.toml ./...` |
+| Check functional options | `make build-goplint && ./bin/goplint -check-func-options -config=exceptions.toml ./...` |
+| Check immutability | `make build-goplint && ./bin/goplint -check-immutability -config=exceptions.toml ./...` |
+| Check struct Validate | `make build-goplint && ./bin/goplint -check-struct-validate -config=exceptions.toml ./...` |
+| Check cast validation | `make build-goplint && ./bin/goplint -check-cast-validation -config=exceptions.toml ./...` |
+| Check Validate usage | `make build-goplint && ./bin/goplint -check-validate-usage -config=exceptions.toml ./...` |
+| Check constructor error usage | `make build-goplint && ./bin/goplint -check-constructor-error-usage -config=exceptions.toml ./...` |
+| Check constructor validates | `make build-goplint && ./bin/goplint -check-constructor-validates -config=exceptions.toml ./...` |
+| Check validate delegation | `make build-goplint && ./bin/goplint -check-validate-delegation -config=exceptions.toml ./...` |
+| Check nonzero fields | `make build-goplint && ./bin/goplint -check-nonzero -config=exceptions.toml ./...` |
+| Check redundant conversions | `make build-goplint && ./bin/goplint -check-redundant-conversion -config=exceptions.toml ./...` |
+| Check cross-platform paths | `make build-goplint && ./bin/goplint -check-cross-platform-paths -config=exceptions.toml ./...` |
+| Check boundary request validation | `make build-goplint && ./bin/goplint -check-boundary-request-validation -config=exceptions.toml ./...` |
+| Check enum CUE sync | `make build-goplint && ./bin/goplint -check-enum-sync -config=exceptions.toml ./...` |
+| Canonical cast validation | `make build-goplint && ./bin/goplint -check-cast-validation -config=exceptions.toml ./...` |
 
 The targeted mutation command consumes the v2 manifest and profiles under
 `testdata/mutation/`. A causal kill requires the declared structured
@@ -89,9 +89,9 @@ make check-goplint-clean-tree-evidence
 make check-goplint-soundness-complete
 ```
 
-Generation consumes the reviewed `clean-tree-v4.paths` and
-`clean-tree-v4.json` inputs, invokes the `semantic` profile to avoid recursive
-freshness verification, and writes only the retained `clean-tree-run.v4.json`
+Generation consumes the reviewed `clean-tree-v5.paths` and
+`clean-tree-v5.json` inputs, invokes the `semantic` profile to avoid recursive
+freshness verification, and writes only the retained `clean-tree-run.v5.json`
 dual-digest record (a retained v3 record is rejected with an explicit
 migration notice). When only documentation-class prose drifted since a valid
 record, `make rebind-goplint-clean-tree-evidence` re-binds it in seconds:
@@ -112,7 +112,7 @@ surface and never substitutes for semantic assurance. The default executor is
 the immutable, resource-aware parallel planner. Consumer smoke is
 deliberately one-sample and is not certification; only semantic/complete runs
 support analyzer-soundness or exact-tree completion claims. See
-[`../../docs/goplint/soundness-gate-execution.md`](../../docs/goplint/soundness-gate-execution.md)
+[`../../docs/goplint/soundness-gate-execution.md`](docs/goplint/soundness-gate-execution.md)
 for resource overrides, timing refresh, plan/bundle schemas, CI reproduction,
 telemetry fields, and failure diagnostics.
 
@@ -129,7 +129,7 @@ report plus shared-audit digest; aggregation retains both the canonical report
 and versioned telemetry. Scheduled and release events force completion. The
 migration-era legacy serial comparison lane was removed after hosted parity
 and wall-time acceptance were recorded in
-[`../../docs/goplint/soundness-gate-performance.md`](../../docs/goplint/soundness-gate-performance.md).
+[`../../docs/goplint/soundness-gate-performance.md`](docs/goplint/soundness-gate-performance.md).
 
 ## Testing Parallelism
 
@@ -187,7 +187,7 @@ The `--check-all` flag enables `--check-validate`, `--check-stringer`, `--check-
 ## Architecture
 
 ```
-tools/goplint/
+
 ├── main.go                 # singlechecker entry point + --update-baseline mode
 ├── exceptions.toml         # governed intentional exception patterns (primitives, constructors, func-options, etc.)
 ├── baseline.toml           # accepted findings baseline (generated)
@@ -218,7 +218,7 @@ tools/goplint/
 │   └── testdata/src/               # analysistest fixture packages
 ```
 
-**Separate Go module**: `tools/goplint/` has its own `go.mod` to avoid adding `golang.org/x/tools` and `github.com/BurntSushi/toml` to the main project's dependencies.
+**Separate Go module**: `` has its own `go.mod` to avoid adding `golang.org/x/tools` and `github.com/BurntSushi/toml` to the main project's dependencies.
 
 ## What Gets Flagged
 
@@ -420,11 +420,11 @@ func good(p FilesystemPath) bool {
 Provenance is preserved through these single-arg, string-returning transformations: `string(...)`, `strings.TrimSpace`/`Trim`/`TrimLeft`/`TrimRight`/`TrimPrefix`/`TrimSuffix`, `filepath.FromSlash`/`ToSlash`/`Clean`, and `path.Clean`. Other transformations break provenance (documented false-negative).
 
 Currently annotated:
-- `pkg/types.FilesystemPath`
-- `pkg/invowkfile.WorkDir`
-- `pkg/invowkfile.ContainerfilePath`
-- `pkg/invowkfile.ScriptContent`
-- `pkg/invowkmod.SubdirectoryPath`
+- `github.com/invowk/invowk/pkg/types.FilesystemPath`
+- `github.com/invowk/invowk/pkg/invowkfile.WorkDir`
+- `github.com/invowk/invowk/pkg/invowkfile.ContainerfilePath`
+- `github.com/invowk/invowk/pkg/invowkfile.ScriptContent`
+- `github.com/invowk/invowk/pkg/invowkmod.SubdirectoryPath`
 
 When adding a new type that holds a CUE-fed forward-slash path, add the directive so V2 can enforce cross-platform absoluteness invariants.
 
@@ -808,14 +808,14 @@ scheduled oracle workflow runs its manifest-derived strict superset separately.
 
 The consolidated local hook (`goplint-behavior`) runs
 `make check-goplint-soundness-routed`
-(`tools/goplint/scripts/check-routed-soundness.sh`) and is capped below the
+(`scripts/check-routed-soundness.sh`) and is capped below the
 semantic tier: documentation diffs run docs-guard, consumer diffs execute one
 shared repository audit, and harness or analyzer-semantics diffs run the
 consumer tier locally while printing the authoritative CI tier and the
 explicit Make targets to run it by hand. `GOPLINT_FORCE_SEMANTIC=1` escalates
 any routed profile except `complete` to `semantic`, locally and in the CI
 plan job (one-release migration escape hatch). Install with
-`make install-hooks`.
+`pre-commit install`.
 
 The retained exact-tree record is a completion artifact, not an ordinary CI
 input. Generate it from the reviewed temporary-index synthetic tree using the
@@ -907,7 +907,7 @@ check.
   `*-inconclusive` categories. Witness size is bounded by
   `--cfg-witness-max-steps`; no flag suppresses uncertainty.
 - **The semantic oracle contract is behavioral**: Keep
-  `tools/goplint/spec/semantic-rules.v1.json` synchronized with registered owner
+  `spec/semantic-rules.v1.json` synchronized with registered owner
   keys and `semantic_spec_oracle_test.go`. Historical `must_report`,
   `must_not_report`, and `must_be_inconclusive` cases must be proven by real
   analyzer output at symbol level.
@@ -954,4 +954,4 @@ check.
   - `TestCheckUseBeforeValidateMethodValue` — UBV ordering with method-value Validate calls
   - `TestCheckAllEnablesCFABackedCastValidation` — verifies `--check-all` enables canonical cast validation
 - **Semantic contract tests** (`semantic_spec_*.go`, `semantic_catalog_registry_test.go`): Validate catalog/schema consistency, registered owners, blocking inconclusive metadata, oracle behavior, and historical miss replay.
-- **CFG benchmarks** (`cfa_bench_test.go`): Traversal benchmarks for CFG-heavy cast/UBV paths. Guardrail command: `./tools/goplint/scripts/check-cfg-bench-thresholds.sh` with thresholds in `tools/goplint/bench/thresholds.toml`.
+- **CFG benchmarks** (`cfa_bench_test.go`): Traversal benchmarks for CFG-heavy cast/UBV paths. Guardrail command: `./scripts/check-cfg-bench-thresholds.sh` with thresholds in `bench/thresholds.toml`.

@@ -25,7 +25,7 @@ func (paths *pathFlags) Set(value string) error {
 }
 
 func main() {
-	root := flag.String("root", "../..", "repository root")
+	root := flag.String("root", ".", "repository root")
 	manifestPath := flag.String("manifest", "spec/soundness-ownership.v2.json", "ownership manifest")
 	event := flag.String("event", "pre_commit", "event context")
 	base := flag.String("base", "", "base revision for changed-path discovery")

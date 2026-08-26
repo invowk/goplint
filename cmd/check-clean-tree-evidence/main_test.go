@@ -12,7 +12,7 @@ func TestVerificationErrorPreservesCauseAndNamesGenerationCommand(t *testing.T) 
 	t.Parallel()
 
 	cause := errors.New("retained record is missing or stale")
-	const evidencePath = "tools/goplint/testdata/gates/clean-tree-run.v4.json"
+	const evidencePath = "testdata/gates/clean-tree-run.v5.json"
 	err := verificationError(evidencePath, cause)
 	if !errors.Is(err, cause) {
 		t.Errorf("verificationError() does not preserve cause: %v", err)

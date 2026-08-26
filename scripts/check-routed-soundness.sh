@@ -7,7 +7,7 @@ EVENT="${GOPLINT_SOUNDNESS_EVENT:-pre_commit}"
 BASE="${GOPLINT_SOUNDNESS_BASE:-}"
 HEAD="${GOPLINT_SOUNDNESS_HEAD:-HEAD}"
 route_args=(
-  -root ../..
+  -root .
   -manifest spec/soundness-ownership.v2.json
   -event "$EVENT"
   -format profile
@@ -46,11 +46,11 @@ if [[ "${GOPLINT_FORCE_SEMANTIC:-}" == "1" && "$profile" != "complete" ]]; then
 fi
 
 if [[ "$profile" == "documentation" ]]; then
-  go run ./cmd/docs-guard -root ../..
+  go run ./cmd/docs-guard -root .
   exit 0
 fi
 
 go run ./cmd/soundness-gate \
-  -root ../.. \
-  -manifest tools/goplint/spec/soundness-gate.v1.json \
+  -root . \
+  -manifest spec/soundness-gate.v1.json \
   -profile "$profile"

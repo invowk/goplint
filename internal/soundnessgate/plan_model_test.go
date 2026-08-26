@@ -176,7 +176,7 @@ func validExecutionPlan() ExecutionPlan {
 		panic(err)
 	}
 	commandDigestB, err := CommandDigest(Subgate{
-		ID: "subgate-b", WorkingDirectory: "tools/goplint", Command: []string{"./scripts/check.sh"},
+		ID: "subgate-b", WorkingDirectory: ".", Command: []string{"./scripts/check.sh"},
 	})
 	if err != nil {
 		panic(err)
@@ -199,11 +199,11 @@ func validExecutionPlan() ExecutionPlan {
 			Digest: runnerTestWorkspaceDigest,
 		},
 		Manifest: ArtifactBinding{
-			Path:   "tools/goplint/spec/soundness-gate.v1.json",
+			Path:   "spec/soundness-gate.v1.json",
 			Digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 		},
 		Registry: ArtifactBinding{
-			Path:   "tools/goplint/spec/semantic-evidence.v2.json",
+			Path:   "spec/semantic-evidence.v2.json",
 			Digest: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 		},
 		Toolchain: ToolchainBinding{
@@ -235,7 +235,7 @@ func validExecutionPlan() ExecutionPlan {
 			{
 				WorkUnitID:        "work-b",
 				SubgateID:         "subgate-b",
-				WorkingDirectory:  "tools/goplint",
+				WorkingDirectory:  ".",
 				Command:           []string{"./scripts/check.sh"},
 				CommandDigest:     commandDigestB,
 				BinaryDigest:      "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",

@@ -109,7 +109,7 @@ func (index *artifactIndex) hasManifestIdentifier(reference string) bool {
 }
 
 // hasGoIdentifierPath reports whether every dot-separated segment of the
-// reference is identifier-shaped and occurs as a whole word in the tools/goplint
+// reference is identifier-shaped and occurs as a whole word in the module
 // Go sources (for example `protocoloracle.Program` or `semanticCatalog`).
 func (index *artifactIndex) hasGoIdentifierPath(reference string) bool {
 	segments := strings.Split(reference, ".")
@@ -125,7 +125,7 @@ func (index *artifactIndex) hasGoIdentifierPath(reference string) bool {
 }
 
 // hasGoIdentifierWord reports whether a single identifier-shaped word occurs
-// in the tools/goplint Go sources.
+// in the module Go sources.
 func (index *artifactIndex) hasGoIdentifierWord(word string) bool {
 	_, ok := index.goIdentifiers[word]
 	return ok

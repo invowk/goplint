@@ -15,7 +15,7 @@ import (
 // testOwnershipManifestPath is the fixture-repository location of the reviewed
 // ownership manifest that partitions the synthetic tree into semantic and
 // prose digests.
-const testOwnershipManifestPath = "tools/goplint/spec/soundness-ownership.v2.json"
+const testOwnershipManifestPath = "spec/soundness-ownership.v2.json"
 
 // testOwnershipManifest classifies fixture docs as documentation and leaves
 // every other fixture path ungoverned so it conservatively binds to the
@@ -25,7 +25,7 @@ const testOwnershipManifest = `{
   "format_version": 2,
   "rules": [
     {"pattern": "docs/**", "class": "documentation"},
-    {"pattern": "tools/goplint/spec/**", "class": "analyzer-semantics"}
+    {"pattern": "spec/**", "class": "analyzer-semantics"}
   ]
 }
 `

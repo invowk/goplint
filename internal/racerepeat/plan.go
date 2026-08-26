@@ -89,9 +89,9 @@ func NewPlan(
 	if err != nil {
 		return Plan{}, err
 	}
-	binaryByMode := make(map[string]BinaryBinding, len(binaries))
-	for _, binary := range binaries {
-		binaryByMode[binary.Mode] = binary
+	workUnits, err := buildWorkUnits(resolved, binaries, shardCount, repeatCount)
+	if err != nil {
+		return Plan{}, err
 	}
 	plan := Plan{
 		FormatVersion: PlanFormatVersion, WorkspaceDigest: workspaceDigest,
@@ -99,16 +99,41 @@ func NewPlan(
 		CensusDigest: resolved.CensusDigest, Census: canonical,
 		Environment: slices.Clone(manifest.Environment),
 		Binaries:    slices.Clone(binaries), RepeatCount: repeatCount, ShardCount: shardCount,
-		WorkUnits: []WorkUnit{}, DefaultedIDs: slices.Clone(resolved.DefaultedMemberIDs),
+		WorkUnits: workUnits, DefaultedIDs: slices.Clone(resolved.DefaultedMemberIDs),
 	}
+	normalized, err := normalizePlan(plan)
+	if err != nil {
+		return Plan{}, err
+	}
+	// Validate the exact returned object here so the constructor's
+	// obligation is provable without an interprocedural summary.
+	if err := normalized.Validate(); err != nil {
+		return Plan{}, err
+	}
+	return normalized, nil
+}
+
+// buildWorkUnits expands the per-mode LPT shard allocation into the exhaustive
+// work-unit list. It is separate from NewPlan so the constructor's validation
+// obligation stays provable on a small control-flow graph.
+func buildWorkUnits(
+	resolved ResolvedTiming,
+	binaries []BinaryBinding,
+	shardCount, repeatCount int,
+) ([]WorkUnit, error) {
+	binaryByMode := make(map[string]BinaryBinding, len(binaries))
+	for _, binary := range binaries {
+		binaryByMode[binary.Mode] = binary
+	}
+	workUnits := []WorkUnit{}
 	for _, mode := range []string{"normal", "race"} {
 		binary, exists := binaryByMode[mode]
 		if !exists {
-			return Plan{}, fmt.Errorf("race/repeat plan has no %s binary", mode)
+			return nil, fmt.Errorf("race/repeat plan has no %s binary", mode)
 		}
 		shards, err := AllocateLPT(resolved.Entries, shardCount, mode)
 		if err != nil {
-			return Plan{}, err
+			return nil, err
 		}
 		iterations := repeatCount
 		if mode == "race" {
@@ -116,7 +141,7 @@ func NewPlan(
 		}
 		for iteration := 1; iteration <= iterations; iteration++ {
 			for shardIndex, shard := range shards {
-				plan.WorkUnits = append(plan.WorkUnits, WorkUnit{
+				workUnits = append(workUnits, WorkUnit{
 					ID:   fmt.Sprintf("%s-%02d-%02d", mode, iteration, shardIndex+1),
 					Mode: mode, Iteration: iteration, MemberIDs: slices.Clone(shard.MemberIDs),
 					TotalWeight: shard.TotalWeight, TimeoutSeconds: shard.TimeoutSeconds,
@@ -125,7 +150,7 @@ func NewPlan(
 			}
 		}
 	}
-	return normalizePlan(plan)
+	return workUnits, nil
 }
 
 // Validate verifies plan identity, bindings, and exact census coverage for

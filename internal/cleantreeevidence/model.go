@@ -33,8 +33,8 @@ const (
 )
 
 var (
-	taskLedgerArchivedPattern = regexp.MustCompile(`^openspec/changes/archive/([0-9]{4}-[0-9]{2}-[0-9]{2})-([a-z0-9][a-z0-9-]*)/tasks\.md$`)
-	taskLedgerActivePattern   = regexp.MustCompile(`^openspec/changes/([a-z0-9][a-z0-9-]*)/tasks\.md$`)
+	taskLedgerArchivedPattern = regexp.MustCompile(`^(?:openspec/changes/archive|docs/ledgers/archive)/([0-9]{4}-[0-9]{2}-[0-9]{2})-([a-z0-9][a-z0-9-]*)/tasks\.md$`)
+	taskLedgerActivePattern   = regexp.MustCompile(`^(?:openspec/changes|docs/ledgers)/([a-z0-9][a-z0-9-]*)/tasks\.md$`)
 	pendingTaskIDPattern      = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)?$`)
 )
 

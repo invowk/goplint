@@ -24,20 +24,20 @@ const (
 	// repository root. Documentation frequently uses module-relative paths
 	// (for example `spec/soundness-gate.v1.json`), so unresolved repository
 	// paths are retried against this directory.
-	goplintModuleDir = "tools/goplint"
+	goplintModuleDir = "."
 
 	// gateManifestRelPath locates the aggregate soundness-gate manifest whose
 	// profile and subgate identifiers anchor documentation claims.
-	gateManifestRelPath = "tools/goplint/spec/soundness-gate.v1.json"
+	gateManifestRelPath = "spec/soundness-gate.v1.json"
 
 	// evidenceRegistryRelPath locates the semantic evidence registry whose
 	// registration and observation identifiers anchor documentation claims.
-	evidenceRegistryRelPath = "tools/goplint/spec/semantic-evidence.v2.json"
+	evidenceRegistryRelPath = "spec/semantic-evidence.v2.json"
 
 	// specDirRelPath is an extra resolution root for slash-less manifest file
 	// names cited inside evidence claim rows (for example
 	// `semantic-evidence.v2.json`).
-	specDirRelPath = "tools/goplint/spec"
+	specDirRelPath = "spec"
 )
 
 // DefaultDocuments is the governed goplint documentation set, relative to the
@@ -47,17 +47,16 @@ var DefaultDocuments = []string{
 	"docs/goplint/soundness-gate-execution.md",
 	"docs/goplint/soundness-gate-performance.md",
 	"docs/goplint/current-techniques-and-semantics.md",
-	"tools/goplint/CLAUDE.md",
-	"tools/goplint/AGENTS.md",
-	"tools/goplint/README.md",
+	"CLAUDE.md",
+	"AGENTS.md",
+	"README.md",
 }
 
 // Layout locates the goplint module and its governed anchor artifacts
 // relative to the repository root under validation. It exists so the guard
 // stays correct when the module lives at a different path than this
-// repository's `tools/goplint` (for example at the root of a standalone
-// goplint repository); DefaultLayout preserves this repository's canonical
-// locations.
+// canonical repository-root module (for example nested under a consumer
+// monorepo); DefaultLayout preserves this repository's canonical locations.
 type Layout struct {
 	// ModuleDir is the analyzer module directory.
 	ModuleDir string
@@ -72,7 +71,7 @@ type Layout struct {
 }
 
 // DefaultLayout returns the canonical layout for this repository: the module
-// under tools/goplint and the governed DefaultDocuments set.
+// at the repository root and the governed DefaultDocuments set.
 func DefaultLayout() Layout {
 	return Layout{
 		ModuleDir:        goplintModuleDir,

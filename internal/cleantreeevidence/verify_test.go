@@ -482,7 +482,7 @@ func newVerifyFixture(t *testing.T) verifyFixture {
 	writeTestJSON(t, root, "plan.json", plan)
 	writeTestFile(t, root, "tracked.txt", "selected tracked drift\n")
 	runTestGit(t, root, "add", "input.txt")
-	writeTestFile(t, root, "paths.txt", "counterexamples.json\ndocs/notes.md\ninput.txt\nmanifest.json\nopenspec\npaths.txt\nplan.json\nregistry.json\ntools/goplint/spec/soundness-ownership.v2.json\ntracked.txt\n")
+	writeTestFile(t, root, "paths.txt", "counterexamples.json\ndocs/notes.md\ninput.txt\nmanifest.json\nopenspec\npaths.txt\nplan.json\nregistry.json\nspec/soundness-ownership.v2.json\ntracked.txt\n")
 	materialization, err := Materialize(t.Context(), root, "paths.txt", plan.OwnershipManifestPath, true)
 	if err != nil {
 		t.Fatal(err)

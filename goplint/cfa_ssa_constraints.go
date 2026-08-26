@@ -284,12 +284,12 @@ func cfgSSAFormulaFromPredicateProvenanceWithControl(
 	if err != nil {
 		return cfgSSAUnsupportedFormula(), false
 	}
-	type encodedConstraint struct {
+	type decodedConstraintShape struct {
 		Subject string `json:"subject"`
 		Op      string `json:"op"`
 		Value   string `json:"value"`
 	}
-	var decoded [][]encodedConstraint
+	var decoded [][]decodedConstraintShape
 	if err := json.Unmarshal(encoded, &decoded); err != nil {
 		return cfgSSAUnsupportedFormula(), false
 	}

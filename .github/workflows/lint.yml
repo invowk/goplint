@@ -1,0 +1,261 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  release:
+    types: [published]
+  schedule:
+    # Weekly completion-profile certification.
+    - cron: "17 5 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Fall back to direct module fetches on transient Go proxy failures.
+  GOPROXY: "https://proxy.golang.org|direct"
+
+jobs:
+  golangci-lint:
+    name: normalized golangci-lint gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify normalized golangci-lint version
+        run: ./scripts/golangci-lint.sh version
+
+      - name: Run lint gates
+        run: make lint
+
+  goplint-plan:
+    name: goplint soundness plan and shared audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      profile: ${{ steps.plan.outputs.profile }}
+    env:
+      GOPLINT_BENCH_RUNNER_CLASS: github-hosted-ubuntu-x64-4cpu-reviewed
+      GOPLINT_BENCH_THRESHOLDS: bench/thresholds.github-ubuntu-x64-4cpu.toml
+    steps:
+      - name: Checkout exact history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Select profile and emit immutable plan
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Pull requests classify the full cumulative base-to-head diff, so a
+          # fixup push never escalates past what the whole change requires.
+          # Schedule, release, and dispatch events force the completion profile
+          # inside the router regardless of changed paths.
+          base=""
+          case "$GITHUB_EVENT_NAME" in
+            pull_request) base="${{ github.event.pull_request.base.sha }}" ;;
+            push) base="${{ github.event.before }}" ;;
+          esac
+          route_args=(-root . -manifest spec/soundness-ownership.v2.json -event "$GITHUB_EVENT_NAME" -format profile)
+          if [[ -n "$base" ]]; then
+            route_args+=(-base "$base" -head "$GITHUB_SHA")
+          fi
+          profile="$(go run ./cmd/soundness-profile "${route_args[@]}")"
+          # One-release migration escape hatch; remove after one quiet release
+          # (see docs/goplint/soundness-gate-execution.md).
+          if [[ "${GOPLINT_FORCE_SEMANTIC:-}" == "1" && "$profile" != "complete" ]]; then
+            echo "GOPLINT_FORCE_SEMANTIC=1 escalates the routed profile to semantic"
+            profile="semantic"
+          fi
+          echo "Selected goplint soundness profile: $profile"
+          if [[ "$profile" == "documentation" ]]; then
+            go run ./cmd/docs-guard -root .
+            echo "matrix=[]" >> "$GITHUB_OUTPUT"
+            echo "profile=$profile" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/soundness-plan"
+          go run ./cmd/soundness-gate \
+            -action plan \
+            -root . \
+            -manifest spec/soundness-gate.v1.json \
+            -profile "$profile" \
+            -cpu-budget 4 \
+            -memory-budget-bytes 12884901888 \
+            -max-workers 4 \
+            -runner-class github-hosted-ubuntu-x64-4cpu-reviewed \
+            -plan "$RUNNER_TEMP/soundness-plan/plan.json" \
+            > "$RUNNER_TEMP/soundness-plan/summary.json"
+          # Start the longest work units first so bounded matrix waves do not
+          # leave a heavy race/repeat group or certification running alone.
+          matrix="$(jq -c '[.work_units[] | select(. != "repository-audit")]
+            | sort_by(
+                if startswith("race-repeat") then 0
+                elif . == "targeted-mutation" then 1
+                elif startswith("benchmark") then 2
+                elif . == "scheduled-oracle" then 3
+                else 4 end, .)
+            | map({work_unit: .})' "$RUNNER_TEMP/soundness-plan/summary.json")"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "profile=$profile" >> "$GITHUB_OUTPUT"
+
+      - name: Execute the one shared repository audit
+        if: steps.plan.outputs.profile != 'documentation'
+        run: |
+          go run ./cmd/soundness-gate \
+            -action work \
+            -root . \
+            -plan "$RUNNER_TEMP/soundness-plan/plan.json" \
+            -work-unit repository-audit \
+            -bundle-dir "$RUNNER_TEMP/soundness-plan"
+
+      - name: Upload plan, audit bundle, and shared audit
+        if: steps.plan.outputs.profile != 'documentation'
+        uses: actions/upload-artifact@v7
+        with:
+          name: soundness-plan-audit
+          path: ${{ runner.temp }}/soundness-plan/
+          if-no-files-found: error
+          retention-days: 3
+          overwrite: true
+
+  goplint-workers:
+    name: goplint soundness worker (${{ matrix.work_unit }})
+    needs: goplint-plan
+    if: needs.goplint-plan.outputs.profile != 'documentation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        include: ${{ fromJSON(needs.goplint-plan.outputs.matrix) }}
+    env:
+      GOPLINT_BENCH_RUNNER_CLASS: github-hosted-ubuntu-x64-4cpu-reviewed
+      GOPLINT_BENCH_THRESHOLDS: bench/thresholds.github-ubuntu-x64-4cpu.toml
+    steps:
+      - name: Checkout exact tree
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download immutable plan and shared audit
+        uses: actions/download-artifact@v8
+        with:
+          name: soundness-plan-audit
+          path: ${{ runner.temp }}/soundness-input
+
+      - name: Execute assigned work unit
+        run: |
+          mkdir -p "$RUNNER_TEMP/soundness-output"
+          args=(
+            -action work
+            -root .
+            -plan "$RUNNER_TEMP/soundness-input/plan.json"
+            -work-unit "${{ matrix.work_unit }}"
+            -bundle-dir "$RUNNER_TEMP/soundness-output"
+          )
+          if [[ -f "$RUNNER_TEMP/soundness-input/repository-audit/repository-audit.json" ]]; then
+            args+=(-repository-audit "$RUNNER_TEMP/soundness-input/repository-audit/repository-audit.json")
+          fi
+          go run ./cmd/soundness-gate "${args[@]}"
+
+      - name: Upload bound work bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: soundness-bundle-${{ matrix.work_unit }}
+          path: ${{ runner.temp }}/soundness-output/${{ matrix.work_unit }}.bundle.json
+          if-no-files-found: error
+          retention-days: 3
+          overwrite: true
+
+  goplint-aggregate:
+    name: goplint soundness aggregate
+    if: always() && needs.goplint-plan.result == 'success' && needs.goplint-plan.outputs.profile != 'documentation'
+    needs: [goplint-plan, goplint-workers]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact tree
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download all plan and worker artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: soundness-*
+          path: ${{ runner.temp }}/soundness-aggregate
+          merge-multiple: true
+
+      - name: Reject missing, duplicate, stale, or partial work
+        run: |
+          go run ./cmd/soundness-gate \
+            -action aggregate \
+            -root . \
+            -plan "$RUNNER_TEMP/soundness-aggregate/plan.json" \
+            -bundle-dir "$RUNNER_TEMP/soundness-aggregate" \
+            -repository-audit "$RUNNER_TEMP/soundness-aggregate/repository-audit/repository-audit.json" \
+            -report "$RUNNER_TEMP/soundness-aggregate-output/report.json" \
+            -telemetry "$RUNNER_TEMP/soundness-aggregate-output/telemetry.json"
+
+      - name: Upload aggregate report and telemetry
+        uses: actions/upload-artifact@v7
+        with:
+          name: soundness-aggregate-result
+          path: ${{ runner.temp }}/soundness-aggregate-output/
+          if-no-files-found: error
+          retention-days: 3
+          overwrite: true
+
+  file-length:
+    name: file length gate (1000 lines)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check file lengths
+        run: ./scripts/check-file-length.sh

@@ -1,0 +1,174 @@
+{
+  "format_version": 1,
+  "change": "complete-goplint-soundness-hardening",
+  "source": "post-implementation soundness and evidence-integrity audit",
+  "findings": [
+    {
+      "id": "conditional-validation-edge",
+      "violated_requirement": "Production propagation implements the declared protocol domain",
+      "production_symbols": ["buildProtocolValidationProgram", "protocolValidationProgram.targetEdgeTransfer", "runIFDSPropagationWithStats"],
+      "minimal_counterexample": "if err := x.Validate(); err != nil { use(x); return nil }; use(x)",
+      "expected_outcome": "violation on the non-nil continuation; validation only on the matching nil edge",
+      "implementation_tasks": ["1.2", "2.2", "2.3", "2.4", "2.8"],
+      "blocking_gates": ["check-goplint-counterexamples", "check-goplint-production-integration", "check-goplint-soundness"]
+    },
+    {
+      "id": "constructor-return-identity",
+      "violated_requirement": "Object identity is flow-sensitive and fail closed",
+      "production_symbols": ["buildConstructorSSAIdentityModel", "protocolAliasAnalysis", "evaluateConstructorPathIFDS"],
+      "minimal_counterexample": "ret = a; _ = a.Validate(); ret = b; return ret, nil",
+      "expected_outcome": "violation for the unvalidated object b; historical assignment to a cannot validate the return slot",
+      "implementation_tasks": ["1.3", "3.1", "3.2", "3.3", "3.4", "3.9"],
+      "blocking_gates": ["check-goplint-counterexamples", "check-goplint-production-integration", "check-goplint-soundness"]
+    },
+    {
+      "id": "post-validation-unknown-effect",
+      "violated_requirement": "Unknown effects can invalidate an established property",
+      "production_symbols": ["runIFDSPropagationWithStats", "postValidationTargetEffect", "protocolAbstractState"],
+      "minimal_counterexample": "_ = x.Validate(); externalUnknown(&x); use(x)",
+      "expected_outcome": "blocking inconclusive because the unresolved relevant effect may invalidate x",
+      "implementation_tasks": ["1.4", "4.1", "4.2", "4.3", "4.4", "4.6"],
+      "blocking_gates": ["check-goplint-counterexamples", "check-goplint-production-integration", "check-goplint-soundness"]
+    },
+    {
+      "id": "joined-state-witness-mismatch",
+      "violated_requirement": "Refinement evidence remains paired with its exact state and path",
+      "production_symbols": ["runIFDSPropagationWithStats", "cfgRefinementController.Refine", "interprocWitnessIdentity"],
+      "minimal_counterexample": "an infeasible validated branch and a feasible unvalidated branch join before one protected use",
+      "expected_outcome": "the feasible unvalidated contribution survives UNSAT discharge of the validated witness",
+      "implementation_tasks": ["1.5", "6.1", "6.2", "6.3", "6.4", "6.5", "6.6", "6.9"],
+      "blocking_gates": ["check-cfg-refinement", "check-goplint-counterexamples", "check-goplint-soundness"]
+    },
+    {
+      "id": "late-timeout-discharge",
+      "violated_requirement": "Refinement evidence remains paired with its exact state and path",
+      "production_symbols": ["cfgRefinementController.Refine", "cfgSSAConstraintsFeasibilityBackend.Check"],
+      "minimal_counterexample": "constraint solving derives UNSAT but the injected deadline expires before evidence acceptance",
+      "expected_outcome": "blocking inconclusive; late UNSAT cannot discharge the witness",
+      "implementation_tasks": ["1.11", "6.7", "6.8", "6.9"],
+      "blocking_gates": ["check-cfg-refinement", "check-goplint-counterexamples", "check-goplint-soundness"]
+    },
+    {
+      "id": "missing-ssa-fallback",
+      "violated_requirement": "Unknown effects can invalidate an established property",
+      "production_symbols": ["buildSSAForPass", "ssaFuncForTypesFunc", "inspectConstructorValidates", "inspectUnvalidatedCastsCFA"],
+      "minimal_counterexample": "a required function or closure is absent from the on-demand SSA result",
+      "expected_outcome": "every dependent obligation is blocking inconclusive with a typed SSA reason",
+      "implementation_tasks": ["1.6", "3.6", "3.7"],
+      "blocking_gates": ["check-goplint-counterexamples", "check-goplint-production-integration", "check-goplint-soundness"]
+    },
+    {
+      "id": "ambiguous-alias-optimism",
+      "violated_requirement": "Object identity is flow-sensitive and fail closed",
+      "production_symbols": ["analyzeProtocolAliases", "protocolAliasSnapshot.join", "ssaFlowAliasMatcher.matches"],
+      "minimal_counterexample": "x and y with the same type flow through incompatible phi, store, interface, closure, or pointer paths before validation",
+      "expected_outcome": "only must-alias facts propagate; relevant may-alias ambiguity is blocking inconclusive",
+      "implementation_tasks": ["1.7", "3.2", "3.4", "3.5", "3.9"],
+      "blocking_gates": ["check-goplint-counterexamples", "check-goplint-production-integration", "check-goplint-soundness"]
+    },
+    {
+      "id": "concrete-stack-recursion",
+      "violated_requirement": "Interprocedural analysis converges through finite summaries",
+      "production_symbols": ["runIFDSPropagationWithStats", "interprocProcedureSummary", "interprocSupergraph"],
+      "minimal_counterexample": "mutually recursive helpers carry an unvalidated object to a protected use",
+      "expected_outcome": "finite summary fixed point with matched returns; exhaustion remains inconclusive",
+      "implementation_tasks": ["1.8", "5.1", "5.2", "5.3", "5.4", "5.5", "5.6", "5.8"],
+      "blocking_gates": ["check-goplint-counterexamples", "check-goplint-determinism", "check-goplint-soundness"]
+    },
+    {
+      "id": "no-return-alias-rebinding",
+      "violated_requirement": "Interprocedural analysis converges through finite summaries",
+      "production_symbols": ["computeProtocolMayReturn", "ssaFunctionValueIsNoReturn", "callMayReturn"],
+      "minimal_counterexample": "exit := os.Exit; if cond { exit = returns }; exit(1); protectedUse()",
+      "expected_outcome": "prune only when the reaching call-site value is unambiguously no-return",
+      "implementation_tasks": ["1.9", "5.7", "5.8"],
+      "blocking_gates": ["check-goplint-counterexamples", "check-goplint-production-integration", "check-goplint-soundness"]
+    },
+    {
+      "id": "generic-obligation-disappears",
+      "violated_requirement": "Generic and unsupported forms preserve obligations conservatively",
+      "production_symbols": ["classifyPrimitiveConstraint", "resolveProtocolValidateMethod", "isPrimitiveUnderlying"],
+      "minimal_counterexample": "a type parameter has a supported primitive term plus methods, or a mixed relevant type set",
+      "expected_outcome": "preserve the primitive obligation or emit blocking inconclusive for unsupported relevant terms",
+      "implementation_tasks": ["1.10", "3.8", "3.9"],
+      "blocking_gates": ["check-goplint-counterexamples", "check-goplint-production-integration", "check-goplint-soundness"]
+    },
+    {
+      "id": "alternate-production-authorities",
+      "violated_requirement": "One production semantic authority remains",
+      "production_symbols": ["interprocSolver", "protocolAbstractState", "ProtocolSummaryFact"],
+      "historical_forbidden_symbols": ["cfgTraversalMode", "dfsUnvalidatedBlocks", "ValidatesTypeFact"],
+      "minimal_counterexample": "a production route selects a legacy traversal, nil-context fallback, or unconditional validation fact",
+      "expected_outcome": "architecture scan fails until every alternate production authority is absent",
+      "implementation_tasks": ["7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "7.7", "7.8"],
+      "blocking_gates": ["check-goplint-architecture", "check-goplint-soundness"]
+    },
+    {
+      "id": "catalog-coverage-not-total",
+      "violated_requirement": "Soundness evidence is complete, independent, and causal",
+      "production_symbols": ["semanticCategoryRegistry", "semanticOwnerRegistry", "validateSemanticRuleCatalog"],
+      "minimal_counterexample": "a registered category such as unvalidated-boundary-request has no rule or required oracle layer",
+      "expected_outcome": "bijection validation fails for any missing, extra, stale, duplicate, or administratively owned entry",
+      "implementation_tasks": ["8.1", "8.2", "8.3", "8.4", "8.5", "8.6", "8.7"],
+      "blocking_gates": ["check-semantic-spec", "check-goplint-soundness"]
+    },
+    {
+      "id": "bounded-oracle-fixed-topology",
+      "violated_requirement": "Soundness evidence is complete, independent, and causal",
+      "production_symbols": ["runIFDSPropagationWithStats"],
+      "supporting_evidence_symbols": ["protocoloracle.Cardinality", "protocoloracle.Generate", "runGeneratedProgram"],
+      "minimal_counterexample": "change a declared procedure, node, identity, call-site, depth, topology, or effect bound without changing the corpus",
+      "expected_outcome": "manifest sensitivity fails; admitted cardinality and feature census are derived from actual enumeration",
+      "implementation_tasks": ["9.1", "9.2", "9.3", "9.7"],
+      "blocking_gates": ["check-goplint-protocol-oracle", "check-goplint-soundness"]
+    },
+    {
+      "id": "oracle-bypasses-production",
+      "violated_requirement": "Soundness evidence is complete, independent, and causal",
+      "production_symbols": ["runGeneratedGoAnalyzer", "routeProtocolCFADiagnostics"],
+      "supporting_evidence_symbols": ["protocoloracle.RenderGoSource", "protocoloracle.Evaluate"],
+      "minimal_counterexample": "the solver-core adapter agrees with the reference while source extraction or analyzer reporting is perturbed",
+      "expected_outcome": "end-to-end generated Go comparison detects extraction, routing, aggregation, and reporting perturbations",
+      "implementation_tasks": ["9.4", "9.5", "9.6", "9.8"],
+      "blocking_gates": ["check-goplint-protocol-oracle", "check-goplint-production-integration", "check-goplint-soundness"]
+    },
+    {
+      "id": "synthetic-determinism-and-fuzz",
+      "violated_requirement": "Soundness evidence is complete, independent, and causal",
+      "production_symbols": ["runIFDSPropagationWithStats", "newAnalyzerWithState"],
+      "supporting_evidence_symbols": ["TestRealAnalyzerDeterminismAcrossPackageFileAndScheduleOrder", "FuzzInterprocSupergraphConstruction", "FuzzIFDSTabulation"],
+      "minimal_counterexample": "real analyzer output changes under package, file, worklist, map, or equivalent scheduling order while helper-sorted data remains equal",
+      "expected_outcome": "real normalized findings, facts, witnesses, summaries, and refinement evidence are byte-identical and fuzz targets use independent semantic properties",
+      "implementation_tasks": ["10.1", "10.2", "10.3", "10.4", "10.5"],
+      "blocking_gates": ["check-goplint-determinism", "check-goplint-fuzz-seeds", "check-goplint-soundness"]
+    },
+    {
+      "id": "mutation-kill-not-causal",
+      "violated_requirement": "Soundness evidence is complete, independent, and causal",
+      "production_symbols": ["runIFDSPropagationWithStats", "validateProtocolSummaryFact", "semanticOwnerRegistry"],
+      "supporting_evidence_symbols": ["cmd/targeted-mutation.run", "soundness-mutants-v1.json"],
+      "minimal_counterexample": "a guard already fails, the mutant does not compile, or unrelated output contains generic FAIL",
+      "expected_outcome": "non-kill unless clean preflight and post-control pass and the declared guard reports the expected semantic mismatch",
+      "implementation_tasks": ["10.6", "10.7", "10.8", "10.9", "10.10"],
+      "blocking_gates": ["check-goplint-targeted-mutation", "check-goplint-soundness"]
+    },
+    {
+      "id": "aggregate-gate-vacuity",
+      "violated_requirement": "Completion evidence is reproducible and claim accurate",
+      "production_symbols": ["Makefile:check-goplint-soundness", ".github/workflows/lint.yml", ".pre-commit-config.yaml"],
+      "minimal_counterexample": "a required production, counterexample, architecture, catalog, oracle, mutation, race, full-scan, or benchmark subcheck is omitted yet the aggregate target succeeds",
+      "expected_outcome": "gate self-tests fail on omission, empty selection, skipped integration, zero corpus/categories, non-causal mutation, or missing evidence",
+      "implementation_tasks": ["11.1", "11.2", "11.3", "11.8"],
+      "blocking_gates": ["check-goplint-gate-contract", "check-goplint-soundness"]
+    },
+    {
+      "id": "completion-proof-not-reproducible",
+      "violated_requirement": "Completion evidence is reproducible and claim accurate",
+      "production_symbols": ["openspec/changes/complete-goplint-soundness-hardening/evidence"],
+      "minimal_counterexample": "green commands run in the dirty development worktree without a synthetic tree identity or retained outcomes",
+      "expected_outcome": "all required gates pass in a clean detached worktree materialized from HEAD plus the intended diff and a complete evidence record is retained",
+      "implementation_tasks": ["12.1", "12.2", "12.3", "12.4", "12.5", "12.6", "12.7", "12.8", "12.9", "12.10"],
+      "blocking_gates": ["check-goplint-clean-tree-evidence", "openspec-strict-validation", "check-goplint-soundness"]
+    }
+  ]
+}

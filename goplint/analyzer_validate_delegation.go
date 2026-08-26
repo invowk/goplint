@@ -302,14 +302,18 @@ func collectDelegationAliasBindings(
 		return lhsKey, event, true
 	}
 
+	// pendingDelegationBinding stages parallel-assignment resolutions so alias maps are
+	// updated only after every right-hand side is resolved against the
+	// pre-assignment state. Declared once here: duplicate function-local type
+	// names would collide in stable finding identities.
+	type pendingDelegationBinding struct {
+		key   string
+		event delegationAliasBindingEvent
+	}
 	ast.Inspect(body, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
-			type pendingBinding struct {
-				key   string
-				event delegationAliasBindingEvent
-			}
-			pending := make([]pendingBinding, 0, len(node.Rhs))
+			pending := make([]pendingDelegationBinding, 0, len(node.Rhs))
 			for i, rhs := range node.Rhs {
 				if i >= len(node.Lhs) {
 					break
@@ -318,17 +322,13 @@ func collectDelegationAliasBindings(
 				if !ok {
 					continue
 				}
-				pending = append(pending, pendingBinding{key: key, event: event})
+				pending = append(pending, pendingDelegationBinding{key: key, event: event})
 			}
 			for _, entry := range pending {
 				bindings[entry.key] = append(bindings[entry.key], entry.event)
 			}
 		case *ast.ValueSpec:
-			type pendingBinding struct {
-				key   string
-				event delegationAliasBindingEvent
-			}
-			pending := make([]pendingBinding, 0, len(node.Values))
+			pending := make([]pendingDelegationBinding, 0, len(node.Values))
 			for i, rhs := range node.Values {
 				if i >= len(node.Names) {
 					break
@@ -337,7 +337,7 @@ func collectDelegationAliasBindings(
 				if !ok {
 					continue
 				}
-				pending = append(pending, pendingBinding{key: key, event: event})
+				pending = append(pending, pendingDelegationBinding{key: key, event: event})
 			}
 			for _, entry := range pending {
 				bindings[entry.key] = append(bindings[entry.key], entry.event)

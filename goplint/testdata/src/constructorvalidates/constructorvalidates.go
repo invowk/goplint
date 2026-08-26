@@ -771,3 +771,84 @@ func NewInverseValidationGuard(name string) (*HelperResultValidated, error) { //
 		return h, err
 	}
 }
+
+// --- Helper-originated returned values validated by the caller ---
+//
+// The returned object's provenance (helper-call result vs struct literal)
+// must not matter: a direct checked Validate() in the constructor body
+// discharges the obligation.
+
+type HelperOriginValue struct {
+	label HelperLabel
+}
+
+// HelperLabel is a named type so these fixtures add no primitive findings.
+type HelperLabel string
+
+func (v HelperOriginValue) Validate() error {
+	if v.label == "" {
+		return fmt.Errorf("label required")
+	}
+	return nil
+}
+
+func buildHelperOriginValue(label HelperLabel) (HelperOriginValue, error) {
+	return HelperOriginValue{label: label}, nil
+}
+
+func passthroughHelperOriginValue(v HelperOriginValue) (HelperOriginValue, error) {
+	return v, nil
+}
+
+// NewHelperOriginChecked receives the value from a same-package helper and
+// validates the exact returned object directly.
+func NewHelperOriginChecked(label HelperLabel) (HelperOriginValue, error) {
+	value, err := buildHelperOriginValue(label)
+	if err != nil {
+		return HelperOriginValue{}, err
+	}
+	if err := value.Validate(); err != nil {
+		return HelperOriginValue{}, err
+	}
+	return value, nil
+}
+
+// NewHelperOriginPassthroughChecked routes the value through a trivial
+// pass-through helper and still validates the exact returned object.
+func NewHelperOriginPassthroughChecked(value HelperOriginValue) (HelperOriginValue, error) {
+	routed, err := passthroughHelperOriginValue(value)
+	if err != nil {
+		return HelperOriginValue{}, err
+	}
+	if err := routed.Validate(); err != nil {
+		return HelperOriginValue{}, err
+	}
+	return routed, nil
+}
+
+func buildHelperOriginPointer(label HelperLabel) (*HelperResultValidated, error) {
+	return &HelperResultValidated{name: string(label)}, nil
+}
+
+// NewHelperOriginPointerChecked receives a pointer value from a same-package
+// helper and validates the exact returned object directly.
+func NewHelperOriginPointerChecked(label HelperLabel) (*HelperResultValidated, error) {
+	value, err := buildHelperOriginPointer(label)
+	if err != nil {
+		return nil, err
+	}
+	if err := value.Validate(); err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
+// NewHelperOriginUnchecked receives the value from a same-package helper that
+// never validates, and returns it without any validation.
+func NewHelperOriginUnchecked(label HelperLabel) (HelperOriginValue, error) { // want `constructor constructorvalidates\.NewHelperOriginUnchecked returns constructorvalidates\.HelperOriginValue which has Validate\(\) but never calls it`
+	value, err := buildHelperOriginValue(label)
+	if err != nil {
+		return HelperOriginValue{}, err
+	}
+	return value, nil
+}

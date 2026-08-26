@@ -68,22 +68,21 @@ type (
 // retained evidence.
 var executableInputFamilies = []string{
 	".github/workflows",
-	"openspec/changes/archive/2026-07-19-close-goplint-soundness-review-gaps/evidence",
-	"openspec/changes/archive/2026-07-19-close-residual-goplint-soundness-gaps/evidence",
+	"bench",
 	"scripts",
-	"tools/goplint/bench",
-	"tools/goplint/scripts",
-	"tools/goplint/spec",
-	"tools/goplint/testdata",
-	"tools/mutation",
+	"spec",
+	"spec/evidence",
+	"testdata",
 }
 
 // executableInputExactPaths enumerates single gate-input files outside the
 // families above.
 var executableInputExactPaths = []string{
-	".golangci.yml",
+	".golangci.toml",
 	".pre-commit-config.yaml",
 	"Makefile",
+	"baseline.toml",
+	"exceptions.toml",
 	"go.mod",
 	"go.sum",
 }

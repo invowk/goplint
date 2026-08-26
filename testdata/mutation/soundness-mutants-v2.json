@@ -20,7 +20,9 @@
         "use-before-validate-inconclusive",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["propagation"],
+      "changed_stages": [
+        "propagation"
+      ],
       "file": "goplint/protocol_validation_effects.go",
       "before": "if comparison.Op == token.EQL {\n\t\treturn protocolErrorResultNil, protocolErrorResultNonNil, true\n\t}\n\treturn protocolErrorResultNonNil, protocolErrorResultNil, true",
       "before_sha256": "166043dbb56405668852ffd1e682e0ea6786f8b1e9b15470265eed20e8e3298d",
@@ -32,11 +34,22 @@
           "TestCanonicalCastSolverRequiresCheckedValidationSuccess",
           "TestProtocolValidationEffectsRequireNilResultEdge"
         ],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestProtocolValidationEffectsRequireNilResultEdge", "id": "nil-branch-success/checked-nil-edge"},
-          "expected": {"subject": "nil-result-edge", "state": "reaches-protected-continuation"},
-          "actual": {"subject": "nil-result-edge", "state": "does-not-reach-protected-continuation"}
-        }]
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestProtocolValidationEffectsRequireNilResultEdge",
+              "id": "nil-branch-success/checked-nil-edge"
+            },
+            "expected": {
+              "subject": "nil-result-edge",
+              "state": "reaches-protected-continuation"
+            },
+            "actual": {
+              "subject": "nil-result-edge",
+              "state": "does-not-reach-protected-continuation"
+            }
+          }
+        ]
       }
     },
     {
@@ -52,7 +65,9 @@
         "use-before-validate-inconclusive",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["identity"],
+      "changed_stages": [
+        "identity"
+      ],
       "file": "goplint/protocol_validation_effects.go",
       "before": "ReceiverIdentity: interner.internValue(receiver),",
       "before_sha256": "9636f5edcae311da2c0585fbe69cedbe935c7e28725d7b3f546a753913858d30",
@@ -64,11 +79,22 @@
           "TestCanonicalCastSolverRequiresCheckedValidationSuccess",
           "TestProtocolValidationEffectsRequireNilResultEdge"
         ],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestProtocolValidationEffectsRequireNilResultEdge", "id": "receiver-identity/checked-validation-relation"},
-          "expected": {"subject": "validation-receiver-and-error-identities", "state": "distinct"},
-          "actual": {"subject": "validation-receiver-and-error-identities", "state": "same"}
-        }]
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestProtocolValidationEffectsRequireNilResultEdge",
+              "id": "receiver-identity/checked-validation-relation"
+            },
+            "expected": {
+              "subject": "validation-receiver-and-error-identities",
+              "state": "distinct"
+            },
+            "actual": {
+              "subject": "validation-receiver-and-error-identities",
+              "state": "same"
+            }
+          }
+        ]
       }
     },
     {
@@ -84,7 +110,9 @@
         "use-before-validate-inconclusive",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["identity"],
+      "changed_stages": [
+        "identity"
+      ],
       "file": "goplint/protocol_alias_analysis.go",
       "before": "state.store(interner.internValue(store.Addr), interner.internValue(store.Val))",
       "before_sha256": "83b9bf60512169ebec57096fb38edc8a146795402910bf66b54664efea78a736",
@@ -96,11 +124,22 @@
           "TestProtocolAliasAnalysisPhiAndStoreSemantics",
           "TestProtocolAliasSnapshotJoinAndStoreKill"
         ],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestProtocolAliasAnalysisPhiAndStoreSemantics", "id": "alias-memory/store-transfer"},
-          "expected": {"subject": "pointed-memory-cell", "state": "updated-with-stored-identity"},
-          "actual": {"subject": "pointed-memory-cell", "state": "missing-stored-identity"}
-        }]
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestProtocolAliasAnalysisPhiAndStoreSemantics",
+              "id": "alias-memory/store-transfer"
+            },
+            "expected": {
+              "subject": "pointed-memory-cell",
+              "state": "updated-with-stored-identity"
+            },
+            "actual": {
+              "subject": "pointed-memory-cell",
+              "state": "missing-stored-identity"
+            }
+          }
+        ]
       }
     },
     {
@@ -116,7 +155,9 @@
         "use-before-validate-inconclusive",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["propagation"],
+      "changed_stages": [
+        "propagation"
+      ],
       "file": "goplint/cfa_ifds_tabulation.go",
       "before": "if edge.Kind != interprocEdgeReturn || edge.CallSite != callSite || edge.From.FuncKey != calleeFunc {",
       "before_sha256": "5238b1c80ffb557fde040c7daff6123359fe178af34d8434e4d5d377c30926e7",
@@ -124,12 +165,25 @@
       "after_sha256": "66f1a59eb1319dcf1ff9160b7b577793ef355d24a0b4e91cd41b00e8596b3182",
       "guard": {
         "test_regex": "^TestIFDSPropagationMatchesReturnsToCallingSite$",
-        "selected_tests": ["TestIFDSPropagationMatchesReturnsToCallingSite"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestIFDSPropagationMatchesReturnsToCallingSite", "id": "matched-returns/calling-site-outcome"},
-          "expected": {"subject": "matched-return-propagation", "state": "safe"},
-          "actual": {"subject": "matched-return-propagation", "state": "unsafe"}
-        }]
+        "selected_tests": [
+          "TestIFDSPropagationMatchesReturnsToCallingSite"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestIFDSPropagationMatchesReturnsToCallingSite",
+              "id": "matched-returns/calling-site-outcome"
+            },
+            "expected": {
+              "subject": "matched-return-propagation",
+              "state": "safe"
+            },
+            "actual": {
+              "subject": "matched-return-propagation",
+              "state": "unsafe"
+            }
+          }
+        ]
       }
     },
     {
@@ -145,7 +199,9 @@
         "use-before-validate-inconclusive",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["graph-construction"],
+      "changed_stages": [
+        "graph-construction"
+      ],
       "file": "goplint/cfa_interproc_graph.go",
       "before": "if !callMayReturn(pass, event.Call, noReturnCalls) {",
       "before_sha256": "df512dc059f8da8ecc282eeec2d8d2fcf2e3d75d718ac7b61566d932649b68e2",
@@ -153,12 +209,25 @@
       "after_sha256": "e535567498bc8e58920df8a7dbfa0efdbbd6966fcb922e68fac8734691c2e5c2",
       "guard": {
         "test_regex": "^TestInterprocGraphPrunesKnownNonReturningCallsAndAliases$",
-        "selected_tests": ["TestInterprocGraphPrunesKnownNonReturningCallsAndAliases"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestInterprocGraphPrunesKnownNonReturningCallsAndAliases", "id": "terminal-pruning/direct-known-noreturn"},
-          "expected": {"subject": "known-noreturn-continuation", "state": "pruned"},
-          "actual": {"subject": "known-noreturn-continuation", "state": "continuation-allowed"}
-        }]
+        "selected_tests": [
+          "TestInterprocGraphPrunesKnownNonReturningCallsAndAliases"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestInterprocGraphPrunesKnownNonReturningCallsAndAliases",
+              "id": "terminal-pruning/direct-known-noreturn"
+            },
+            "expected": {
+              "subject": "known-noreturn-continuation",
+              "state": "pruned"
+            },
+            "actual": {
+              "subject": "known-noreturn-continuation",
+              "state": "continuation-allowed"
+            }
+          }
+        ]
       }
     },
     {
@@ -174,7 +243,9 @@
         "use-before-validate-inconclusive",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["source-extraction"],
+      "changed_stages": [
+        "source-extraction"
+      ],
       "file": "goplint/protocol_type_normalization.go",
       "before": "case *ast.IndexExpr:\n\t\treturn protocolCalledFunction(info, typed.X)\n\tcase *ast.IndexListExpr:\n\t\treturn protocolCalledFunction(info, typed.X)",
       "before_sha256": "880281e0a143add8695b18e149ba7adf6de923506630f5d191d200e27be04606",
@@ -182,12 +253,25 @@
       "after_sha256": "31f823fcf1649c4316d6e0206617b447d90dca8745025e1030431106d35bfa52",
       "guard": {
         "test_regex": "^TestNormalizeProtocolCallUsesInstantiatedGenericSignatures$",
-        "selected_tests": ["TestNormalizeProtocolCallUsesInstantiatedGenericSignatures"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestNormalizeProtocolCallUsesInstantiatedGenericSignatures", "id": "generic-normalization/indexed-callees"},
-          "expected": {"subject": "generic-indexed-call-resolution", "state": "resolved-index-and-index-list"},
-          "actual": {"subject": "generic-indexed-call-resolution", "state": "missing-indexed-callee"}
-        }]
+        "selected_tests": [
+          "TestNormalizeProtocolCallUsesInstantiatedGenericSignatures"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestNormalizeProtocolCallUsesInstantiatedGenericSignatures",
+              "id": "generic-normalization/indexed-callees"
+            },
+            "expected": {
+              "subject": "generic-indexed-call-resolution",
+              "state": "resolved-index-and-index-list"
+            },
+            "actual": {
+              "subject": "generic-indexed-call-resolution",
+              "state": "missing-indexed-callee"
+            }
+          }
+        ]
       }
     },
     {
@@ -199,7 +283,9 @@
         "unvalidated-cast-inconclusive",
         "use-before-validate-inconclusive"
       ],
-      "changed_stages": ["source-extraction"],
+      "changed_stages": [
+        "source-extraction"
+      ],
       "file": "goplint/protocol_summary_fact.go",
       "before": "if fact.FormatVersion != protocolSummaryFactVersion || !fact.Complete ||\n\t\tstrings.TrimSpace(fact.PackagePath) == \"\" || fact.PackagePath != packagePath ||\n\t\tstrings.TrimSpace(fact.FunctionName) == \"\" ||\n\t\tstrings.TrimSpace(fact.FunctionIdentity) == \"\" {",
       "before_sha256": "8e9ee56924eb22ed7bebf98745a0423225ca7a89f4c99ac2d5fc15a558ae69d8",
@@ -213,19 +299,46 @@
         ],
         "expected_mismatches": [
           {
-            "assertion": {"test": "TestProtocolSummaryFactFailuresHaveDeterministicStatuses/incompatible_version", "id": "fact-versioning/deterministic-incompatible-version"},
-            "expected": {"subject": "protocol-summary-fact-status", "state": "incompatible"},
-            "actual": {"subject": "protocol-summary-fact-status", "state": "valid"}
+            "assertion": {
+              "test": "TestProtocolSummaryFactFailuresHaveDeterministicStatuses/incompatible_version",
+              "id": "fact-versioning/deterministic-incompatible-version"
+            },
+            "expected": {
+              "subject": "protocol-summary-fact-status",
+              "state": "incompatible"
+            },
+            "actual": {
+              "subject": "protocol-summary-fact-status",
+              "state": "valid"
+            }
           },
           {
-            "assertion": {"test": "TestValidateProtocolSummaryFactFailsClosed/legacy_version", "id": "fact-versioning/legacy-version"},
-            "expected": {"subject": "protocol-summary-fact-status", "state": "incompatible"},
-            "actual": {"subject": "protocol-summary-fact-status", "state": "valid"}
+            "assertion": {
+              "test": "TestValidateProtocolSummaryFactFailsClosed/legacy_version",
+              "id": "fact-versioning/legacy-version"
+            },
+            "expected": {
+              "subject": "protocol-summary-fact-status",
+              "state": "incompatible"
+            },
+            "actual": {
+              "subject": "protocol-summary-fact-status",
+              "state": "valid"
+            }
           },
           {
-            "assertion": {"test": "TestValidateProtocolSummaryFactFailsClosed/version_mismatch", "id": "fact-versioning/version-mismatch"},
-            "expected": {"subject": "protocol-summary-fact-status", "state": "incompatible"},
-            "actual": {"subject": "protocol-summary-fact-status", "state": "valid"}
+            "assertion": {
+              "test": "TestValidateProtocolSummaryFactFailsClosed/version_mismatch",
+              "id": "fact-versioning/version-mismatch"
+            },
+            "expected": {
+              "subject": "protocol-summary-fact-status",
+              "state": "incompatible"
+            },
+            "actual": {
+              "subject": "protocol-summary-fact-status",
+              "state": "valid"
+            }
           }
         ]
       }
@@ -237,27 +350,46 @@
         "missing-constructor-validate",
         "missing-constructor-validate-inconclusive"
       ],
-      "changed_stages": ["propagation"],
-      "file": "goplint/cfa_ifds_solver.go",
+      "changed_stages": [
+        "propagation"
+      ],
+      "file": "goplint/cfa_ifds_constructor_path.go",
       "before": "if state.validationProven() {\n\t\t\t\t\tif nodeID.Kind == interprocNodeKindReturn {\n\t\t\t\t\t\treturn ideEdgeFuncIdentity, pathOutcomeReasonNone\n\t\t\t\t\t}\n\t\t\t\t\treturn postValidationTargetEffectWithSummaryStack(\n\t\t\t\t\t\ts.pass,\n\t\t\t\t\t\tnode,\n\t\t\t\t\t\ttarget,\n\t\t\t\t\t\tinput.SummaryStack,\n\t\t\t\t\t\ts.calleeSummaryCache,\n\t\t\t\t\t)\n\t\t\t\t}",
       "before_sha256": "bd52f1c111ab7d72566e3e864c1a54d033dc23f0aee86d7d2736253db8db9e66",
       "after": "if state.validationProven() {\n\t\t\t\t\tif nodeID.Kind == interprocNodeKindReturn {\n\t\t\t\t\t\treturn ideEdgeFuncIdentity, pathOutcomeReasonNone\n\t\t\t\t\t}\n\t\t\t\t\treturn ideEdgeFuncIdentity, pathOutcomeReasonNone\n\t\t\t\t}",
       "after_sha256": "6dd4d6bbbb13f54b02c2edb534bc076c8e23ba53acb8d4ccffc51d6f5892d8f1",
       "guard": {
         "test_regex": "^TestProtocolSummaryEffectsApplyAcrossPackages$",
-        "selected_tests": ["TestProtocolSummaryEffectsApplyAcrossPackages"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestProtocolSummaryEffectsApplyAcrossPackages", "id": "post-validation-summary/cross-package-effects"},
-          "expected": {"subject": "post-validation-constructor-diagnostics", "state": "violations=5,inconclusives=1"},
-          "actual": {"subject": "post-validation-constructor-diagnostics", "state": "violations=0,inconclusives=0"}
-        }]
+        "selected_tests": [
+          "TestProtocolSummaryEffectsApplyAcrossPackages"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestProtocolSummaryEffectsApplyAcrossPackages",
+              "id": "post-validation-summary/cross-package-effects"
+            },
+            "expected": {
+              "subject": "post-validation-constructor-diagnostics",
+              "state": "violations=5,inconclusives=1"
+            },
+            "actual": {
+              "subject": "post-validation-constructor-diagnostics",
+              "state": "violations=0,inconclusives=0"
+            }
+          }
+        ]
       }
     },
     {
       "id": "post-validation-unknown/drop-cast-transfer",
       "concern": "cast paths keep relevant unresolved effects blocking after validation",
-      "categories": ["unvalidated-cast-inconclusive"],
-      "changed_stages": ["propagation"],
+      "categories": [
+        "unvalidated-cast-inconclusive"
+      ],
+      "changed_stages": [
+        "propagation"
+      ],
       "file": "goplint/protocol_domain.go",
       "before": "if reason == pathOutcomeReasonNone {\n\t\treturn s\n\t}",
       "before_sha256": "08a164c4563ef56cee627b348e9fde85eb724595ccfaede73fdb4d68598f5ae9",
@@ -265,12 +397,25 @@
       "after_sha256": "3abc30228a38616f8cc2344035693a6deb9cbf6a05d2c68a5974ea1a2b5d98f5",
       "guard": {
         "test_regex": "^TestProtocolUnknownEffectsAfterValidation$",
-        "selected_tests": ["TestProtocolUnknownEffectsAfterValidation"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestProtocolUnknownEffectsAfterValidation", "id": "post-validation-unknown/inconclusive-count"},
-          "expected": {"subject": "post-validation-unknown-effect-diagnostics", "state": "9"},
-          "actual": {"subject": "post-validation-unknown-effect-diagnostics", "state": "0"}
-        }]
+        "selected_tests": [
+          "TestProtocolUnknownEffectsAfterValidation"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestProtocolUnknownEffectsAfterValidation",
+              "id": "post-validation-unknown/inconclusive-count"
+            },
+            "expected": {
+              "subject": "post-validation-unknown-effect-diagnostics",
+              "state": "9"
+            },
+            "actual": {
+              "subject": "post-validation-unknown-effect-diagnostics",
+              "state": "0"
+            }
+          }
+        ]
       }
     },
     {
@@ -282,7 +427,9 @@
         "unvalidated-cast-inconclusive",
         "use-before-validate-inconclusive"
       ],
-      "changed_stages": ["refinement"],
+      "changed_stages": [
+        "refinement"
+      ],
       "file": "goplint/cfa_refinement.go",
       "before": "} else if verdict == cfgFeasibilityResultUnknown {\n\t\tresult.Class = interprocOutcomeInconclusive\n\t\tresult.Reason = pathOutcomeReasonFeasibilityUnknown\n\t}",
       "before_sha256": "b38f566826eaed0dc1ca166f2365bf37d370e536a5acca354fb5ab15fdf3f7e2",
@@ -290,12 +437,25 @@
       "after_sha256": "3f178368dc34d21b6877b9b04f1d545fe8f2ab17ad5130aef7af0603def8fd87",
       "guard": {
         "test_regex": "^TestCFGRefinementUnknownResultStaysInconclusive$",
-        "selected_tests": ["TestCFGRefinementUnknownResultStaysInconclusive"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestCFGRefinementUnknownResultStaysInconclusive", "id": "unknown-to-safe/feasibility-finalization"},
-          "expected": {"subject": "unknown-feasibility-finalization", "state": "blocking-inconclusive"},
-          "actual": {"subject": "unknown-feasibility-finalization", "state": "optimistic-safe"}
-        }]
+        "selected_tests": [
+          "TestCFGRefinementUnknownResultStaysInconclusive"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestCFGRefinementUnknownResultStaysInconclusive",
+              "id": "unknown-to-safe/feasibility-finalization"
+            },
+            "expected": {
+              "subject": "unknown-feasibility-finalization",
+              "state": "blocking-inconclusive"
+            },
+            "actual": {
+              "subject": "unknown-feasibility-finalization",
+              "state": "optimistic-safe"
+            }
+          }
+        ]
       }
     },
     {
@@ -307,7 +467,9 @@
         "unvalidated-cast-inconclusive",
         "use-before-validate-inconclusive"
       ],
-      "changed_stages": ["propagation"],
+      "changed_stages": [
+        "propagation"
+      ],
       "file": "goplint/protocol_domain.go",
       "before": "Uncertainty:     s.Uncertainty | other.Uncertainty,",
       "before_sha256": "3a150052cd05d846d97027a490555a31b99965fff08177a997077c14bf226e2f",
@@ -315,12 +477,25 @@
       "after_sha256": "984140c4f1b9686d7d5a880512f0a01c18d77a04c71cc57ffaa393dd785c8d8d",
       "guard": {
         "test_regex": "^TestProtocolDomainJoinLaws$",
-        "selected_tests": ["TestProtocolDomainJoinLaws"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestProtocolDomainJoinLaws", "id": "production-domain/joined-uncertainty"},
-          "expected": {"subject": "protocol-domain-join", "state": "commutative"},
-          "actual": {"subject": "protocol-domain-join", "state": "non-commutative"}
-        }]
+        "selected_tests": [
+          "TestProtocolDomainJoinLaws"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestProtocolDomainJoinLaws",
+              "id": "production-domain/joined-uncertainty"
+            },
+            "expected": {
+              "subject": "protocol-domain-join",
+              "state": "commutative"
+            },
+            "actual": {
+              "subject": "protocol-domain-join",
+              "state": "non-commutative"
+            }
+          }
+        ]
       }
     },
     {
@@ -332,7 +507,9 @@
         "use-before-validate-cross-block",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["refinement"],
+      "changed_stages": [
+        "refinement"
+      ],
       "file": "goplint/cfa_refinement.go",
       "before": "} else if verdict == cfgFeasibilityResultUnknown {",
       "before_sha256": "7e9478a04f2671e12c9753c9c8c319dc879643d10d1fb8111e14f08008371fd7",
@@ -348,24 +525,60 @@
         ],
         "expected_mismatches": [
           {
-            "assertion": {"test": "TestCategoryMutationGuardMissingConstructorValidate", "id": "category-report/missing-constructor-validate"},
-            "expected": {"subject": "diagnostic-category/missing-constructor-validate", "state": "present"},
-            "actual": {"subject": "diagnostic-category/missing-constructor-validate", "state": "absent"}
+            "assertion": {
+              "test": "TestCategoryMutationGuardMissingConstructorValidate",
+              "id": "category-report/missing-constructor-validate"
+            },
+            "expected": {
+              "subject": "diagnostic-category/missing-constructor-validate",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/missing-constructor-validate",
+              "state": "absent"
+            }
           },
           {
-            "assertion": {"test": "TestCategoryMutationGuardUnvalidatedCast", "id": "category-report/unvalidated-cast"},
-            "expected": {"subject": "diagnostic-category/unvalidated-cast", "state": "present"},
-            "actual": {"subject": "diagnostic-category/unvalidated-cast", "state": "absent"}
+            "assertion": {
+              "test": "TestCategoryMutationGuardUnvalidatedCast",
+              "id": "category-report/unvalidated-cast"
+            },
+            "expected": {
+              "subject": "diagnostic-category/unvalidated-cast",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/unvalidated-cast",
+              "state": "absent"
+            }
           },
           {
-            "assertion": {"test": "TestCategoryMutationGuardUseBeforeValidateCrossBlock", "id": "category-report/use-before-validate-cross-block"},
-            "expected": {"subject": "diagnostic-category/use-before-validate-cross-block", "state": "present"},
-            "actual": {"subject": "diagnostic-category/use-before-validate-cross-block", "state": "absent"}
+            "assertion": {
+              "test": "TestCategoryMutationGuardUseBeforeValidateCrossBlock",
+              "id": "category-report/use-before-validate-cross-block"
+            },
+            "expected": {
+              "subject": "diagnostic-category/use-before-validate-cross-block",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/use-before-validate-cross-block",
+              "state": "absent"
+            }
           },
           {
-            "assertion": {"test": "TestCategoryMutationGuardUseBeforeValidateSameBlock", "id": "category-report/use-before-validate-same-block"},
-            "expected": {"subject": "diagnostic-category/use-before-validate-same-block", "state": "present"},
-            "actual": {"subject": "diagnostic-category/use-before-validate-same-block", "state": "absent"}
+            "assertion": {
+              "test": "TestCategoryMutationGuardUseBeforeValidateSameBlock",
+              "id": "category-report/use-before-validate-same-block"
+            },
+            "expected": {
+              "subject": "diagnostic-category/use-before-validate-same-block",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/use-before-validate-same-block",
+              "state": "absent"
+            }
           }
         ]
       }
@@ -383,7 +596,9 @@
         "use-before-validate-inconclusive",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["aggregation"],
+      "changed_stages": [
+        "aggregation"
+      ],
       "file": "goplint/cfa_witness_contribution.go",
       "before": "\"state-after=\" + edge.StateAfter.key(),",
       "before_sha256": "f351f7ed37b0ddc89f33ee24f14469ba53f99c16f21644167b2dc8cf95b1fd22",
@@ -391,12 +606,25 @@
       "after_sha256": "5ea635276cd1ea41042494748afe223927a5b04f57d492ca98a212028835ac37",
       "guard": {
         "test_regex": "^TestInterprocWitnessIdentityBindsPostTransferState$",
-        "selected_tests": ["TestInterprocWitnessIdentityBindsPostTransferState"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestInterprocWitnessIdentityBindsPostTransferState", "id": "witness-state/post-transfer-state"},
-          "expected": {"subject": "witness-post-transfer-identity", "state": "distinct"},
-          "actual": {"subject": "witness-post-transfer-identity", "state": "collapsed"}
-        }]
+        "selected_tests": [
+          "TestInterprocWitnessIdentityBindsPostTransferState"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestInterprocWitnessIdentityBindsPostTransferState",
+              "id": "witness-state/post-transfer-state"
+            },
+            "expected": {
+              "subject": "witness-post-transfer-identity",
+              "state": "distinct"
+            },
+            "actual": {
+              "subject": "witness-post-transfer-identity",
+              "state": "collapsed"
+            }
+          }
+        ]
       }
     },
     {
@@ -412,7 +640,9 @@
         "use-before-validate-inconclusive",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["propagation"],
+      "changed_stages": [
+        "propagation"
+      ],
       "file": "goplint/cfa_ifds_tabulation.go",
       "before": "if _, exists := summaries[key]; exists {\n\t\t\treturn true\n\t\t}",
       "before_sha256": "dd3bc3a301cda7bf3476dcce6761f68b3bbd8ed51bc3ed36467e7cd1c4886ac2",
@@ -426,14 +656,32 @@
         ],
         "expected_mismatches": [
           {
-            "assertion": {"test": "TestIFDSTabulationConvergesMutuallyRecursiveSummaries", "id": "recursive-summary/mutual-fixed-point-reuse"},
-            "expected": {"subject": "mutual-recursive-summary-fixed-point", "state": "summaries-reused-across-both-procedures"},
-            "actual": {"subject": "mutual-recursive-summary-fixed-point", "state": "summaries-not-reused-across-both-procedures"}
+            "assertion": {
+              "test": "TestIFDSTabulationConvergesMutuallyRecursiveSummaries",
+              "id": "recursive-summary/mutual-fixed-point-reuse"
+            },
+            "expected": {
+              "subject": "mutual-recursive-summary-fixed-point",
+              "state": "summaries-reused-across-both-procedures"
+            },
+            "actual": {
+              "subject": "mutual-recursive-summary-fixed-point",
+              "state": "summaries-not-reused-across-both-procedures"
+            }
           },
           {
-            "assertion": {"test": "TestIFDSTabulationConvergesRecursiveSummaryWithoutDepthCutoff", "id": "recursive-summary/direct-fixed-point-reuse"},
-            "expected": {"subject": "recursive-summary-fixed-point", "state": "summary-reused"},
-            "actual": {"subject": "recursive-summary-fixed-point", "state": "summary-not-reused"}
+            "assertion": {
+              "test": "TestIFDSTabulationConvergesRecursiveSummaryWithoutDepthCutoff",
+              "id": "recursive-summary/direct-fixed-point-reuse"
+            },
+            "expected": {
+              "subject": "recursive-summary-fixed-point",
+              "state": "summary-reused"
+            },
+            "actual": {
+              "subject": "recursive-summary-fixed-point",
+              "state": "summary-not-reused"
+            }
           }
         ]
       }
@@ -447,7 +695,9 @@
         "unvalidated-cast-inconclusive",
         "use-before-validate-inconclusive"
       ],
-      "changed_stages": ["source-extraction"],
+      "changed_stages": [
+        "source-extraction"
+      ],
       "file": "goplint/cfa_ssa_builder.go",
       "before": "return ssaFunctionResolution{Availability: ssaAvailability{Status: ssaAvailabilityMissingFunction}}",
       "before_sha256": "7ea61da53eb54a868a12d5516f9e2a647b3983f5c5c8288eddf99872a865798a",
@@ -455,12 +705,25 @@
       "after_sha256": "b68be211ef732e2e5da578ecaf079e4d6a27373c7c6b20c728ee31483154f543",
       "guard": {
         "test_regex": "^TestTypedSSAAvailabilityDistinguishesFailureClasses$",
-        "selected_tests": ["TestTypedSSAAvailabilityDistinguishesFailureClasses"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestTypedSSAAvailabilityDistinguishesFailureClasses", "id": "missing-ssa/nil-function-status"},
-          "expected": {"subject": "nil-ssa-function-availability", "state": "missing-function"},
-          "actual": {"subject": "nil-ssa-function-availability", "state": "ready"}
-        }]
+        "selected_tests": [
+          "TestTypedSSAAvailabilityDistinguishesFailureClasses"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestTypedSSAAvailabilityDistinguishesFailureClasses",
+              "id": "missing-ssa/nil-function-status"
+            },
+            "expected": {
+              "subject": "nil-ssa-function-availability",
+              "state": "missing-function"
+            },
+            "actual": {
+              "subject": "nil-ssa-function-availability",
+              "state": "ready"
+            }
+          }
+        ]
       }
     },
     {
@@ -472,7 +735,9 @@
         "unvalidated-cast-inconclusive",
         "use-before-validate-inconclusive"
       ],
-      "changed_stages": ["propagation"],
+      "changed_stages": [
+        "propagation"
+      ],
       "file": "goplint/cfa_feasibility.go",
       "before": "return deadline != nil && deadline.Expired()",
       "before_sha256": "aef941fe754992611ff438dca3ea3786fa65676d4df986fd92151c5c8db3e32d",
@@ -480,12 +745,25 @@
       "after_sha256": "19921ccfad14c1deb04f7bda6247bf6ad4abe774de85b6003dea4e6b7774dd5c",
       "guard": {
         "test_regex": "^TestIFDSTabulationStopsCooperativelyBeforeAcceptingSafe$",
-        "selected_tests": ["TestIFDSTabulationStopsCooperativelyBeforeAcceptingSafe"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestIFDSTabulationStopsCooperativelyBeforeAcceptingSafe", "id": "timeout/cooperative-tabulation-deadline"},
-          "expected": {"subject": "tabulation-outcome", "state": "inconclusive:timeout"},
-          "actual": {"subject": "tabulation-outcome", "state": "safe:none"}
-        }]
+        "selected_tests": [
+          "TestIFDSTabulationStopsCooperativelyBeforeAcceptingSafe"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestIFDSTabulationStopsCooperativelyBeforeAcceptingSafe",
+              "id": "timeout/cooperative-tabulation-deadline"
+            },
+            "expected": {
+              "subject": "tabulation-outcome",
+              "state": "inconclusive:timeout"
+            },
+            "actual": {
+              "subject": "tabulation-outcome",
+              "state": "safe:none"
+            }
+          }
+        ]
       }
     },
     {
@@ -501,7 +779,9 @@
         "use-before-validate-inconclusive",
         "use-before-validate-same-block"
       ],
-      "changed_stages": ["graph-construction"],
+      "changed_stages": [
+        "graph-construction"
+      ],
       "file": "goplint/cfa_interproc_graph.go",
       "before": "sort.Slice(out, func(i, j int) bool {",
       "before_sha256": "4519cc3948a4de949898ba84bd4f0fabc90bd6a9ba3d388fcd765eb3c8999247",
@@ -509,19 +789,36 @@
       "after_sha256": "b93854e57426af9731e69823ae4570d1e93a2a548e46cabc75d4f5dd0fff36af",
       "guard": {
         "test_regex": "^TestInterprocOutgoingEdgesHaveCanonicalOrder$",
-        "selected_tests": ["TestInterprocOutgoingEdgesHaveCanonicalOrder"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestInterprocOutgoingEdgesHaveCanonicalOrder", "id": "determinism/outgoing-edge-order"},
-          "expected": {"subject": "outgoing-call-site-order", "state": "a,z"},
-          "actual": {"subject": "outgoing-call-site-order", "state": "z,a"}
-        }]
+        "selected_tests": [
+          "TestInterprocOutgoingEdgesHaveCanonicalOrder"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestInterprocOutgoingEdgesHaveCanonicalOrder",
+              "id": "determinism/outgoing-edge-order"
+            },
+            "expected": {
+              "subject": "outgoing-call-site-order",
+              "state": "a,z"
+            },
+            "actual": {
+              "subject": "outgoing-call-site-order",
+              "state": "z,a"
+            }
+          }
+        ]
       }
     },
     {
       "id": "catalog-completeness/misroute-boundary-category",
       "concern": "the live production category registry remains in total owner/kind sync with the semantic catalog",
-      "categories": ["unvalidated-boundary-request"],
-      "changed_stages": ["reporting"],
+      "categories": [
+        "unvalidated-boundary-request"
+      ],
+      "changed_stages": [
+        "reporting"
+      ],
       "file": "goplint/categories.go",
       "before": "newProtocolCategory(CategoryUnvalidatedBoundaryRequest, BaselineSuppressible, \"Exported request/options boundaries using parameters before Validate()\", ownerBoundaryRequest),",
       "before_sha256": "aa13cb752bc9bbda6850854df1fc5e50ff8077bbbc07fe8f0bf594c8101ab7d7",
@@ -529,12 +826,25 @@
       "after_sha256": "a6f40abf38744f91708cd94638120880bd6257507bbc561f4e1ba96eefa8a424",
       "guard": {
         "test_regex": "^TestSemanticSpecSchemaAndCatalogParse$",
-        "selected_tests": ["TestSemanticSpecSchemaAndCatalogParse"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestSemanticSpecSchemaAndCatalogParse", "id": "catalog-completeness/boundary-owner"},
-          "expected": {"subject": "unvalidated-boundary-request-owner", "state": "boundary-request-validation"},
-          "actual": {"subject": "unvalidated-boundary-request-owner", "state": "primitive-detection"}
-        }]
+        "selected_tests": [
+          "TestSemanticSpecSchemaAndCatalogParse"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestSemanticSpecSchemaAndCatalogParse",
+              "id": "catalog-completeness/boundary-owner"
+            },
+            "expected": {
+              "subject": "unvalidated-boundary-request-owner",
+              "state": "boundary-request-validation"
+            },
+            "actual": {
+              "subject": "unvalidated-boundary-request-owner",
+              "state": "primitive-detection"
+            }
+          }
+        ]
       }
     },
     {
@@ -544,7 +854,9 @@
         "unvalidated-cast",
         "unvalidated-cast-inconclusive"
       ],
-      "changed_stages": ["source-extraction"],
+      "changed_stages": [
+        "source-extraction"
+      ],
       "file": "internal/protocoloracle/generate.go",
       "before": "for _, value := range dimensions.Topologies[1:] {",
       "before_sha256": "33ea4ea94b4e06e01c4c0489488e848de22011fa6a3160b42e41f05f9877ebae",
@@ -552,19 +864,36 @@
       "after_sha256": "c520f66fe1722ad09d7f3427773130df8bb5aebdbd8d846a8d45031615a9b5e3",
       "guard": {
         "test_regex": "^TestProtocolOracleGeneratedGoEndToEnd$",
-        "selected_tests": ["TestProtocolOracleGeneratedGoEndToEnd"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestProtocolOracleGeneratedGoEndToEnd", "id": "oracle-bounds/reviewed-cardinality"},
-          "expected": {"subject": "blocking-oracle-cardinality", "state": "reviewed"},
-          "actual": {"subject": "blocking-oracle-cardinality", "state": "drifted"}
-        }]
+        "selected_tests": [
+          "TestProtocolOracleGeneratedGoEndToEnd"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestProtocolOracleGeneratedGoEndToEnd",
+              "id": "oracle-bounds/reviewed-cardinality"
+            },
+            "expected": {
+              "subject": "blocking-oracle-cardinality",
+              "state": "reviewed"
+            },
+            "actual": {
+              "subject": "blocking-oracle-cardinality",
+              "state": "drifted"
+            }
+          }
+        ]
       }
     },
     {
       "id": "category-report/unvalidated-cast",
       "concern": "unvalidated cast violations retain their exact production category at reporting",
-      "changed_stages": ["reporting"],
-      "categories": ["unvalidated-cast"],
+      "changed_stages": [
+        "reporting"
+      ],
+      "categories": [
+        "unvalidated-cast"
+      ],
       "file": "goplint/cfa_cast_validation.go",
       "before": "reportFindingWithMetaIfNotBaselined(pass, bl, ac.pos.Pos(), CategoryUnvalidatedCast, findingID, msg, meta)",
       "before_sha256": "452c38d0ddad9e0e0eb1eee6cb728c694a887b02b92d7992c39768a153183c4c",
@@ -572,19 +901,36 @@
       "after_sha256": "86df816144bef1fe2bb86852857bc6d2a695515751149f44f14832696be868dd",
       "guard": {
         "test_regex": "^TestCategoryMutationGuardUnvalidatedCast$",
-        "selected_tests": ["TestCategoryMutationGuardUnvalidatedCast"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestCategoryMutationGuardUnvalidatedCast", "id": "category-report/unvalidated-cast"},
-          "expected": {"subject": "diagnostic-category/unvalidated-cast", "state": "present"},
-          "actual": {"subject": "diagnostic-category/unvalidated-cast", "state": "absent"}
-        }]
+        "selected_tests": [
+          "TestCategoryMutationGuardUnvalidatedCast"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestCategoryMutationGuardUnvalidatedCast",
+              "id": "category-report/unvalidated-cast"
+            },
+            "expected": {
+              "subject": "diagnostic-category/unvalidated-cast",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/unvalidated-cast",
+              "state": "absent"
+            }
+          }
+        ]
       }
     },
     {
       "id": "category-report/unvalidated-cast-inconclusive",
       "concern": "unvalidated cast uncertainty retains its exact production category at reporting",
-      "changed_stages": ["reporting"],
-      "categories": ["unvalidated-cast-inconclusive"],
+      "changed_stages": [
+        "reporting"
+      ],
+      "categories": [
+        "unvalidated-cast-inconclusive"
+      ],
       "file": "goplint/cfa_cast_shared.go",
       "before": "reportInconclusiveFindingWithMetaIfNotBaselined(\n\t\tpass,\n\t\tbl,\n\t\tac.pos.Pos(),\n\t\tCategoryUnvalidatedCastInconclusive,\n\t\tfindingID,\n\t\tmsg,\n\t\tmeta,\n\t)",
       "before_sha256": "969490e468de6957f9c86c1b78a32af104ae17382e1cbb1e3eaa775498af9a7b",
@@ -592,19 +938,36 @@
       "after_sha256": "928acd70cffa380618d7eeecd1400ed3252374588d6369d33073d92490638a19",
       "guard": {
         "test_regex": "^TestCategoryMutationGuardUnvalidatedCastInconclusive$",
-        "selected_tests": ["TestCategoryMutationGuardUnvalidatedCastInconclusive"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestCategoryMutationGuardUnvalidatedCastInconclusive", "id": "category-report/unvalidated-cast-inconclusive"},
-          "expected": {"subject": "diagnostic-category/unvalidated-cast-inconclusive", "state": "present"},
-          "actual": {"subject": "diagnostic-category/unvalidated-cast-inconclusive", "state": "absent"}
-        }]
+        "selected_tests": [
+          "TestCategoryMutationGuardUnvalidatedCastInconclusive"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestCategoryMutationGuardUnvalidatedCastInconclusive",
+              "id": "category-report/unvalidated-cast-inconclusive"
+            },
+            "expected": {
+              "subject": "diagnostic-category/unvalidated-cast-inconclusive",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/unvalidated-cast-inconclusive",
+              "state": "absent"
+            }
+          }
+        ]
       }
     },
     {
       "id": "category-report/missing-constructor-validate",
       "concern": "constructor validation violations retain their exact production category at reporting",
-      "changed_stages": ["reporting"],
-      "categories": ["missing-constructor-validate"],
+      "changed_stages": [
+        "reporting"
+      ],
+      "categories": [
+        "missing-constructor-validate"
+      ],
       "file": "goplint/analyzer_constructor_validates.go",
       "before": "reportFindingWithMetaIfNotBaselined(pass, bl, fn.Name.Pos(), CategoryMissingConstructorValidate, findingID, msg, meta)",
       "before_sha256": "f2ee14be6968d23585090b1d4e14a2b7890f539187cb5cb9f0c99a3eca270bad",
@@ -612,19 +975,36 @@
       "after_sha256": "2662dac62413b20b1f6e097fe598e78004f126918251304ede221e7ae7659df6",
       "guard": {
         "test_regex": "^TestCategoryMutationGuardMissingConstructorValidate$",
-        "selected_tests": ["TestCategoryMutationGuardMissingConstructorValidate"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestCategoryMutationGuardMissingConstructorValidate", "id": "category-report/missing-constructor-validate"},
-          "expected": {"subject": "diagnostic-category/missing-constructor-validate", "state": "present"},
-          "actual": {"subject": "diagnostic-category/missing-constructor-validate", "state": "absent"}
-        }]
+        "selected_tests": [
+          "TestCategoryMutationGuardMissingConstructorValidate"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestCategoryMutationGuardMissingConstructorValidate",
+              "id": "category-report/missing-constructor-validate"
+            },
+            "expected": {
+              "subject": "diagnostic-category/missing-constructor-validate",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/missing-constructor-validate",
+              "state": "absent"
+            }
+          }
+        ]
       }
     },
     {
       "id": "category-report/missing-constructor-validate-inconclusive",
       "concern": "constructor validation uncertainty retains its exact production category at reporting",
-      "changed_stages": ["reporting"],
-      "categories": ["missing-constructor-validate-inconclusive"],
+      "changed_stages": [
+        "reporting"
+      ],
+      "categories": [
+        "missing-constructor-validate-inconclusive"
+      ],
       "file": "goplint/analyzer_constructor_validates.go",
       "before": "reportInconclusiveFindingWithMetaIfNotBaselined(\n\t\t\t\t\tpass,\n\t\t\t\t\tbl,\n\t\t\t\t\tfn.Name.Pos(),\n\t\t\t\t\tCategoryMissingConstructorValidateInc,\n\t\t\t\t\tfindingID,\n\t\t\t\t\tmsg,\n\t\t\t\t\tmeta,\n\t\t\t\t)",
       "before_sha256": "f9510fe222c3e48f86e32db3453b896fb3bf49d739c83f4fac2169889b3c4ff0",
@@ -632,19 +1012,36 @@
       "after_sha256": "11c1f4b958693a5d21d0d4c65a5ffe889c7787223ee185bbbbf18b569a22a87a",
       "guard": {
         "test_regex": "^TestCategoryMutationGuardMissingConstructorValidateInconclusive$",
-        "selected_tests": ["TestCategoryMutationGuardMissingConstructorValidateInconclusive"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestCategoryMutationGuardMissingConstructorValidateInconclusive", "id": "category-report/missing-constructor-validate-inconclusive"},
-          "expected": {"subject": "diagnostic-category/missing-constructor-validate-inconclusive", "state": "present"},
-          "actual": {"subject": "diagnostic-category/missing-constructor-validate-inconclusive", "state": "absent"}
-        }]
+        "selected_tests": [
+          "TestCategoryMutationGuardMissingConstructorValidateInconclusive"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestCategoryMutationGuardMissingConstructorValidateInconclusive",
+              "id": "category-report/missing-constructor-validate-inconclusive"
+            },
+            "expected": {
+              "subject": "diagnostic-category/missing-constructor-validate-inconclusive",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/missing-constructor-validate-inconclusive",
+              "state": "absent"
+            }
+          }
+        ]
       }
     },
     {
       "id": "category-report/use-before-validate-same-block",
       "concern": "same-block use-before-validation retains its exact production category at reporting",
-      "changed_stages": ["reporting"],
-      "categories": ["use-before-validate-same-block"],
+      "changed_stages": [
+        "reporting"
+      ],
+      "categories": [
+        "use-before-validate-same-block"
+      ],
       "file": "goplint/cfa_cast_shared.go",
       "before": "reportFindingWithMetaIfNotBaselined(pass, bl, ac.pos.Pos(), CategoryUseBeforeValidateSameBlock, ubvID, ubvMsg, meta)",
       "before_sha256": "e2a99a300e3737a2f56a100abdeb9a225e43bf5ff83bfeff42e2b576bc732d82",
@@ -652,19 +1049,36 @@
       "after_sha256": "669a17b8df5e396c5e34f8df35d3b657cdedd1f5f5761aa29db9cafe9821a519",
       "guard": {
         "test_regex": "^TestCategoryMutationGuardUseBeforeValidateSameBlock$",
-        "selected_tests": ["TestCategoryMutationGuardUseBeforeValidateSameBlock"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestCategoryMutationGuardUseBeforeValidateSameBlock", "id": "category-report/use-before-validate-same-block"},
-          "expected": {"subject": "diagnostic-category/use-before-validate-same-block", "state": "present"},
-          "actual": {"subject": "diagnostic-category/use-before-validate-same-block", "state": "absent"}
-        }]
+        "selected_tests": [
+          "TestCategoryMutationGuardUseBeforeValidateSameBlock"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestCategoryMutationGuardUseBeforeValidateSameBlock",
+              "id": "category-report/use-before-validate-same-block"
+            },
+            "expected": {
+              "subject": "diagnostic-category/use-before-validate-same-block",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/use-before-validate-same-block",
+              "state": "absent"
+            }
+          }
+        ]
       }
     },
     {
       "id": "category-report/use-before-validate-cross-block",
       "concern": "cross-block use-before-validation retains its exact production category at reporting",
-      "changed_stages": ["reporting"],
-      "categories": ["use-before-validate-cross-block"],
+      "changed_stages": [
+        "reporting"
+      ],
+      "categories": [
+        "use-before-validate-cross-block"
+      ],
       "file": "goplint/cfa_cast_shared.go",
       "before": "reportFindingWithMetaIfNotBaselined(\n\t\tpass,\n\t\tbl,\n\t\tac.pos.Pos(),\n\t\tCategoryUseBeforeValidateCrossBlock,\n\t\tubvID,\n\t\tubvMsg,\n\t\tmeta,\n\t)",
       "before_sha256": "387f6e62eb57cd7eb58530c6d4a70b294104b1db303d44e5ffbe65605898f60f",
@@ -672,19 +1086,36 @@
       "after_sha256": "5627f13ba28121e984d5cf26156dd6c118b3d22bb391ef257f84a15779731e94",
       "guard": {
         "test_regex": "^TestCategoryMutationGuardUseBeforeValidateCrossBlock$",
-        "selected_tests": ["TestCategoryMutationGuardUseBeforeValidateCrossBlock"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestCategoryMutationGuardUseBeforeValidateCrossBlock", "id": "category-report/use-before-validate-cross-block"},
-          "expected": {"subject": "diagnostic-category/use-before-validate-cross-block", "state": "present"},
-          "actual": {"subject": "diagnostic-category/use-before-validate-cross-block", "state": "absent"}
-        }]
+        "selected_tests": [
+          "TestCategoryMutationGuardUseBeforeValidateCrossBlock"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestCategoryMutationGuardUseBeforeValidateCrossBlock",
+              "id": "category-report/use-before-validate-cross-block"
+            },
+            "expected": {
+              "subject": "diagnostic-category/use-before-validate-cross-block",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/use-before-validate-cross-block",
+              "state": "absent"
+            }
+          }
+        ]
       }
     },
     {
       "id": "category-report/use-before-validate-inconclusive",
       "concern": "use-before-validation uncertainty retains its exact production category at reporting",
-      "changed_stages": ["reporting"],
-      "categories": ["use-before-validate-inconclusive"],
+      "changed_stages": [
+        "reporting"
+      ],
+      "categories": [
+        "use-before-validate-inconclusive"
+      ],
       "file": "goplint/cfa_cast_shared.go",
       "before": "reportInconclusiveFindingWithMetaIfNotBaselined(\n\t\tpass,\n\t\tbl,\n\t\tac.pos.Pos(),\n\t\tCategoryUseBeforeValidateInconclusive,\n\t\tubvID,\n\t\tubvMsg,\n\t\tmeta,\n\t)\n}\n\nfunc refineUBVResult(",
       "before_sha256": "7f13382aaaecabb1d06b2fb3af66a40a840b99bbaa48ee4366dbf038778c5206",
@@ -692,19 +1123,36 @@
       "after_sha256": "8ef630d029f112532c080882751b1609aea4148f563e3f7def201df8b723870e",
       "guard": {
         "test_regex": "^TestCategoryMutationGuardUseBeforeValidateInconclusive$",
-        "selected_tests": ["TestCategoryMutationGuardUseBeforeValidateInconclusive"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestCategoryMutationGuardUseBeforeValidateInconclusive", "id": "category-report/use-before-validate-inconclusive"},
-          "expected": {"subject": "diagnostic-category/use-before-validate-inconclusive", "state": "present"},
-          "actual": {"subject": "diagnostic-category/use-before-validate-inconclusive", "state": "absent"}
-        }]
+        "selected_tests": [
+          "TestCategoryMutationGuardUseBeforeValidateInconclusive"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestCategoryMutationGuardUseBeforeValidateInconclusive",
+              "id": "category-report/use-before-validate-inconclusive"
+            },
+            "expected": {
+              "subject": "diagnostic-category/use-before-validate-inconclusive",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/use-before-validate-inconclusive",
+              "state": "absent"
+            }
+          }
+        ]
       }
     },
     {
       "id": "category-report/unvalidated-boundary-request",
       "concern": "boundary-request violations retain their exact mixed production category at reporting",
-      "changed_stages": ["reporting"],
-      "categories": ["unvalidated-boundary-request"],
+      "changed_stages": [
+        "reporting"
+      ],
+      "categories": [
+        "unvalidated-boundary-request"
+      ],
       "file": "goplint/analyzer_boundary_request_validation.go",
       "before": "reportFindingWithMetaIfNotBaselined(pass, bl, param.pos, CategoryUnvalidatedBoundaryRequest, findingID, msg, meta)",
       "before_sha256": "20a84f1271ac06241de1df319c4b391f9d3ecb657d8adccbccf6752841b73be4",
@@ -712,12 +1160,25 @@
       "after_sha256": "2746ff46cf42377a768bbb757cbbd9566c335496fb7336b73a1b6f3d86973375",
       "guard": {
         "test_regex": "^TestCategoryMutationGuardUnvalidatedBoundaryRequest$",
-        "selected_tests": ["TestCategoryMutationGuardUnvalidatedBoundaryRequest"],
-        "expected_mismatches": [{
-          "assertion": {"test": "TestCategoryMutationGuardUnvalidatedBoundaryRequest", "id": "category-report/unvalidated-boundary-request"},
-          "expected": {"subject": "diagnostic-category/unvalidated-boundary-request", "state": "present"},
-          "actual": {"subject": "diagnostic-category/unvalidated-boundary-request", "state": "absent"}
-        }]
+        "selected_tests": [
+          "TestCategoryMutationGuardUnvalidatedBoundaryRequest"
+        ],
+        "expected_mismatches": [
+          {
+            "assertion": {
+              "test": "TestCategoryMutationGuardUnvalidatedBoundaryRequest",
+              "id": "category-report/unvalidated-boundary-request"
+            },
+            "expected": {
+              "subject": "diagnostic-category/unvalidated-boundary-request",
+              "state": "present"
+            },
+            "actual": {
+              "subject": "diagnostic-category/unvalidated-boundary-request",
+              "state": "absent"
+            }
+          }
+        ]
       }
     }
   ]

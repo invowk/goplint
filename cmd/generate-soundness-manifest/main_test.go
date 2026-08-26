@@ -20,7 +20,7 @@ func TestMutationKernelSubgateMatchesLiveCoverage(t *testing.T) {
 	root := repositoryRoot(t)
 	registry, err := soundnessevidence.LoadRegistry(
 		t.Context(),
-		filepath.Join(root, "tools", "goplint", "spec", "semantic-evidence.v2.json"),
+		filepath.Join(root, "spec", "semantic-evidence.v2.json"),
 	)
 	if err != nil {
 		t.Fatalf("LoadRegistry() error: %v", err)
@@ -65,7 +65,7 @@ func TestMakeScanReportProducersMatchManifest(t *testing.T) {
 	root := repositoryRoot(t)
 	registry, err := soundnessevidence.LoadRegistry(
 		t.Context(),
-		filepath.Join(root, "tools", "goplint", "spec", "semantic-evidence.v2.json"),
+		filepath.Join(root, "spec", "semantic-evidence.v2.json"),
 	)
 	if err != nil {
 		t.Fatalf("LoadRegistry() error: %v", err)
@@ -101,7 +101,7 @@ func validateMakeReportProducer(t *testing.T, root string, subgate soundnessgate
 	reportPath := filepath.Join(t.TempDir(), "report.json")
 	reporterCommand := makeReporterCommand(t, root, subgate.Command[1])
 	command := exec.CommandContext(t.Context(), reporterCommand[0], reporterCommand[1:]...)
-	command.Dir = filepath.Join(root, "tools", "goplint")
+	command.Dir = root
 	command.Env = append(os.Environ(),
 		soundnessevidence.EnvRunID+"="+binding.RunID,
 		soundnessevidence.EnvWorkspaceDigest+"="+binding.WorkspaceDigest,
@@ -167,5 +167,5 @@ func repositoryRoot(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("os.Getwd() error: %v", err)
 	}
-	return filepath.Clean(filepath.Join(workingDirectory, "..", "..", "..", ".."))
+	return filepath.Clean(filepath.Join(workingDirectory, "..", ".."))
 }

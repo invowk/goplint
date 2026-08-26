@@ -72,7 +72,7 @@ func TestValidateDocumentsFindsStaleReferences(t *testing.T) {
 		{
 			name: "renamed subgate in claim row without other anchors is a dangling claim",
 			overrides: map[string]string{
-				"tools/goplint/spec/soundness-gate.v1.json": `{
+				"spec/soundness-gate.v1.json": `{
   "format_version": 1,
   "profiles": [{"id": "semantic", "subgate_ids": ["full-scan-canonical"]}],
   "subgates": [{"id": "full-scan-canonical"}, {"id": "race-repeat-1"}]
@@ -192,7 +192,7 @@ func TestPathTokenHeuristics(t *testing.T) {
 func TestValidateRealRepositoryDocumentation(t *testing.T) {
 	t.Parallel()
 
-	root, err := filepath.Abs(filepath.Join("..", "..", "..", ".."))
+	root, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {
 		t.Fatalf("resolve repository root: %v", err)
 	}
@@ -277,8 +277,8 @@ func TestDefaultLayoutMatchesCanonicalRepository(t *testing.T) {
 	t.Parallel()
 
 	layout := DefaultLayout()
-	if layout.ModuleDir != "tools/goplint" {
-		t.Fatalf("ModuleDir = %q, want tools/goplint", layout.ModuleDir)
+	if layout.ModuleDir != "." {
+		t.Fatalf("ModuleDir = %q, want .", layout.ModuleDir)
 	}
 	if !slices.Equal(layout.Documents, DefaultDocuments) {
 		t.Fatalf("Documents = %v, want DefaultDocuments", layout.Documents)
@@ -301,12 +301,12 @@ func writeFixtureRepo(t *testing.T, overrides map[string]string) string {
 			"ROOT_DIR:=/tmp\n" +
 			"build: deps\n\tgo build ./...\n" +
 			"check-goplint-soundness:\n\ttrue\n",
-		"tools/goplint/spec/soundness-gate.v1.json": `{
+		"spec/soundness-gate.v1.json": `{
   "format_version": 1,
   "profiles": [{"id": "semantic", "subgate_ids": ["full-scan"]}],
   "subgates": [{"id": "full-scan"}, {"id": "race-repeat-1"}]
 }`,
-		"tools/goplint/spec/semantic-evidence.v2.json": `{
+		"spec/semantic-evidence.v2.json": `{
   "format_version": 2,
   "registrations": [
     {
@@ -359,7 +359,7 @@ func fixtureGuideContent() string {
 	return "# Guide\n" + // line 1
 		"\n" + // line 2
 		"Run `make build` and `make check-goplint-soundness` from the root.\n" + // line 3
-		"The manifest lives at `tools/goplint/spec/soundness-gate.v1.json`.\n" + // line 4
+		"The manifest lives at `spec/soundness-gate.v1.json`.\n" + // line 4
 		"Race groups run as `race-repeat-1/6` workers.\n" + // line 5
 		"See `pkg/types.FilesystemPath` for CUE-fed path values.\n" + // line 6
 		"\n" + // line 7

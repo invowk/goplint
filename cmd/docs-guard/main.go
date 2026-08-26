@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	root := flag.String("root", "../..", "repository root")
+	root := flag.String("root", ".", "repository root")
 	flag.Parse()
 
 	report, err := docsguard.Validate(*root)

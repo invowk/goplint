@@ -49,26 +49,30 @@ max_bytes_per_op = 500000
 max_allocs_per_op = 13000
 
 [benchmarks.BenchmarkProtocolGeneratedAnalyzer]
-observed_ns_per_op_samples = [151152856, 155561143, 138770098, 155964972, 130835962]
-observed_bytes_per_op_samples = [113468306, 113549294, 113539965, 113388173, 113605643]
-observed_allocs_per_op_samples = [978774, 978825, 978775, 978567, 978820]
-observed_median_ns_per_op = 151152856
-observed_median_bytes_per_op = 113539965
-observed_median_allocs_per_op = 978775
-max_ns_per_op = 175000000
-max_bytes_per_op = 140000000
-max_allocs_per_op = 1250000
+# Recalibrated 2026-08-26 after the constructor-validates local-first proof
+# (caller-local Validate evidence now runs before callee delegation).
+observed_ns_per_op_samples = [153874071, 161093910, 169511053, 146630669, 329073937]
+observed_bytes_per_op_samples = [118089640, 117475504, 117311296, 118054416, 117575776]
+observed_allocs_per_op_samples = [1130669, 1129888, 1129726, 1130313, 1129981]
+observed_median_ns_per_op = 161093910
+observed_median_bytes_per_op = 117575776
+observed_median_allocs_per_op = 1129981
+max_ns_per_op = 205000000
+max_bytes_per_op = 145000000
+max_allocs_per_op = 1400000
 
 [benchmarks.BenchmarkConstructorSuccessfulReturnClassification]
-observed_ns_per_op_samples = [347386, 348671, 347650, 344504, 346983]
-observed_bytes_per_op_samples = [246629, 246374, 246137, 246623, 246551]
-observed_allocs_per_op_samples = [3313, 3313, 3313, 3313, 3313]
-observed_median_ns_per_op = 347386
-observed_median_bytes_per_op = 246551
-observed_median_allocs_per_op = 3313
-max_ns_per_op = 400000
-max_bytes_per_op = 300000
-max_allocs_per_op = 4200
+# Recalibrated 2026-08-26 after the constructor-validates local-first proof
+# (caller-local Validate evidence now runs before callee delegation).
+observed_ns_per_op_samples = [536520, 415301, 422462, 366567, 424844]
+observed_bytes_per_op_samples = [310192, 264400, 287312, 264192, 287088]
+observed_allocs_per_op_samples = [3585, 3458, 3479, 3455, 3477]
+observed_median_ns_per_op = 422462
+observed_median_bytes_per_op = 287088
+observed_median_allocs_per_op = 3479
+max_ns_per_op = 490000
+max_bytes_per_op = 360000
+max_allocs_per_op = 4400
 
 [benchmarks.BenchmarkProtocolPackageProcedureInventory]
 observed_ns_per_op_samples = [34.57, 34.08, 34.41, 32.94, 33.54]

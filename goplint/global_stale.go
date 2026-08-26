@@ -15,14 +15,14 @@ import (
 func CollectGlobalStaleExceptionPatternsFromStreams(
 	analysisData, findingsData []byte,
 ) (stalePatterns []string, totalPatterns, totalPackages int, err error) {
-	type diagnosticKey struct {
+	type staleDiagnosticKey struct {
 		pkg     string
 		message string
 		posn    string
 	}
 
 	seenPackages := make(map[string]bool)
-	analysisCounts := make(map[diagnosticKey]int)
+	analysisCounts := make(map[staleDiagnosticKey]int)
 	if err := ForEachAnalysisResult(analysisData, func(result AnalysisResult) error {
 		for pkgPath, analyzers := range result {
 			seenPackages[pkgPath] = true
@@ -30,7 +30,7 @@ func CollectGlobalStaleExceptionPatternsFromStreams(
 				if diag.Category != CategoryStaleException {
 					continue
 				}
-				analysisCounts[diagnosticKey{pkg: pkgPath, message: diag.Message, posn: diag.Posn}]++
+				analysisCounts[staleDiagnosticKey{pkg: pkgPath, message: diag.Message, posn: diag.Posn}]++
 			}
 		}
 		return nil
@@ -38,7 +38,7 @@ func CollectGlobalStaleExceptionPatternsFromStreams(
 		return nil, 0, 0, fmt.Errorf("decoding analysis JSON: %w", err)
 	}
 
-	streamCounts := make(map[diagnosticKey]int)
+	streamCounts := make(map[staleDiagnosticKey]int)
 	patternPackages := make(map[string]map[string]bool)
 	if err := forEachFindingsRecord(findingsData, func(record FindingStreamRecord) error {
 		if record.Kind != "" && record.Kind != "finding" {
@@ -54,7 +54,7 @@ func CollectGlobalStaleExceptionPatternsFromStreams(
 		if !seenPackages[record.Package] {
 			return fmt.Errorf("stale-exception findings record references unanalyzed package %q", record.Package)
 		}
-		streamCounts[diagnosticKey{pkg: record.Package, message: record.Message, posn: record.Posn}]++
+		streamCounts[staleDiagnosticKey{pkg: record.Package, message: record.Message, posn: record.Posn}]++
 		if patternPackages[pattern] == nil {
 			patternPackages[pattern] = make(map[string]bool)
 		}

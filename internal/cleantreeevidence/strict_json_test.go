@@ -19,7 +19,7 @@ func TestLoadPlanRoundTripUnderStrictJSONV2(t *testing.T) {
 
 	plan := Plan{
 		FormatVersion:         FormatVersion,
-		OwnershipManifestPath: "tools/goplint/spec/soundness-ownership.v2.json",
+		OwnershipManifestPath: "spec/soundness-ownership.v2.json",
 		Inputs:                []InputPlan{},
 		Toolchain:             []ToolPlan{},
 		TaskLedgers:           []TaskLedgerPlan{},

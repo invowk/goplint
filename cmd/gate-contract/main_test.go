@@ -20,7 +20,7 @@ func TestLiveGateContract(t *testing.T) {
 		t.Fatalf("os.Getwd() error: %v", err)
 	}
 	moduleRoot := filepath.Clean(filepath.Join(workingDirectory, "..", ".."))
-	repositoryRoot := filepath.Clean(filepath.Join(moduleRoot, "..", ".."))
+	repositoryRoot := moduleRoot
 	contract, err := loadContract(filepath.Join(moduleRoot, "testdata", "gates", "soundness-v1.json"))
 	if err != nil {
 		t.Fatalf("loadContract() error: %v", err)

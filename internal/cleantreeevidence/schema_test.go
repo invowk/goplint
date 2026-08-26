@@ -36,7 +36,7 @@ func TestCleanTreePlanSchemaMatchesStrictModel(t *testing.T) {
 func TestReviewedCleanTreePlanLoadsAndMatchesSchema(t *testing.T) {
 	t.Parallel()
 
-	planPath := filepath.Join("..", "..", "testdata", "gates", "clean-tree-v4.json")
+	planPath := filepath.Join("..", "..", "testdata", "gates", "clean-tree-v5.json")
 	if _, err := LoadPlan(planPath); err != nil {
 		t.Fatalf("LoadPlan(reviewed plan) error = %v", err)
 	}
