@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 type buildCommandFunc func(context.Context, string, string, ...string) error

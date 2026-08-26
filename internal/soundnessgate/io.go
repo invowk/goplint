@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 // LoadManifest strictly decodes an aggregate manifest and returns the digest

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/goplint"
+	"github.com/invowk/goplint/goplint"
 )
 
 const testDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"

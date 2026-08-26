@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/internal/profileownership"
+	"github.com/invowk/goplint/internal/profileownership"
 )
 
 // Rebind refreshes the prose identity of a retained record without executing

@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 func emitSoundnessSubgateReport(t *testing.T, populations []soundnessgate.Population) {

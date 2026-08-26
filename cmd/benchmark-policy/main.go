@@ -9,7 +9,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/invowk/invowk/tools/goplint/internal/benchmarkpolicy"
+	"github.com/invowk/goplint/internal/benchmarkpolicy"
 )
 
 func main() {

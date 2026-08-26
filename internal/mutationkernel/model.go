@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 const (

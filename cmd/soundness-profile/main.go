@@ -13,7 +13,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/invowk/invowk/tools/goplint/internal/profileownership"
+	"github.com/invowk/goplint/internal/profileownership"
 )
 
 type pathFlags []string

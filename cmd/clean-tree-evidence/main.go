@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/invowk/invowk/tools/goplint/internal/cleantreeevidence"
+	"github.com/invowk/goplint/internal/cleantreeevidence"
 )
 
 func main() {

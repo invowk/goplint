@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 func validGateRegistry() soundnessevidence.Registry {

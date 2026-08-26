@@ -66,7 +66,7 @@ func compileCleanTreePlanSchema(t *testing.T) *jsonschema.Schema {
 		t.Fatal(err)
 	}
 	compiler := jsonschema.NewCompiler()
-	const schemaURL = "https://github.com/invowk/invowk/tools/goplint/testdata/gates/clean-tree-v4.schema.json"
+	const schemaURL = "https://github.com/invowk/goplint/testdata/gates/clean-tree-v4.schema.json"
 	if err := compiler.AddResource(schemaURL, schemaDocument); err != nil {
 		t.Fatal(err)
 	}

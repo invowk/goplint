@@ -10,7 +10,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/invowk/invowk/tools/goplint/internal/stableidmigration"
+	"github.com/invowk/goplint/internal/stableidmigration"
 )
 
 const populationReviewSchemaVersion = 1

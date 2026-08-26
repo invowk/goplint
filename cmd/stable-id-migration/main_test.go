@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/stableidmigration"
+	"github.com/invowk/goplint/internal/stableidmigration"
 )
 
 func TestRunWritesAcceptedReportAndRejectsInvalidMigration(t *testing.T) {

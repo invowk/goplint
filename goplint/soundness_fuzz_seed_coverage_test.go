@@ -16,9 +16,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/protocoloracle"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/protocoloracle"
+	"github.com/invowk/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 const fuzzSeedCoverageFormatVersion = 2

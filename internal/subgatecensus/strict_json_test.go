@@ -22,7 +22,7 @@ func TestLoadRoundTripUnderStrictJSONV2(t *testing.T) {
 		Runs: []Run{
 			{
 				ID:       "run-a",
-				Packages: []string{"github.com/invowk/invowk/tools/goplint/internal/racerepeat"},
+				Packages: []string{"github.com/invowk/goplint/internal/racerepeat"},
 				Tests:    []string{"TestA"},
 				Count:    1,
 			},

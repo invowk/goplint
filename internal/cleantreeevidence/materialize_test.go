@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/gitenv"
+	"github.com/invowk/goplint/internal/gitenv"
 )
 
 // testOwnershipManifestPath is the fixture-repository location of the reviewed

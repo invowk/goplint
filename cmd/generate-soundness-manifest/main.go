@@ -16,10 +16,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/invowk/invowk/tools/goplint/internal/mutationkernel"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
-	"github.com/invowk/invowk/tools/goplint/internal/subgatecensus"
+	"github.com/invowk/goplint/internal/mutationkernel"
+	"github.com/invowk/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/subgatecensus"
 )
 
 func main() {

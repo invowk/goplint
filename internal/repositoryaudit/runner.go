@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/goplint"
-	"github.com/invowk/invowk/tools/goplint/internal/gitenv"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/goplint"
+	"github.com/invowk/goplint/internal/gitenv"
+	"github.com/invowk/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 const analyzerWaitDelay = 10 * time.Second

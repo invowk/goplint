@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/internal/gitenv"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/gitenv"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 const commandWaitDelay = 10 * time.Second

@@ -5,7 +5,7 @@ package main
 import (
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 func TestCompareNormalizedReportsIgnoresRunScopedIdentity(t *testing.T) {

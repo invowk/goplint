@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/goplint"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/goplint"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 //nolint:paralleltest // Serial helper-process proofs must finish before the aggregate report is emitted.

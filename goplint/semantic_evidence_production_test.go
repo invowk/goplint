@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 type semanticProductionExecution struct {

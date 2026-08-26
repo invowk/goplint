@@ -19,9 +19,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/invowk/invowk/tools/goplint/internal/mutationguard"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/mutationguard"
+	"github.com/invowk/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 var errUnexpectedRootGuard = errors.New("unexpected root guard execution")

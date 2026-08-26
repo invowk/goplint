@@ -16,8 +16,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/invowk/invowk/tools/goplint/goplint"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/goplint"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 func main() {

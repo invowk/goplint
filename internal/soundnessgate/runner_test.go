@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 const (

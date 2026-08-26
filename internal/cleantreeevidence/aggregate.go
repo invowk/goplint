@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 var causalMutationProperties = []string{

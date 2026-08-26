@@ -5,7 +5,7 @@ package goplint
 import (
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/mutationguard"
+	"github.com/invowk/goplint/internal/mutationguard"
 )
 
 type mutationGuardObservation = mutationguard.Observation

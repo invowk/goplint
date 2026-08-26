@@ -9,7 +9,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 func TestNewPlanBindsBuildOnceBinariesAndExactModeIterationCoverage(t *testing.T) {

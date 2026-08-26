@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
-	"github.com/invowk/invowk/tools/goplint/internal/subgatecensus"
+	"github.com/invowk/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/subgatecensus"
 )
 
 func main() {

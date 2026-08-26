@@ -16,7 +16,7 @@ import (
 
 	"golang.org/x/tools/go/analysis/analysistest"
 
-	"github.com/invowk/invowk/tools/goplint/goplint"
+	"github.com/invowk/goplint/goplint"
 )
 
 func TestExtractUpdateBaselinePath(t *testing.T) {

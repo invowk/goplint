@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/goplint"
+	"github.com/invowk/goplint/goplint"
 )
 
 func TestParseAnalysisJSON(t *testing.T) {

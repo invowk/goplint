@@ -12,8 +12,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/invowk/invowk/tools/goplint/internal/mutationkernel"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/mutationkernel"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 func main() {

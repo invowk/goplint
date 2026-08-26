@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 const envGoTestParallelism = "GOPLINT_SOUNDNESS_GO_TEST_PARALLELISM"

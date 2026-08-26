@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/internal/racerepeat"
+	"github.com/invowk/goplint/internal/racerepeat"
 )
 
 func main() {

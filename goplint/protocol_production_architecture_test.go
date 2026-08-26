@@ -383,6 +383,6 @@ func isTraversalContextType(typ types.Type) bool {
 	}
 	named, ok := pointer.Elem().(*types.Named)
 	return ok && named.Obj().Pkg() != nil &&
-		named.Obj().Pkg().Path() == "github.com/invowk/invowk/tools/goplint/goplint" &&
+		named.Obj().Pkg().Path() == "github.com/invowk/goplint/goplint" &&
 		named.Obj().Name() == "cfgTraversalContext"
 }

@@ -13,7 +13,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 const selectedSubgatesCensusID = "selected-subgates"

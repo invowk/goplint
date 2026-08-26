@@ -177,7 +177,7 @@ func validateSemanticRuleCatalogAgainstSchema(catalogPath, schemaPath string) er
 	}
 
 	// Keep schema reference stable and independent from local filesystem paths.
-	const schemaURL = "https://github.com/invowk/invowk/tools/goplint/spec/schema/semantic-rules.schema.json"
+	const schemaURL = "https://github.com/invowk/goplint/spec/schema/semantic-rules.schema.json"
 	if err := compiler.AddResource(schemaURL, schemaDoc); err != nil {
 		return fmt.Errorf("registering semantic rules schema resource: %w", err)
 	}

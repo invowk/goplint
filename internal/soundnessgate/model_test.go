@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 func TestManifestValidateRejectsBidirectionalDrift(t *testing.T) {

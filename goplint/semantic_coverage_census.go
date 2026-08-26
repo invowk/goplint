@@ -12,7 +12,7 @@ import (
 	"os"
 	"slices"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
 const semanticCoverageCensusVersion = 3

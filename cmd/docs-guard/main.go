@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/invowk/invowk/tools/goplint/internal/docsguard"
+	"github.com/invowk/goplint/internal/docsguard"
 )
 
 func main() {

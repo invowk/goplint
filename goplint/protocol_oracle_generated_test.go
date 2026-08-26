@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/protocoloracle"
+	"github.com/invowk/goplint/internal/protocoloracle"
 )
 
 // TestProtocolOracleSolverCoreComponent is supporting component evidence only.

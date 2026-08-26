@@ -12,8 +12,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/invowk/invowk/tools/goplint/internal/cleantreeevidence"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/cleantreeevidence"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 const cleanTreeGenerationCommand = "make generate-goplint-clean-tree-evidence"

@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessevidence"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/soundnessevidence"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 // CaptureOptions selects the exact tree and destination for a retained proof.

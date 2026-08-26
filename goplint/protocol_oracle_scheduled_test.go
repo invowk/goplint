@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/invowk/invowk/tools/goplint/internal/protocoloracle"
-	"github.com/invowk/invowk/tools/goplint/internal/soundnessgate"
+	"github.com/invowk/goplint/internal/protocoloracle"
+	"github.com/invowk/goplint/internal/soundnessgate"
 )
 
 const (

@@ -1,4 +1,4 @@
-module github.com/invowk/invowk/tools/goplint
+module github.com/invowk/goplint
 
 go 1.27.0
 

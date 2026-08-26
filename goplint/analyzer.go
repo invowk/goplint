@@ -90,7 +90,7 @@ func newAnalyzerWithState(state *flagState) *analysis.Analyzer {
 	analyzer := &analysis.Analyzer{
 		Name:     "goplint",
 		Doc:      "reports bare primitive types where DDD Value Types should be used",
-		URL:      "https://github.com/invowk/invowk/tools/goplint",
+		URL:      "https://github.com/invowk/goplint",
 		Requires: []*analysis.Analyzer{inspect.Analyzer},
 		FactTypes: []analysis.Fact{
 			(*NonZeroFact)(nil),

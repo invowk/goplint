@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/invowk/invowk/tools/goplint/goplint"
+	"github.com/invowk/goplint/goplint"
 )
 
 func TestRunUsesOneSupersetTraversalWithoutBaselineSuppression(t *testing.T) {

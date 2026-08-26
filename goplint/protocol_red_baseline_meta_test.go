@@ -38,11 +38,11 @@ func TestProtocolRedBaselineMetaContracts(t *testing.T) {
 
 		assertRedBaselineStructFields(t, scope, "joined-state-witness-mismatch", "interprocPathEdge", map[string]string{
 			"state":   "protocolAbstractState",
-			"witness": "[]github.com/invowk/invowk/tools/goplint/goplint.interprocWitnessEdge",
+			"witness": "[]github.com/invowk/goplint/goplint.interprocWitnessEdge",
 		})
 		assertRedBaselineStructFields(t, scope, "joined-state-witness-mismatch", "interprocProcedureSummary", map[string]string{
 			"state":           "protocolAbstractState",
-			"witness":         "[]github.com/invowk/invowk/tools/goplint/goplint.interprocWitnessEdge",
+			"witness":         "[]github.com/invowk/goplint/goplint.interprocWitnessEdge",
 			"exitStateBefore": "protocolAbstractState",
 		})
 	})
@@ -214,7 +214,7 @@ func assertRedBaselineStructFields(
 			continue
 		}
 		gotType := types.TypeString(field.Type(), func(pkg *types.Package) string { return pkg.Path() })
-		if gotType != wantType && gotType != "github.com/invowk/invowk/tools/goplint/goplint."+wantType {
+		if gotType != wantType && gotType != "github.com/invowk/goplint/goplint."+wantType {
 			t.Errorf(
 				"red-baseline[%s]: production field %s.%s has type %s, want %s",
 				contract,
