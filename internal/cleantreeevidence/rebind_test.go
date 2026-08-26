@@ -61,7 +61,7 @@ func TestRebindRefreshesProseIdentityAndCarriesReport(t *testing.T) {
 	t.Parallel()
 
 	fixture := newVerifyFixture(t)
-	options := CaptureOptions(fixture.options)
+	options := fixture.captureOptions()
 	captured, err := Capture(t.Context(), options)
 	if err != nil {
 		t.Fatal(err)
@@ -160,7 +160,7 @@ func TestRebindFailsClosedOnSemanticDrift(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, rebindErr := Rebind(t.Context(), CaptureOptions(fixture.options))
+			_, rebindErr := Rebind(t.Context(), fixture.captureOptions())
 			if rebindErr == nil {
 				t.Fatal("Rebind() reblessed semantic drift")
 			}
@@ -230,7 +230,7 @@ func TestRebindRejectsTamperedRetainedAggregateReport(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, rebindErr := Rebind(t.Context(), CaptureOptions(fixture.options))
+			_, rebindErr := Rebind(t.Context(), fixture.captureOptions())
 			if rebindErr == nil || !strings.Contains(rebindErr.Error(), tt.want) {
 				t.Fatalf("Rebind() error = %v, want %q", rebindErr, tt.want)
 			}

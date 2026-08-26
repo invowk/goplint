@@ -22,7 +22,12 @@ import (
 // provenance. Any semantic-content drift fails closed with the drifted paths
 // named; the retained record is never modified on failure.
 func Rebind(ctx context.Context, options CaptureOptions) (record Record, resultErr error) {
-	root, pathsPath, planPath, evidencePath, err := resolveVerifyOptions(ctx, VerifyOptions(options))
+	if options.ReuseAggregateReportPath != "" {
+		return Record{}, errors.New(
+			"re-binding never executes the aggregate command, so a reused aggregate report selection is not applicable",
+		)
+	}
+	root, pathsPath, planPath, evidencePath, err := resolveVerifyOptions(ctx, options.verifyOptions())
 	if err != nil {
 		return Record{}, err
 	}

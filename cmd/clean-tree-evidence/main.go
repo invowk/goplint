@@ -29,15 +29,23 @@ func main() {
 		"re-bind the retained record after prose-only drift without executing any assurance profile; "+
 			"semantic-content drift fails closed",
 	)
+	reuseAggregateReport := flag.String(
+		"reuse-aggregate-report",
+		"",
+		"absolute path outside the repository holding an aggregate run report already produced for the exact "+
+			"synthetic tree; the planned aggregate command is then verified and reused instead of executed, and any "+
+			"profile or digest mismatch fails closed without falling back to execution",
+	)
 	flag.Parse()
 	if *pathsPath == "" {
 		fail(errors.New("-paths is required; implicit dirty-worktree capture is forbidden"))
 	}
 	options := cleantreeevidence.CaptureOptions{
-		Root:         *root,
-		PathsPath:    *pathsPath,
-		PlanPath:     *planPath,
-		EvidencePath: *evidencePath,
+		Root:                     *root,
+		PathsPath:                *pathsPath,
+		PlanPath:                 *planPath,
+		EvidencePath:             *evidencePath,
+		ReuseAggregateReportPath: *reuseAggregateReport,
 	}
 	if *rebind {
 		if _, err := cleantreeevidence.Rebind(context.Background(), options); err != nil {

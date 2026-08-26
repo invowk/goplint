@@ -389,6 +389,17 @@ type verifyFixture struct {
 	options VerifyOptions
 }
 
+// captureOptions selects the fixture tree for capture without any reused
+// aggregate report, so reuse stays an explicit per-test opt-in.
+func (fixture verifyFixture) captureOptions() CaptureOptions {
+	return CaptureOptions{
+		Root:         fixture.options.Root,
+		PathsPath:    fixture.options.PathsPath,
+		PlanPath:     fixture.options.PlanPath,
+		EvidencePath: fixture.options.EvidencePath,
+	}
+}
+
 func newVerifyFixture(t *testing.T) verifyFixture {
 	t.Helper()
 	root := initializeTestRepository(t)

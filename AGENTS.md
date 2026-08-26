@@ -24,6 +24,7 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | **Force semantic soundness** | **`make check-goplint-soundness-semantic`** |
 | **Check completion proof** | **`make check-goplint-soundness-complete`** |
 | **Generate retained exact-tree proof (v4)** | **`make generate-goplint-clean-tree-evidence`** |
+| **Generate retained proof, reusing a verified aggregate report** | **`make generate-goplint-clean-tree-evidence-reusing`** |
 | **Re-bind retained proof after prose-only drift** | **`make rebind-goplint-clean-tree-evidence`** |
 | **Verify retained exact-tree proof (v4)** | **`make check-goplint-clean-tree-evidence`** |
 | **Check mutation-kernel coverage** | **`make check-goplint-mutation-kernel-coverage`** |
@@ -93,8 +94,15 @@ Generation consumes the reviewed `clean-tree-v5.paths` and
 `clean-tree-v5.json` inputs, invokes the `semantic` profile to avoid recursive
 freshness verification, and writes only the retained `clean-tree-run.v5.json`
 dual-digest record (a retained v3 record is rejected with an explicit
-migration notice). When only documentation-class prose drifted since a valid
-record, `make rebind-goplint-clean-tree-evidence` re-binds it in seconds:
+migration notice). To pay for the semantic profile once, export
+`GOPLINT_SOUNDNESS_REPORT_PATH` (absolute, outside the workspace) before the
+semantic run and generate with
+`make generate-goplint-clean-tree-evidence-reusing`: that opt-in target admits
+the already-retained aggregate report instead of re-executing it, but only
+after byte-equal profile, manifest, registry, and recomputed synthetic-tree
+workspace digests; any mismatch fails closed with the mismatch named and never
+falls back to re-execution. When only documentation-class prose drifted since a
+valid record, `make rebind-goplint-clean-tree-evidence` re-binds it in seconds:
 both tree digests are recomputed, task ledgers and the diff census are
 revalidated, and the aggregate report is carried forward with re-bound
 provenance; semantic-content drift makes re-binding fail closed naming the
@@ -824,7 +832,10 @@ semantic profile (or re-bind it after prose-only drift with
 `make check-goplint-clean-tree-evidence`, then run
 `make check-goplint-soundness-complete`. Never make record generation invoke
 the complete profile: that would recurse into the record's own freshness
-check.
+check. `make generate-goplint-clean-tree-evidence-reusing` may consume an
+aggregate report the caller already retained for the same content instead of
+re-executing the semantic profile, but only under byte-equal profile, manifest,
+registry, and recomputed synthetic-tree workspace digests.
 
 ## Gotchas
 

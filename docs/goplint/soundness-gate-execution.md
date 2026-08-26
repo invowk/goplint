@@ -272,6 +272,51 @@ reviewed plan `clean-tree-v5.json`; code and schema validate structure only.
 Closing or archiving an OpenSpec change therefore edits exactly one reviewed
 file.
 
+## Generation semantics and aggregate-report reuse
+
+Generation materializes the reviewed selection into a detached synthetic
+worktree and, by default, executes the whole reviewed command plan inside it.
+It invokes the `semantic` profile rather than `complete` so the proof cannot
+depend recursively on the freshness check of the record it is creating.
+
+That default re-executes the semantic profile even when the caller just ran
+`make check-goplint-soundness-semantic` over byte-identical content. The
+opt-in `-reuse-aggregate-report` flag, wired as
+`make generate-goplint-clean-tree-evidence-reusing`, instead admits an
+aggregate report the caller already retained. It is admitted only after the
+same admission check the default path applies to a report it just produced,
+against the freshly materialized synthetic worktree:
+
+- the file parses and validates as an aggregate run report against the
+  manifest and registry read from the synthetic tree;
+- its `profile` equals the plan's `aggregate_report.profile`;
+- its `manifest_digest` is byte-equal to the digest of the manifest as read
+  from the synthetic tree, and the registry digest is bound the same way;
+- its `workspace_digest` is byte-equal to the workspace digest recomputed
+  from the synthetic worktree.
+
+Every other planned command still executes inside the synthetic worktree, and
+the recorded outcome for the aggregate command states reuse — its retained log
+opens with `reused caller-provided aggregate report <sha256>` — instead of
+claiming an execution that did not happen. The record stays v4-shaped and
+carries exactly the same digest bindings a re-executed run would have
+produced, because the admitted report satisfied the same equalities by
+construction.
+
+Reuse fails closed. A missing file, a parse failure, a profile mismatch, or any
+digest mismatch aborts generation with the exact mismatch named and leaves the
+retained record untouched; there is no fallback to re-execution, which would
+hide a caller mistake behind the full aggregate cost. The report must be an
+absolute path outside the repository, so it can never become part of the tree
+it is evidence about. Reuse is also refused for `-rebind`, which executes
+nothing.
+
+Because the workspace digest is recomputed byte-for-byte, reuse only succeeds
+while the caller's worktree content still matches the synthetic tree: an
+uncommitted path outside the reviewed selection, a reviewed diff exclusion, or
+a record rewritten since the semantic run all make the digests differ, and the
+mismatch is reported instead of silently absorbed.
+
 ## Completion proof
 
 After all intended files and task bookkeeping are final, generate (or, when
@@ -284,6 +329,24 @@ make generate-goplint-clean-tree-evidence   # or: make rebind-goplint-clean-tree
 make check-goplint-clean-tree-evidence
 make check-goplint-soundness-complete
 ```
+
+To pay for the semantic profile once, persist the semantic run's report
+through the existing `GOPLINT_SOUNDNESS_REPORT_PATH` (an absolute path outside
+the workspace) and generate with reuse:
+
+```bash
+export GOPLINT_SOUNDNESS_REPORT_PATH="$(mktemp -d)/aggregate-report.json"
+make check-goplint-soundness-semantic
+make generate-goplint-clean-tree-evidence-reusing
+make check-goplint-clean-tree-evidence
+make check-goplint-soundness-complete
+```
+
+The reusing target defaults its report selection to
+`GOPLINT_SOUNDNESS_REPORT_PATH` and can be pointed elsewhere with
+`GOPLINT_CLEAN_TREE_REUSE_REPORT`. It is a separate target so an exported
+report path can never silently change what
+`make generate-goplint-clean-tree-evidence` does.
 
 Any subsequent semantic-content change makes the retained proof stale and
 requires regeneration; prose-only drift only requires re-binding.

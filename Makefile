@@ -66,7 +66,7 @@ check-types-all-json: build-goplint
 # Soundness-assurance gates
 # ---------------------------------------------------------------------------
 
-.PHONY: check-goplint-soundness check-goplint-soundness-routed check-goplint-docs check-goplint-soundness-consumer check-goplint-soundness-harness check-goplint-harness-parity check-goplint-module-tests check-goplint-soundness-core check-goplint-soundness-semantic check-goplint-soundness-complete generate-goplint-clean-tree-evidence rebind-goplint-clean-tree-evidence check-goplint-clean-tree-evidence check-goplint-mutation-kernel-coverage check-goplint-gate-contract check-goplint-production-integration check-goplint-counterexamples check-goplint-architecture check-goplint-catalog check-semantic-spec check-goplint-protocol-oracle check-goplint-protocol-oracle-scheduled check-goplint-end-to-end-oracle check-goplint-fuzz-seeds check-goplint-fuzz-scheduled check-goplint-targeted-mutation check-goplint-determinism check-cfg-refinement check-goplint-race-repeat update-goplint-race-repeat-timings check-goplint-repository-audit check-goplint-full-scan check-goplint-performance-smoke check-goplint-benchmarks
+.PHONY: check-goplint-soundness check-goplint-soundness-routed check-goplint-docs check-goplint-soundness-consumer check-goplint-soundness-harness check-goplint-harness-parity check-goplint-module-tests check-goplint-soundness-core check-goplint-soundness-semantic check-goplint-soundness-complete generate-goplint-clean-tree-evidence generate-goplint-clean-tree-evidence-reusing rebind-goplint-clean-tree-evidence check-goplint-clean-tree-evidence check-goplint-mutation-kernel-coverage check-goplint-gate-contract check-goplint-production-integration check-goplint-counterexamples check-goplint-architecture check-goplint-catalog check-semantic-spec check-goplint-protocol-oracle check-goplint-protocol-oracle-scheduled check-goplint-end-to-end-oracle check-goplint-fuzz-seeds check-goplint-fuzz-scheduled check-goplint-targeted-mutation check-goplint-determinism check-cfg-refinement check-goplint-race-repeat update-goplint-race-repeat-timings check-goplint-repository-audit check-goplint-full-scan check-goplint-performance-smoke check-goplint-benchmarks
 check-goplint-soundness: check-goplint-soundness-routed
 
 check-goplint-soundness-routed:
@@ -97,6 +97,21 @@ check-goplint-soundness-complete:
 
 generate-goplint-clean-tree-evidence:
 	$(GOCMD) run ./cmd/clean-tree-evidence -root . -paths testdata/gates/clean-tree-v5.paths -plan testdata/gates/clean-tree-v5.json -evidence testdata/gates/clean-tree-run.v5.json
+
+# Generate the retained record from an aggregate report the caller already
+# produced for this exact tree, instead of re-executing the semantic profile
+# inside the synthetic worktree. Defaults to the report the caller's semantic
+# run persisted through GOPLINT_SOUNDNESS_REPORT_PATH. Reuse is a separate
+# target so an exported report path can never silently change what the default
+# generation target does; any profile or digest mismatch fails closed.
+GOPLINT_CLEAN_TREE_REUSE_REPORT ?= $(GOPLINT_SOUNDNESS_REPORT_PATH)
+
+generate-goplint-clean-tree-evidence-reusing:
+	@test -n "$(GOPLINT_CLEAN_TREE_REUSE_REPORT)" || { \
+		echo "set GOPLINT_CLEAN_TREE_REUSE_REPORT (or GOPLINT_SOUNDNESS_REPORT_PATH) to the absolute aggregate report retained by the semantic run over this exact tree"; \
+		exit 1; \
+	}
+	$(GOCMD) run ./cmd/clean-tree-evidence -root . -paths testdata/gates/clean-tree-v5.paths -plan testdata/gates/clean-tree-v5.json -evidence testdata/gates/clean-tree-run.v5.json -reuse-aggregate-report "$(GOPLINT_CLEAN_TREE_REUSE_REPORT)"
 
 rebind-goplint-clean-tree-evidence:
 	$(GOCMD) run ./cmd/clean-tree-evidence -rebind -root . -paths testdata/gates/clean-tree-v5.paths -plan testdata/gates/clean-tree-v5.json -evidence testdata/gates/clean-tree-run.v5.json

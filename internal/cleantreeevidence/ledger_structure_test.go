@@ -148,7 +148,7 @@ func TestArchivingChangeRequiresOnlyReviewedPlanEdit(t *testing.T) {
 	t.Parallel()
 
 	fixture := newVerifyFixture(t)
-	options := CaptureOptions(fixture.options)
+	options := fixture.captureOptions()
 	if _, err := Capture(t.Context(), options); err != nil {
 		t.Fatalf("Capture() with the active change ledger: %v", err)
 	}

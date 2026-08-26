@@ -38,6 +38,7 @@ The main commands are:
 | `make check-goplint-soundness-semantic` | Force the full semantic soundness profile |
 | `make check-goplint-soundness-complete` | Run the completion profile, including retained exact-tree freshness |
 | `make generate-goplint-clean-tree-evidence` | Generate the retained v4 dual-digest run record from the reviewed paths and plan |
+| `make generate-goplint-clean-tree-evidence-reusing` | Generate the retained record from an aggregate report already retained for this exact tree instead of re-executing it |
 | `make rebind-goplint-clean-tree-evidence` | Re-bind the retained record after prose-only drift, carrying the aggregate report forward |
 | `make check-goplint-clean-tree-evidence` | Verify the retained exact-tree proof without changing the caller's index or worktree |
 | `make check-goplint-mutation-kernel-coverage` | Verify causal mutant coverage for every mutation-required semantic category |
@@ -72,11 +73,17 @@ make check-goplint-soundness-complete
 Generation consumes the reviewed v4 path selection and command plan, invokes
 the `semantic` profile rather than `complete` to avoid recursive freshness
 verification, and writes only the retained `clean-tree-run.v5.json`
-dual-digest record. When only documentation-class prose drifted since a valid
-record, `make rebind-goplint-clean-tree-evidence` re-binds it in seconds;
-semantic-content drift makes re-binding fail closed naming the drifted paths.
-Missing or stale retained evidence cannot be baselined, excepted, or
-inline-ignored.
+dual-digest record. To pay for the semantic profile once, export
+`GOPLINT_SOUNDNESS_REPORT_PATH` (absolute, outside the workspace) before the
+semantic run and replace generation with
+`make generate-goplint-clean-tree-evidence-reusing`; the already-retained
+aggregate report is admitted only under byte-equal profile, manifest,
+registry, and recomputed synthetic-tree workspace digests, and any mismatch
+fails closed instead of re-executing. When only documentation-class prose
+drifted since a valid record, `make rebind-goplint-clean-tree-evidence`
+re-binds it in seconds; semantic-content drift makes re-binding fail closed
+naming the drifted paths. Missing or stale retained evidence cannot be
+baselined, excepted, or inline-ignored.
 
 Profile routing, resource discovery and overrides, timing refresh, smoke versus
 certification, immutable plan/bundle schemas, CI reproduction, telemetry, and

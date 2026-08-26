@@ -19,17 +19,39 @@ import (
 )
 
 // CaptureOptions selects the exact tree and destination for a retained proof.
+// ReuseAggregateReportPath is empty by default, which executes every planned
+// command including the aggregate profile. When it is set, the named report is
+// admitted in place of executing the planned aggregate command, but only after
+// it proves the same identities a freshly produced report would have to prove.
 type CaptureOptions struct {
-	Root         string
-	PathsPath    string
-	PlanPath     string
-	EvidencePath string
+	Root                     string
+	PathsPath                string
+	PlanPath                 string
+	EvidencePath             string
+	ReuseAggregateReportPath string
+}
+
+// verifyOptions projects the repository, plan, and record selection shared with
+// verification. The projection is explicit rather than a type conversion
+// because reuse selection is capture-only: verification must never be handed a
+// caller-provided report.
+func (options CaptureOptions) verifyOptions() VerifyOptions {
+	return VerifyOptions{
+		Root:         options.Root,
+		PathsPath:    options.PathsPath,
+		PlanPath:     options.PlanPath,
+		EvidencePath: options.EvidencePath,
+	}
 }
 
 // Capture materializes the selected tree, executes every planned command, and
 // publishes a format-v3 record. A failed command still produces a failed record.
 func Capture(ctx context.Context, options CaptureOptions) (record Record, resultErr error) {
-	root, pathsPath, planPath, evidencePath, err := resolveVerifyOptions(ctx, VerifyOptions(options))
+	root, pathsPath, planPath, evidencePath, err := resolveVerifyOptions(ctx, options.verifyOptions())
+	if err != nil {
+		return Record{}, err
+	}
+	reusedReportPath, err := resolveReusedReportPath(root, options.ReuseAggregateReportPath)
 	if err != nil {
 		return Record{}, err
 	}
@@ -112,7 +134,27 @@ func Capture(ctx context.Context, options CaptureOptions) (record Record, result
 	commandEnv := cleanTreeCommandEnvironment(materialization.tempRoot)
 	reportPath := filepath.Join(observationRoot, filepath.FromSlash(plan.AggregateReport.OutputFile))
 	allPassed := true
+	reusedAggregate := AggregateReportIdentity{}
+	aggregateWasReused := false
 	for _, command := range plan.Commands {
+		if reusedReportPath != "" && command.Name == plan.AggregateReport.CommandName {
+			// A rejected reuse selection is a caller-input failure, so it returns
+			// before any record is published and leaves the retained record intact.
+			outcome, identity, reuseErr := reuseAggregateReport(
+				ctx,
+				materialization.Worktree,
+				reusedReportPath,
+				plan.AggregateReport,
+				command,
+			)
+			if reuseErr != nil {
+				return Record{}, reuseErr
+			}
+			record.Commands = append(record.Commands, outcome)
+			reusedAggregate = identity
+			aggregateWasReused = true
+			continue
+		}
 		environment := commandEnv
 		if command.Name == plan.AggregateReport.CommandName {
 			environment = replaceEnvironmentVariable(environment, soundnessgate.EnvReportPath, reportPath)
@@ -123,14 +165,18 @@ func Capture(ctx context.Context, options CaptureOptions) (record Record, result
 			allPassed = false
 		}
 	}
-	record.AggregateReport, err = collectAggregateReport(
-		ctx,
-		materialization.Worktree,
-		reportPath,
-		plan.AggregateReport,
-	)
-	if err != nil {
-		allPassed = false
+	if aggregateWasReused {
+		record.AggregateReport = reusedAggregate
+	} else {
+		record.AggregateReport, err = collectAggregateReport(
+			ctx,
+			materialization.Worktree,
+			reportPath,
+			plan.AggregateReport,
+		)
+		if err != nil {
+			allPassed = false
+		}
 	}
 	record.Provenance = ProvenanceIdentity{
 		Kind:                        ProvenanceGenerated,

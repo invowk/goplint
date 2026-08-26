@@ -2,7 +2,7 @@
 #
 # goplint baseline — accepted DDD compliance findings
 # Regenerate: make update-baseline
-# Total: 2778 findings
+# Total: 2784 findings
 
 # Bare primitive type usage
 [primitive]
@@ -175,6 +175,7 @@ entries = [
     { id = "gpl4_0eb5c644f01f32295f7c8397c60a689143a27d549f5483338dc018a5cb62c2aa", message = "struct field soundnessgate.SubgateTelemetry.QueueDurationNanoseconds uses primitive type int64" },
     { id = "gpl4_0ed7a9ae90187fedd22269d05d08a3600f2f58fa197b5a7936202fb257306499", message = "parameter \"root\" of harness-parity.runParity uses primitive type string" },
     { id = "gpl4_0ef7787ce2cc4d00f582e8faec0a1af5188ba15ec081240117cac4fd4654e819", message = "return value of goplint.protocolCFGBlockDominators uses primitive type int32 (in map key), map[int32]bool (in map value)" },
+    { id = "gpl4_0efa1a413a022c2d7a6a7037a097871046956a3556f077c44b65617246587f12", message = "parameter \"root\" of cleantreeevidence.resolveReusedReportPath uses primitive type string" },
     { id = "gpl4_0f016d28420071678e443592db19885332ab96fc53a48ea08cdec981386666eb", message = "struct field protocoloracle.ManifestDimensions.InitialFacts uses primitive type []string" },
     { id = "gpl4_0f54ffa852a340e85907bcba5fda7600fb4efb590961034c74576451925995bd", message = "struct field soundnessevidence.SemanticObservation.Properties uses primitive type []string" },
     { id = "gpl4_0f5dbc061fb16f2a12ade2cf8748daef4de468bdff22fa8fdb618ab2e27ced1d", message = "return value of soundnessgate.maximumConcurrentReservations uses primitive type int64" },
@@ -794,6 +795,7 @@ entries = [
     { id = "gpl4_4dd76071f4bdf4613087ef7b39e84669d328efe8eece8428c2e65efe50baea65", message = "parameter \"index\" of soundnessevidence.Registration.validate uses primitive type int" },
     { id = "gpl4_4e014dd5724a2c1d6e522de1072f53b1d041ba1ffed142960b607e38f10d511b", message = "return value of protocoloracle.CorpusFingerprint uses primitive type string" },
     { id = "gpl4_4e029308360ec2793d59382022e8d115541dbbb451ad3edbe1f0ee421fc02c1e", message = "parameter \"values\" of mutationkernel.validateUniqueTokens uses primitive type []string" },
+    { id = "gpl4_4e195eda81b317555342ef5d6875ddc67dedc2215c470b2ba51da0eb9b358a76", message = "parameter \"path\" of cleantreeevidence.resolveReusedReportPath uses primitive type string" },
     { id = "gpl4_4e46fd6d13718f9c75cfa8aa3ffcb2a1c768da9e7764373029a6ac956a4901d1", message = "parameter \"index\" of soundnessgate.Subgate.validate uses primitive type int" },
     { id = "gpl4_4e5590bf8ec9e601d4ddc90e1bbe678d244f987f55f484a337fc6919119e7386", message = "parameter \"directHelpers\" of protocoloracle.writeEntryBody uses primitive type uint8 (in map key)" },
     { id = "gpl4_4e602b24acaff777f86a6fc1bedf373b6526bda9f24fcb0f266e1afdcaa51250", message = "parameter \"outputPath\" of goplint.generateBaseline uses primitive type string" },
@@ -1140,6 +1142,7 @@ entries = [
     { id = "gpl4_745f4e0b26deb6f161d97c8a9d4b88562b82c0cf7a199e1b759c6158d59fd3ac", message = "struct field goplint.interprocPathResult.FactKey uses primitive type string" },
     { id = "gpl4_745f9bb344866c0c90be359976930d1471219db39117f9df1ea6f617d0415fd2", message = "struct field soundnessgate.ArtifactBinding.Digest uses primitive type string" },
     { id = "gpl4_7472f1fe3c6745bf719881117600bf1e234a79bce4daae14e4d909d10e2141cf", message = "return value of soundnessgate.calculateBindingDigest uses primitive type string" },
+    { id = "gpl4_74c1e7cab94dd5ea1479145686006deae69b3ff33a1d82583c8b515365fb85a3", message = "parameter \"reportPath\" of cleantreeevidence.reuseAggregateReport uses primitive type string" },
     { id = "gpl4_74d0333811fcf39dd9f5c95d3b0ff7d83fa1114233c3610a5de65893f6f27efe", message = "parameter \"path\" of cleantreeevidence.LoadRecord uses primitive type string" },
     { id = "gpl4_759105932a311e6f5708ffb2329b3d40c6d7157beb522f19b5d3b23f577c15b2", message = "parameter \"catalogPath\" of mutationkernel.mutationProfile.validate uses primitive type string" },
     { id = "gpl4_75a1a0f1142829f73ad7740ea24ad03b8008193d0811f3774177ac23f635319a", message = "return value of generate-evidence-registry.generatedDimensions uses primitive type []string" },
@@ -1446,6 +1449,7 @@ entries = [
     { id = "gpl4_938501b3a68789497d1d369d8c2f07e5a5d774fc2a9e273640c0295a8069ff40", message = "parameter \"root\" of docsguard.ValidateLayout uses primitive type string" },
     { id = "gpl4_938c75039c7131ccb94d711964c00fa0cfb1d3839f7760b13002dba2a8d5c057", message = "struct field stableidmigration.PopulationChange.Evidence uses primitive type string" },
     { id = "gpl4_93d401acd397fcdf9c0ca5df79efdf3d3df0d654ee8d81324216404e560ebd23", message = "struct field subgatecensus.Selector.Scope uses primitive type string" },
+    { id = "gpl4_93d5cc14706cb372326484d932dadcf9b9d8653537ea75f4e44b267de5339474", message = "struct field cleantreeevidence.CaptureOptions.ReuseAggregateReportPath uses primitive type string" },
     { id = "gpl4_93d944c68baea535c4394b74ea5241b01c98546782b1e81b1362d5b472ee9f64", message = "parameter \"populationID\" of generate-soundness-manifest.censusPopulationRequirement uses primitive type string" },
     { id = "gpl4_93eb458b3e6680bf231f4e195d63fe2cbe7da90baad1718b05bb76bd322482c1", message = "struct field protocoloracle.BoundsManifest.Enumeration uses primitive type string" },
     { id = "gpl4_93f82ea60200fd6801cb903a13435c7a977402eaa68b108d7f321657cede7c07", message = "return value of goplint.findingMetaFromDiagnosticURL uses primitive type string (in map key and value)" },
@@ -1519,6 +1523,7 @@ entries = [
     { id = "gpl4_9a3ba04bc8a0585428a495c45f24ab41cd8aaeea2142746c7b92aa1798983f93", message = "struct field cleantreeevidence.CommandOutcome.Directory uses primitive type string" },
     { id = "gpl4_9a4d4d99008fcc57b4ed6cf4c32b83368a37a76eac9a639d3c2d19a1349eaa3f", message = "struct field goplint.interprocUBVCrossBlockInput.MaxStates uses primitive type int" },
     { id = "gpl4_9a4e5ffa288d5c5352574e80a6195edb6c540208aa932a378fcc63616bdb612e", message = "struct field cleantreeevidence.CommandOutcome.Args uses primitive type []string" },
+    { id = "gpl4_9a56210893befc1f25a6b83f731f0b4ebacc61efadb9866f420f43c5d20ee7cf", message = "parameter \"worktree\" of cleantreeevidence.reuseAggregateReport uses primitive type string" },
     { id = "gpl4_9a5a867589eb0e11a992d6645f2840bd8da66c9e771f37e73ca3da00ec43a2da", message = "parameter \"root\" of cleantreeevidence.collectToolchain uses primitive type string" },
     { id = "gpl4_9a64a930acf30916eb5bd1652deecf9e0eaf7d460f6a498671553216facdc292", message = "struct field goplint.directiveDiagnostic.message uses primitive type string" },
     { id = "gpl4_9a772bbc16584b97440440002c53ac5510fa47a382ce5a3b5586197f5129bcbd", message = "parameter \"root\" of cleantreeevidence.requireRetainedBaseAncestor uses primitive type string" },
@@ -1751,6 +1756,7 @@ entries = [
     { id = "gpl4_b24b0478ab9331cc6635da473a6f2b2148608bf1b117f0338db9cd9aca098c09", message = "parameter \"mayReturn\" of goplint.protocolFunctionHasReturningPath uses primitive type string (in map key)" },
     { id = "gpl4_b25d7d499b1afc4667cae8ca104b74e5ac9889b0f231cb10753a763679858c7c", message = "struct field goplint.cfgFeasibilityDecision.Reason uses primitive type string" },
     { id = "gpl4_b2650cadfd2c9d8ddd12840f1f9b311b70588bddb82f84657868a2fc85fe2850", message = "struct field goplint.diagnosticKey.pkg uses primitive type string" },
+    { id = "gpl4_b29bb7c2307a14ca0580a9dfb1af51341d37f3e082af74e35871cede34570261", message = "return value of cleantreeevidence.resolveReusedReportPath uses primitive type string" },
     { id = "gpl4_b2b2ce6c625bfd09134aa416c18eab52268ca064541f7ebba3f47b2f5131fd2f", message = "parameter \"kind\" of goplint.validProtocolSummaryTarget uses primitive type string" },
     { id = "gpl4_b2f7dd5154de920ed6f82d59aa0ad66de4415cffd159a55624b85cc5ec299a48", message = "parameter \"raw\" of goplint.FindingIDFromDiagnosticURL uses primitive type string" },
     { id = "gpl4_b32b2610d96dcd1c91f978c8d6b82dcb382c3d700194c646da0c9ea0445daab4", message = "struct field soundnessgate.ResourceOverrides.CPUUnits uses primitive type int" },
