@@ -28,7 +28,7 @@ func main() {
 		"retained format-v4 evidence file",
 	)
 	allowReusedAggregate := flag.Bool(
-		"allow-reused-aggregate",
+		cleantreeevidence.AllowReusedAggregateFlag,
 		false,
 		"accept a record whose aggregate command was reused from a caller-provided report instead of executed; "+
 			"local iteration only, never a completion or release claim",

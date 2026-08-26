@@ -24,7 +24,7 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | **Force semantic soundness** | **`make check-goplint-soundness-semantic`** |
 | **Check completion proof** | **`make check-goplint-soundness-complete`** |
 | **Generate retained exact-tree proof (v4)** | **`make generate-goplint-clean-tree-evidence`** |
-| **Generate retained proof, reusing a verified aggregate report** | **`make generate-goplint-clean-tree-evidence-reusing`** |
+| **Generate retained proof, reusing a verified aggregate report (local iteration only)** | **`make generate-goplint-clean-tree-evidence-reusing`** |
 | **Re-bind retained proof after prose-only drift** | **`make rebind-goplint-clean-tree-evidence`** |
 | **Verify retained exact-tree proof (v4)** | **`make check-goplint-clean-tree-evidence`** |
 | **Verify accepting a reused aggregate (local iteration only)** | **`make check-goplint-clean-tree-evidence-allowing-reuse`** |
@@ -101,7 +101,8 @@ the caller already retained instead of re-executing it. Admission requires the
 report to bind the synthetic tree (profile, byte-equal manifest digest, exact
 registration census, and recomputed workspace digest, which itself covers the
 tracked registry file) and requires the companion `<report>.binding.json` that
-`cmd/soundness-gate` writes to pin the report bytes, the registry byte digest,
+`cmd/soundness-gate` writes to pin the report's canonical decoded form, the
+registry byte digest,
 and the producing Go toolchain, which must equal the generating process's
 toolchain. Any mismatch fails closed with the mismatch named and never falls
 back to re-execution. Such a record carries
@@ -845,8 +846,8 @@ the complete profile: that would recurse into the record's own freshness
 check. `make generate-goplint-clean-tree-evidence-reusing` may consume an
 aggregate report the caller already retained for the same content instead of
 re-executing the semantic profile, but only under tree binding plus the
-companion `<report>.binding.json` that pins the report bytes, the registry byte
-digest, and the producing toolchain. The record it writes carries
+companion `<report>.binding.json` that pins the report's canonical decoded
+form, the registry byte digest, and the producing toolchain. The record it writes carries
 `provenance.kind: "reused-aggregate"`: the freshness verifier refuses that kind
 unless `-allow-reused-aggregate` is passed, re-binding refuses to carry it
 forward, and the `clean-tree-freshness` subgate never opts in — so reuse is a

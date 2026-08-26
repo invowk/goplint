@@ -176,6 +176,9 @@ func executeDistributed(ctx context.Context, options distributedOptions) error {
 		if err != nil {
 			return fmt.Errorf("aggregate distributed work bundles: %w", err)
 		}
+		if err := retainReportBinding(ctx, plan, options.reportPath, report); err != nil {
+			return err
+		}
 		if err := json.NewEncoder(os.Stdout).Encode(struct {
 			RunID        string `json:"run_id"`
 			SubgateCount int    `json:"subgate_count"`
@@ -281,7 +284,7 @@ func execute(ctx context.Context, options executeOptions) (soundnessgate.Result,
 			if err != nil {
 				return soundnessgate.Result{}, fmt.Errorf("run serial soundness plan: %w", err)
 			}
-			if err := retainReportBinding(ctx, plan, result); err != nil {
+			if err := retainReportBinding(ctx, plan, result.ReportPath, result.Report); err != nil {
 				return soundnessgate.Result{}, err
 			}
 			return result, nil
@@ -293,7 +296,7 @@ func execute(ctx context.Context, options executeOptions) (soundnessgate.Result,
 		if err != nil {
 			return soundnessgate.Result{}, fmt.Errorf("run parallel soundness plan: %w", err)
 		}
-		if err := retainReportBinding(ctx, plan, result); err != nil {
+		if err := retainReportBinding(ctx, plan, result.ReportPath, result.Report); err != nil {
 			return soundnessgate.Result{}, err
 		}
 		return result, nil
@@ -306,16 +309,23 @@ func execute(ctx context.Context, options executeOptions) (soundnessgate.Result,
 // A RunReport carries no producing-toolchain or plan identity, so any later
 // consumer of the retained bytes — notably clean-tree evidence generation
 // reusing this report — would otherwise have no way to bind them to the plan
-// and toolchain that produced them.
-func retainReportBinding(ctx context.Context, plan soundnessgate.ExecutionPlan, result soundnessgate.Result) error {
-	if result.ReportPath == "" {
+// and toolchain that produced them. Every action that retains a report must
+// call this, so "a retained report has a companion binding" holds for the local
+// run action and the distributed aggregate action alike.
+func retainReportBinding(
+	ctx context.Context,
+	plan soundnessgate.ExecutionPlan,
+	reportPath string,
+	report soundnessgate.RunReport,
+) error {
+	if reportPath == "" {
 		return nil
 	}
-	binding, err := soundnessgate.DeriveRunReportBinding(plan, result.Report)
+	binding, err := soundnessgate.DeriveRunReportBinding(plan, report)
 	if err != nil {
 		return fmt.Errorf("derive retained aggregate report binding: %w", err)
 	}
-	if err := soundnessgate.PublishRunReportBinding(ctx, result.ReportPath, binding); err != nil {
+	if err := soundnessgate.PublishRunReportBinding(ctx, filepath.Clean(reportPath), binding); err != nil {
 		return fmt.Errorf("retain aggregate report binding: %w", err)
 	}
 	return nil

@@ -291,8 +291,9 @@ on fresh aggregate execution, because the `clean-tree-freshness` subgate in the
 `complete` profile never passes that opt-in.
 
 Admission requires all of the following, and fails closed on any one of them.
-Tree-content binding, through the same admission check the default path applies
-to a report it just produced:
+Tree-content binding, through `validateAggregateReport` — the one admission
+function the default path also applies to the report it just produced, and the
+only sense in which the two paths are equivalent:
 
 - the file parses and validates as an aggregate run report against the manifest
   and registry read from the synthetic tree, including exact-census validation
@@ -305,11 +306,14 @@ to a report it just produced:
   every other tracked and untracked path.
 
 Producing-run binding, through the companion `<report>.binding.json` that
-`cmd/soundness-gate` writes beside any retained report:
+`cmd/soundness-gate` writes beside any report it retains, for the local `run`
+action and the distributed `aggregate` action alike:
 
 - the binding's `report_sha256` equals the canonical digest of the reused
-  report bytes, so post-production tampering with any report member — including
-  a per-subgate `report_digest` — is rejected;
+  report's decoded form (the re-marshaled record, not the file bytes, so
+  formatting is irrelevant but every member is covered), which rejects
+  post-production tampering with any report member — including a per-subgate
+  `report_digest`;
 - its `profile`, `workspace_digest`, and `manifest_digest` equal the values
   independently recomputed above;
 - its `registry_digest` is byte-equal to the digest of the registry file as read
@@ -346,21 +350,29 @@ verification refuses reused records by default:
   populations, so a census that was never executed is structurally
   indistinguishable from one that was.
 - **Per-subgate `report_digest` artifacts.** They are not recomputable from any
-  retained artifact. The companion binding pins the whole report's bytes, which
-  catches tampering after production but not a value fabricated during it.
+  retained artifact. The companion binding pins the report's canonical decoded
+  form, which catches tampering after production but not a value fabricated
+  during it.
 - **Fabrication by the producer.** The companion binding is written by the same
   process that writes the report, so it detects replay across trees, manifests,
   registries, profiles, and toolchains — not a forged pair.
-- **Plan identity and resource budget.** The binding carries `plan_id` and the
-  resource budget and they are recorded in the command log, but they are not
-  recomputed: the plan digest covers the machine-dependent resource budget, so
-  it is deliberately not reproducible across runs.
+- **Plan identity and resource budget.** The binding carries both and neither is
+  recomputed, because the plan digest covers the machine-dependent resource
+  budget and is therefore not reproducible across runs. The retained command log
+  records `plan_id`; the resource budget is checked for structural validity only
+  and is not carried into the record at all.
 - **Wall-clock plausibility.** Nothing constrains a retained `duration_ms`, for
   reused or executed outcomes; a reviewed floor would be a policy decision
   about runner classes and is deliberately not invented here. The distinct
   provenance kind, not the duration, is what marks an outcome as not executed.
 - **Timestamps.** The report has none, so "recently produced" cannot be
   asserted; only content equality with the tree can be.
+- **The producing environment.** Executed commands run with the scrubbed
+  environment that generation builds, which strips the evidence, policy, scan,
+  and resource variables that could redirect what a command proves. A reused
+  report was produced outside that scrub, so an inherited variable such as
+  `GOPLINT_SCAN_ROOT` could have redirected the producing run's certification
+  scan target without perturbing any identity checked at admission.
 
 ### Reuse preconditions and non-retryability
 

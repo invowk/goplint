@@ -135,7 +135,8 @@ aggregate execution inside step 2 with an aggregate report the caller already
 retained. It is admitted solely under tree binding (profile, byte-equal
 manifest digest, exact registration census, and the recomputed workspace digest
 that covers the tracked registry file) plus the companion
-`<report>.binding.json`, which pins the report bytes, the registry byte digest,
+`<report>.binding.json`, which pins the report's canonical decoded form, the
+registry byte digest,
 and the producing Go toolchain. The recorded outcome states reuse instead of
 execution and the record carries `provenance.kind: "reused-aggregate"`, which
 step 4 refuses without `-allow-reused-aggregate`; step 5 therefore still

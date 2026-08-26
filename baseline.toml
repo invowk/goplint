@@ -2,7 +2,7 @@
 #
 # goplint baseline — accepted DDD compliance findings
 # Regenerate: make update-baseline
-# Total: 2799 findings
+# Total: 2800 findings
 
 # Bare primitive type usage
 [primitive]
@@ -303,6 +303,7 @@ entries = [
     { id = "gpl4_1c22b7aa04efeca5cc23a8c5a7becd9bd45df1d14324c76bdccc7be79db47d08", message = "struct field soundnessevidence.SemanticObservation.Dimensions uses primitive type []string" },
     { id = "gpl4_1c2e8dc9312c692c60729cb069d6ed925878637b270395a66035f19f3e1a9308", message = "parameter \"args\" of goplint.dispatchWithDeps uses primitive type []string" },
     { id = "gpl4_1c53f6c4ccea4cbb4b05ddf4351286b9fbd6a31d20fe88e58a8c31ac9874daf4", message = "struct field goplint.flagState.cfgFeasibilityTimeoutMS uses primitive type int" },
+    { id = "gpl4_1c5b0b9aa32f7d22c7bfd28c8f81880d385b1c6fd0eb1087d6d31ddd09432265", message = "parameter \"reportPath\" of soundness-gate.retainReportBinding uses primitive type string" },
     { id = "gpl4_1c7d963698416d584e8b6d0ba15412751fdc6a705ce6469cde1e8ac0c9477bea", message = "parameter \"source\" of repositoryaudit.cloneMap uses primitive type string (in map key and value)" },
     { id = "gpl4_1c873d9ea0697a9f7a29bdf6adf7ef96f13bc60e2891a9bf44f97d00bed2884c", message = "parameter \"funcQualName\" of goplint.reportCommandWaitDelay uses primitive type string" },
     { id = "gpl4_1cbda6309ce5c32571d8e78444e9938effb981de602b87cb40a7aef1fc891178", message = "struct field stableidmigration.PopulationChangeReview.CanonicalSHA256 uses primitive type string" },

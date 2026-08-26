@@ -16,6 +16,12 @@ import (
 	"github.com/invowk/goplint/internal/soundnessevidence"
 )
 
+// AllowReusedAggregateFlag is the exact opt-in flag name that makes the
+// freshness verifier accept a reused-aggregate record. It is exported so the
+// verifier command and the completion-containment test bind one string: the
+// whole containment argument is that no reviewed gate command passes it.
+const AllowReusedAggregateFlag = "allow-reused-aggregate"
+
 // VerifyOptions selects the repository, reviewed paths, plan, and retained
 // record checked by Verify. AllowReusedAggregate is an explicit local-iteration
 // opt-in: without it, a record whose aggregate command was reused instead of
@@ -157,6 +163,9 @@ func Verify(ctx context.Context, options VerifyOptions) (resultErr error) {
 	if err := verifyCommands(plan, record.Commands); err != nil {
 		return err
 	}
+	if err := requireProvenanceMatchesAggregateLog(plan, record); err != nil {
+		return err
+	}
 	expectedWorkspaceDigest := ""
 	if record.Provenance.Kind == ProvenanceRebound {
 		expectedWorkspaceDigest = record.Provenance.AggregateWorkspaceDigest
@@ -187,11 +196,6 @@ func Verify(ctx context.Context, options VerifyOptions) (resultErr error) {
 	return nil
 }
 
-// validateProvenance requires the retained aggregate report to be
-// attributable to the exact semantic content of the verified tree. The
-// attribution chain is: the report binds the workspace that produced it, the
-// provenance binds that workspace to a semantic-content digest, and the
-// verified repository identity must carry the same semantic digest.
 // requireFreshAggregateExecution refuses a reused-aggregate record unless the
 // caller explicitly opted in. The refusal is deliberately early and independent
 // of every content identity: a reused record can be perfectly fresh with
@@ -210,6 +214,48 @@ func requireFreshAggregateExecution(record Record, allowReused bool) error {
 	)
 }
 
+// requireProvenanceMatchesAggregateLog requires the reused provenance kind and
+// the reuse marker in the aggregate command log to agree in both directions.
+// The retained log and its digest are the only record members that witness how
+// the aggregate outcome was obtained, so without this equivalence a single
+// string edit to provenance.kind would silently downgrade a reused record into
+// one the verifier accepts by default, and a marker-carrying log could claim
+// execution.
+func requireProvenanceMatchesAggregateLog(plan Plan, record Record) error {
+	marked := false
+	found := false
+	for _, outcome := range record.Commands {
+		if outcome.Name != plan.AggregateReport.CommandName {
+			continue
+		}
+		found = true
+		marked = strings.HasPrefix(outcome.Log, reusedAggregateReportPrefix)
+	}
+	if !found {
+		return fmt.Errorf("record has no outcome for aggregate command %q", plan.AggregateReport.CommandName)
+	}
+	reused := record.Provenance.Kind == ProvenanceReused
+	if reused == marked {
+		return nil
+	}
+	if reused {
+		return fmt.Errorf(
+			"clean-tree provenance kind %q, but the aggregate command log does not record reuse",
+			record.Provenance.Kind,
+		)
+	}
+	return fmt.Errorf(
+		"clean-tree provenance kind %q, but the aggregate command log records a reused report: a reused record may "+
+			"not be presented as executed",
+		record.Provenance.Kind,
+	)
+}
+
+// validateProvenance requires the retained aggregate report to be
+// attributable to the exact semantic content of the verified tree. The
+// attribution chain is: the report binds the workspace that produced it, the
+// provenance binds that workspace to a semantic-content digest, and the
+// verified repository identity must carry the same semantic digest.
 func validateProvenance(record Record) error {
 	provenance := record.Provenance
 	if provenance.Kind != ProvenanceGenerated && provenance.Kind != ProvenanceRebound &&

@@ -139,10 +139,11 @@ func reusedBindingError(reportPath string, err error) error {
 // of executing the planned aggregate command.
 //
 // Admission binds the report to the exact synthetic tree through
-// validateAggregateReport — the same admission check the default path applies
-// to a report it just produced — and additionally binds the producing run
-// through the companion binding soundness-gate writes beside a retained report:
-// canonical report bytes, profile, workspace, manifest, registry byte digest,
+// validateAggregateReport, the one admission function the default path also
+// applies to the report it just produced, and additionally binds the producing
+// run through the companion binding soundness-gate writes beside any report it
+// retains:
+// canonical decoded report form, profile, workspace, manifest, registry digest,
 // and the producing Go toolchain, which must equal this process's toolchain.
 //
 // What this does NOT establish: a RunReport is a self-attested census with no
@@ -207,24 +208,25 @@ func reuseAggregateReport(
 }
 
 // validateSyntheticTreeBinding requires the companion binding to agree with the
-// manifest and registry byte digests recomputed from the synthetic tree, and
-// with the canonical report digest that admission just derived. The plan
-// identity and resource budget are carried, not recomputed: the plan digest
-// covers the machine-dependent resource budget, so it is deliberately not
-// reproducible across runs.
+// identities that only the synthetic tree can supply. The registry digest is
+// load-bearing: nothing else compares the reviewed registry bytes to the
+// binding. The report digest is re-compared against the record identity on
+// purpose, because it is the one place where the two canonical report-digest
+// helpers — this package's record digest and soundnessgate's binding digest —
+// must agree; the pre-plan phase compared the binding against only one of them.
+//
+// The manifest digest is deliberately not re-compared here: the pre-plan phase
+// requires the binding to match the report, and validateAggregateReport requires
+// the report to match the synthetic tree, so binding-to-tree equality already
+// follows. The plan identity and resource budget are carried, not recomputed:
+// the plan digest covers the machine-dependent resource budget, so it is
+// deliberately not reproducible across runs.
 func validateSyntheticTreeBinding(
 	binding soundnessgate.RunReportBinding,
 	identity AggregateReportIdentity,
 ) error {
 	if binding.ReportSHA256 != identity.SHA256 {
 		return fmt.Errorf("binding report digest %s, reused report %s", binding.ReportSHA256, identity.SHA256)
-	}
-	if binding.ManifestDigest != identity.ManifestSHA256 {
-		return fmt.Errorf(
-			"binding manifest digest %s, synthetic tree %s",
-			binding.ManifestDigest,
-			identity.ManifestSHA256,
-		)
 	}
 	if binding.RegistryDigest != identity.RegistrySHA256 {
 		return fmt.Errorf(

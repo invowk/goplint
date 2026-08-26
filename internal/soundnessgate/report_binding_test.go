@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestRunReportBindingRoundTripsAndPinsReportBytes(t *testing.T) {
+func TestRunReportBindingRoundTripsAndPinsCanonicalReportForm(t *testing.T) {
 	t.Parallel()
 
 	plan, report := bindingFixture(t)

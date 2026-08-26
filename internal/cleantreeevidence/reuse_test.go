@@ -95,6 +95,85 @@ func TestVerifyRefusesReusedRecordWithoutOptInNamingRegeneration(t *testing.T) {
 	}
 }
 
+// TestVerifyRejectsProvenanceKindDisagreeingWithAggregateLog covers the
+// one-string-edit downgrade in both directions: the reuse marker in the
+// aggregate log and the reused provenance kind must agree, so neither a reused
+// record relabelled as generated nor an executed record carrying the marker is
+// accepted.
+func TestVerifyRejectsProvenanceKindDisagreeingWithAggregateLog(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		reuse bool
+		// tamper rewrites the retained record after a successful capture.
+		tamper func(*testing.T, *Record)
+		want   string
+	}{
+		{
+			name:  "reused record relabelled as generated",
+			reuse: true,
+			tamper: func(t *testing.T, record *Record) {
+				t.Helper()
+				record.Provenance.Kind = ProvenanceGenerated
+			},
+			want: "the aggregate command log records a reused report",
+		},
+		{
+			name:  "executed record carrying the reuse marker",
+			reuse: false,
+			tamper: func(t *testing.T, record *Record) {
+				t.Helper()
+				forged := reusedAggregateReportPrefix + record.AggregateReport.SHA256 + "\n"
+				record.Commands[0].Log = forged
+				record.Commands[0].LogSHA256 = digestBytes([]byte(forged))
+			},
+			want: "the aggregate command log records a reused report",
+		},
+		{
+			name:  "reused record with the marker stripped",
+			reuse: true,
+			tamper: func(t *testing.T, record *Record) {
+				t.Helper()
+				const forged = "executed the aggregate profile\n"
+				record.Commands[0].Log = forged
+				record.Commands[0].LogSHA256 = digestBytes([]byte(forged))
+			},
+			want: "the aggregate command log does not record reuse",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			fixture := newVerifyFixture(t)
+			options := fixture.captureOptions()
+			if tt.reuse {
+				options.ReuseAggregateReportPath = publishReusedReport(t, newReusedReportPair(t, fixture))
+			}
+			record, err := Capture(t.Context(), options)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tt.tamper(t, &record)
+			evidencePath := resolveFromRoot(fixture.root, fixture.options.EvidencePath)
+			if err := WriteRecord(evidencePath, record); err != nil {
+				t.Fatal(err)
+			}
+			// The opt-in is granted so the rejection under test is the
+			// kind-to-log disagreement, not the default reuse refusal.
+			verifyOptions := fixture.options
+			verifyOptions.AllowReusedAggregate = true
+			err = Verify(t.Context(), verifyOptions)
+			if err == nil {
+				t.Fatal("Verify() accepted a record whose provenance kind disagrees with its aggregate log")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("Verify() error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func TestRebindRefusesToCarryReusedProvenanceForward(t *testing.T) {
 	t.Parallel()
 
@@ -229,6 +308,24 @@ func TestCaptureRejectsReusedAggregateReportThatIsNotAProof(t *testing.T) {
 				pair.binding.Toolchain = drifted
 			},
 			want: []string{"producing toolchain", "go0.0.1", "current"},
+		},
+		{
+			// Only the binding drifts, so the pre-plan linkage check is what
+			// must reject it.
+			name: "binding workspace digest mismatch",
+			mutate: func(t *testing.T, pair *reusedReportPair) {
+				t.Helper()
+				pair.binding.WorkspaceDigest = soundnessevidence.DigestBytes([]byte(forgedDigestSeed))
+			},
+			want: []string{"binding workspace digest", "reused report"},
+		},
+		{
+			name: "binding manifest digest mismatch",
+			mutate: func(t *testing.T, pair *reusedReportPair) {
+				t.Helper()
+				pair.binding.ManifestDigest = soundnessevidence.DigestBytes([]byte(forgedDigestSeed))
+			},
+			want: []string{"binding manifest digest", "reused report"},
 		},
 		{
 			name: "registry digest mismatch",
@@ -446,7 +543,8 @@ func (pair *reusedReportPair) rebindManifestDigest(t *testing.T, digest string) 
 	pair.rebindReportDigest(t)
 }
 
-// rebindReportDigest re-pins the companion binding to the current report bytes.
+// rebindReportDigest re-pins the companion binding to the current report's
+// canonical decoded form.
 func (pair *reusedReportPair) rebindReportDigest(t *testing.T) {
 	t.Helper()
 	digest, err := soundnessgate.CanonicalRunReportDigest(pair.report)

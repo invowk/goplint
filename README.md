@@ -79,7 +79,8 @@ dual-digest record. During the iteration loop only,
 the caller already retained: it must bind the synthetic tree (profile,
 byte-equal manifest digest, exact registration census, and the recomputed
 workspace digest covering the tracked registry file) and must come with the
-companion `<report>.binding.json` that pins the report bytes, the registry byte
+companion `<report>.binding.json` that pins the report's canonical decoded
+form, the registry byte
 digest, and the producing Go toolchain. Any mismatch fails closed instead of
 re-executing. The resulting record carries
 `provenance.kind: "reused-aggregate"`, which the freshness verifier refuses
