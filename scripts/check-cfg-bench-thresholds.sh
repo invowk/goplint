@@ -3,6 +3,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+# The repository full-scan target is parameterizable so a standalone goplint
+# checkout can certify against an external consumer corpus. Defaults preserve
+# this repository's canonical invowk scan.
+SCAN_ROOT="${GOPLINT_SCAN_ROOT:-$ROOT_DIR}"
+SCAN_BASELINE="${GOPLINT_SCAN_BASELINE:-tools/goplint/baseline.toml}"
+SCAN_EXCEPTIONS="${GOPLINT_SCAN_EXCEPTIONS:-tools/goplint/exceptions.toml}"
+read -r -a SCAN_PACKAGES <<<"${GOPLINT_SCAN_PACKAGES:-./cmd/... ./internal/... ./pkg/...}"
 PHASE="all"
 if [[ "${1:-}" == "--phase" ]]; then
   PHASE="${2:-}"
@@ -184,18 +191,18 @@ if [[ "$PHASE" == "all" || "$PHASE" == "full-scan" ]]; then
     echo "/usr/bin/time is required for repository full-scan thresholds" >&2
     exit 1
   fi
-  make -s -C "$ROOT_DIR" build-goplint
+  make -s -C "$SCAN_ROOT" build-goplint
   scan_wall_samples=()
   scan_rss_samples=()
   scan_observation_args=()
   for sample in 1 2 3 4 5; do
     time_file="$(mktemp)"
     set +e
-    (cd "$ROOT_DIR" && /usr/bin/time -f 'goplint-bench-time %e %M' -o "$time_file" \
+    (cd "$SCAN_ROOT" && /usr/bin/time -f 'goplint-bench-time %e %M' -o "$time_file" \
       ./bin/goplint -test=false -check-all -check-enum-sync \
-      -baseline=tools/goplint/baseline.toml \
-      -config=tools/goplint/exceptions.toml \
-      ./cmd/... ./internal/... ./pkg/... >/dev/null 2>&1)
+      -baseline="$SCAN_BASELINE" \
+      -config="$SCAN_EXCEPTIONS" \
+      "${SCAN_PACKAGES[@]}" >/dev/null 2>&1)
     scan_status=$?
     set -e
     if [[ $scan_status -ne 0 && $scan_status -ne 3 ]]; then

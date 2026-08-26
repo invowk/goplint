@@ -3,6 +3,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+# The repository smoke-scan target is parameterizable so a standalone goplint
+# checkout can smoke against an external consumer corpus. Defaults preserve
+# this repository's canonical invowk scan.
+SCAN_ROOT="${GOPLINT_SCAN_ROOT:-$ROOT_DIR}"
+SCAN_BASELINE="${GOPLINT_SCAN_BASELINE:-tools/goplint/baseline.toml}"
+SCAN_EXCEPTIONS="${GOPLINT_SCAN_EXCEPTIONS:-tools/goplint/exceptions.toml}"
+read -r -a SCAN_PACKAGES <<<"${GOPLINT_SCAN_PACKAGES:-./cmd/... ./internal/... ./pkg/...}"
 POLICY_FILE="${1:-${GOPLINT_BENCH_SMOKE_POLICY:-$ROOT_DIR/tools/goplint/bench/consumer-smoke.github-ubuntu-x64-4cpu.toml}}"
 if [[ "$POLICY_FILE" != /* ]]; then
   POLICY_FILE="$ROOT_DIR/$POLICY_FILE"
@@ -81,7 +88,7 @@ if [[ -n "${GOPLINT_REPOSITORY_AUDIT_PATH:-}" ]]; then
   fi
   # The consumer binding digests bin/goplint; rebuild it so a distributed
   # worker on a fresh checkout reproduces the producer's analyzer digest.
-  make -s -C "$ROOT_DIR" build-goplint
+  make -s -C "$SCAN_ROOT" build-goplint
   (
     cd "$ROOT_DIR/tools/goplint"
     go run ./cmd/repository-audit -mode full-scan
@@ -94,15 +101,15 @@ else
     echo "/usr/bin/time is required for repository smoke measurement" >&2
     exit 1
   fi
-  make -s -C "$ROOT_DIR" build-goplint
+  make -s -C "$SCAN_ROOT" build-goplint
   time_file="$(mktemp)"
   trap 'rm -f "$time_file"' EXIT
   set +e
-  (cd "$ROOT_DIR" && /usr/bin/time -f 'goplint-smoke-time %e %M' -o "$time_file" \
+  (cd "$SCAN_ROOT" && /usr/bin/time -f 'goplint-smoke-time %e %M' -o "$time_file" \
     ./bin/goplint -test=false -check-all -check-enum-sync \
-    -baseline=tools/goplint/baseline.toml \
-    -config=tools/goplint/exceptions.toml \
-    ./cmd/... ./internal/... ./pkg/... >/dev/null 2>&1)
+    -baseline="$SCAN_BASELINE" \
+    -config="$SCAN_EXCEPTIONS" \
+    "${SCAN_PACKAGES[@]}" >/dev/null 2>&1)
   scan_status=$?
   set -e
   if [[ $scan_status -ne 0 && $scan_status -ne 3 ]]; then

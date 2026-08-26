@@ -218,6 +218,78 @@ func TestValidateRealRepositoryDocumentation(t *testing.T) {
 	}
 }
 
+func TestValidateLayoutRelocatedModule(t *testing.T) {
+	t.Parallel()
+
+	// A standalone-repository shape: the goplint module lives at the
+	// repository root, so anchor artifacts resolve without a tools/goplint
+	// prefix while governed docs keep their docs/goplint location.
+	files := map[string]string{
+		"Makefile": ".PHONY: build check-goplint-soundness\n" +
+			"build:\n\tgo build ./...\n" +
+			"check-goplint-soundness:\n\ttrue\n",
+		"spec/soundness-gate.v1.json": `{
+  "format_version": 1,
+  "profiles": [{"id": "semantic", "subgate_ids": ["full-scan"]}],
+  "subgates": [{"id": "full-scan"}]
+}`,
+		"spec/semantic-evidence.v2.json": `{"format_version": 2, "registrations": []}`,
+		"goplint/analyzer.go": "// SPDX-License-Identifier: MPL-2.0\n\n" +
+			"package goplint\n\ntype semanticCatalog struct{}\n",
+		"docs/goplint/guide.md": "# Guide\n\n" +
+			"Run `make check-goplint-soundness` from the root.\n" +
+			"The manifest lives at `spec/soundness-gate.v1.json`.\n",
+	}
+	root := t.TempDir()
+	for relPath, content := range files {
+		fullPath := filepath.Join(root, filepath.FromSlash(relPath))
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			t.Fatalf("create fixture directory for %s: %v", relPath, err)
+		}
+		if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
+			t.Fatalf("write fixture file %s: %v", relPath, err)
+		}
+	}
+
+	layout := Layout{
+		ModuleDir:        ".",
+		GateManifest:     "spec/soundness-gate.v1.json",
+		EvidenceRegistry: "spec/semantic-evidence.v2.json",
+		SpecDir:          "spec",
+		Documents:        []string{"docs/goplint/guide.md"},
+	}
+	report, err := ValidateLayout(root, layout)
+	if err != nil {
+		t.Fatalf("ValidateLayout: %v", err)
+	}
+	if len(report.Findings) != 0 {
+		t.Fatalf("expected no findings for relocated layout, got %v", report.Findings)
+	}
+	if report.DocumentsChecked != 1 {
+		t.Fatalf("DocumentsChecked = %d, want 1", report.DocumentsChecked)
+	}
+	if report.AnchorsResolved == 0 {
+		t.Fatal("expected resolved anchors for relocated layout, got zero")
+	}
+}
+
+func TestDefaultLayoutMatchesCanonicalRepository(t *testing.T) {
+	t.Parallel()
+
+	layout := DefaultLayout()
+	if layout.ModuleDir != "tools/goplint" {
+		t.Fatalf("ModuleDir = %q, want tools/goplint", layout.ModuleDir)
+	}
+	if !slices.Equal(layout.Documents, DefaultDocuments) {
+		t.Fatalf("Documents = %v, want DefaultDocuments", layout.Documents)
+	}
+	// The default layout must be a defensive copy, not an aliased slice.
+	layout.Documents[0] = "mutated"
+	if DefaultDocuments[0] == "mutated" {
+		t.Fatal("DefaultLayout aliases DefaultDocuments instead of copying it")
+	}
+}
+
 // writeFixtureRepo materializes a minimal synthetic repository with a
 // Makefile, soundness manifests, Go sources, and governed documents, then
 // applies the per-case overrides.

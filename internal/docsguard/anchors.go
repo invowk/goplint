@@ -14,9 +14,10 @@ import (
 type (
 	// artifactIndex is the executable-artifact anchor registry: declared Make
 	// targets, soundness manifest identifiers, and Go identifiers occurring in
-	// the tools/goplint sources.
+	// the goplint module sources located by the layout.
 	artifactIndex struct {
 		root                string
+		layout              Layout
 		makeTargets         map[string]struct{}
 		manifestIdentifiers map[string]struct{}
 		goIdentifiers       map[string]struct{}
@@ -68,25 +69,26 @@ type (
 
 // newArtifactIndex loads every anchor source once: the repository Makefile,
 // the soundness-gate manifest, the semantic evidence registry, and one plain
-// text identifier scan over the tools/goplint Go sources.
-func newArtifactIndex(root string) (*artifactIndex, error) {
+// text identifier scan over the layout's goplint module Go sources.
+func newArtifactIndex(root string, layout Layout) (*artifactIndex, error) {
 	makeTargets, err := loadMakeTargets(root)
 	if err != nil {
 		return nil, err
 	}
 	manifestIdentifiers := map[string]struct{}{}
-	if err := loadGateIdentifiers(filepath.Join(root, filepath.FromSlash(gateManifestRelPath)), manifestIdentifiers); err != nil {
+	if err := loadGateIdentifiers(filepath.Join(root, filepath.FromSlash(layout.GateManifest)), manifestIdentifiers); err != nil {
 		return nil, err
 	}
-	if err := loadEvidenceIdentifiers(filepath.Join(root, filepath.FromSlash(evidenceRegistryRelPath)), manifestIdentifiers); err != nil {
+	if err := loadEvidenceIdentifiers(filepath.Join(root, filepath.FromSlash(layout.EvidenceRegistry)), manifestIdentifiers); err != nil {
 		return nil, err
 	}
-	goIdentifiers, err := loadGoIdentifiers(filepath.Join(root, filepath.FromSlash(goplintModuleDir)))
+	goIdentifiers, err := loadGoIdentifiers(filepath.Join(root, filepath.FromSlash(layout.ModuleDir)))
 	if err != nil {
 		return nil, err
 	}
 	return &artifactIndex{
 		root:                root,
+		layout:              layout,
 		makeTargets:         makeTargets,
 		manifestIdentifiers: manifestIdentifiers,
 		goIdentifiers:       goIdentifiers,
@@ -130,17 +132,17 @@ func (index *artifactIndex) hasGoIdentifierWord(word string) bool {
 }
 
 // resolveRepoPath reports whether the normalized reference exists on disk,
-// resolving against the repository root, the tools/goplint module directory,
-// and the referencing document's own directory.
+// resolving against the repository root, the goplint module directory, and
+// the referencing document's own directory.
 func (index *artifactIndex) resolveRepoPath(docDir, normalized string) bool {
-	return index.existsUnderAny(normalized, ".", goplintModuleDir, docDir)
+	return index.existsUnderAny(normalized, ".", index.layout.ModuleDir, docDir)
 }
 
 // resolveClaimPath reports whether a claim-row reference exists on disk. Claim
 // rows additionally resolve slash-less manifest file names against the spec
 // directory.
 func (index *artifactIndex) resolveClaimPath(docDir, normalized string) bool {
-	return index.existsUnderAny(normalized, ".", goplintModuleDir, specDirRelPath, docDir)
+	return index.existsUnderAny(normalized, ".", index.layout.ModuleDir, index.layout.SpecDir, docDir)
 }
 
 // isPackageSymbolReference reports whether an unresolved path-shaped reference is
@@ -151,7 +153,7 @@ func (index *artifactIndex) isPackageSymbolReference(docDir, normalized string) 
 	if trimmed == normalized {
 		return false
 	}
-	return index.existsUnderAny(trimmed, ".", goplintModuleDir, docDir)
+	return index.existsUnderAny(trimmed, ".", index.layout.ModuleDir, docDir)
 }
 
 // existsUnderAny reports whether the slash-separated relative reference exists

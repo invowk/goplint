@@ -52,6 +52,37 @@ var DefaultDocuments = []string{
 	"tools/goplint/README.md",
 }
 
+// Layout locates the goplint module and its governed anchor artifacts
+// relative to the repository root under validation. It exists so the guard
+// stays correct when the module lives at a different path than this
+// repository's `tools/goplint` (for example at the root of a standalone
+// goplint repository); DefaultLayout preserves this repository's canonical
+// locations.
+type Layout struct {
+	// ModuleDir is the analyzer module directory.
+	ModuleDir string
+	// GateManifest is the aggregate soundness-gate manifest path.
+	GateManifest string
+	// EvidenceRegistry is the semantic evidence registry path.
+	EvidenceRegistry string
+	// SpecDir is the extra resolution root for slash-less manifest file names.
+	SpecDir string
+	// Documents is the governed documentation set.
+	Documents []string
+}
+
+// DefaultLayout returns the canonical layout for this repository: the module
+// under tools/goplint and the governed DefaultDocuments set.
+func DefaultLayout() Layout {
+	return Layout{
+		ModuleDir:        goplintModuleDir,
+		GateManifest:     gateManifestRelPath,
+		EvidenceRegistry: evidenceRegistryRelPath,
+		SpecDir:          specDirRelPath,
+		Documents:        append([]string(nil), DefaultDocuments...),
+	}
+}
+
 // repoPathFirstSegments are the leading path segments that mark a backticked
 // reference as a repository path reference.
 var repoPathFirstSegments = map[string]struct{}{
@@ -116,15 +147,25 @@ func (f Finding) String() string {
 // Validate checks the default goplint documentation set under root, the
 // repository root directory.
 func Validate(root string) (Report, error) {
-	return ValidateDocuments(root, DefaultDocuments)
+	return ValidateLayout(root, DefaultLayout())
 }
 
-// ValidateDocuments checks the given repository-relative documents under root.
+// ValidateDocuments checks the given repository-relative documents under root
+// using the canonical repository layout for anchor resolution.
 func ValidateDocuments(root string, documents []string) (Report, error) {
-	index, err := newArtifactIndex(root)
+	layout := DefaultLayout()
+	layout.Documents = documents
+	return ValidateLayout(root, layout)
+}
+
+// ValidateLayout checks layout.Documents under root, resolving anchors
+// through the layout's module and manifest locations.
+func ValidateLayout(root string, layout Layout) (Report, error) {
+	index, err := newArtifactIndex(root, layout)
 	if err != nil {
 		return Report{}, err
 	}
+	documents := layout.Documents
 	report := Report{}
 	for _, document := range documents {
 		data, readErr := os.ReadFile(filepath.Join(root, filepath.FromSlash(document)))
