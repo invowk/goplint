@@ -21,8 +21,10 @@ import (
 // CaptureOptions selects the exact tree and destination for a retained proof.
 // ReuseAggregateReportPath is empty by default, which executes every planned
 // command including the aggregate profile. When it is set, the named report is
-// admitted in place of executing the planned aggregate command, but only after
-// it proves the same identities a freshly produced report would have to prove.
+// admitted in place of executing the planned aggregate command under the
+// tree-content and producing-run bindings in reuse.go; the resulting record
+// carries ProvenanceReused, which verification refuses unless the caller
+// explicitly opts in, because admission binds identities rather than execution.
 type CaptureOptions struct {
 	Root                     string
 	PathsPath                string
@@ -68,6 +70,16 @@ func Capture(ctx context.Context, options CaptureOptions) (record Record, result
 	}
 	if pathCoveredBySelection(root, paths, evidencePath) {
 		return Record{}, fmt.Errorf("evidence output %q may not be part of the synthetic tree", evidencePath)
+	}
+	// Every tree-independent reuse check runs before the plan starts, so a bad
+	// selection never costs the caller the runtime of the earlier commands.
+	reusedReport := soundnessgate.RunReport{}
+	reusedBinding := soundnessgate.RunReportBinding{}
+	if reusedReportPath != "" {
+		reusedReport, reusedBinding, err = loadReusedAggregateSelection(ctx, reusedReportPath, plan.AggregateReport)
+		if err != nil {
+			return Record{}, err
+		}
 	}
 	if err := os.MkdirAll(filepath.Dir(resolveFromRoot(root, evidencePath)), 0o755); err != nil {
 		return Record{}, fmt.Errorf("create clean-tree evidence directory: %w", err)
@@ -144,6 +156,8 @@ func Capture(ctx context.Context, options CaptureOptions) (record Record, result
 				ctx,
 				materialization.Worktree,
 				reusedReportPath,
+				reusedReport,
+				reusedBinding,
 				plan.AggregateReport,
 				command,
 			)
@@ -178,8 +192,12 @@ func Capture(ctx context.Context, options CaptureOptions) (record Record, result
 			allPassed = false
 		}
 	}
+	provenanceKind := ProvenanceGenerated
+	if aggregateWasReused {
+		provenanceKind = ProvenanceReused
+	}
 	record.Provenance = ProvenanceIdentity{
-		Kind:                        ProvenanceGenerated,
+		Kind:                        provenanceKind,
 		AggregateSemanticTreeDigest: record.Repository.SemanticTreeDigest,
 		AggregateWorkspaceDigest:    record.AggregateReport.Report.WorkspaceDigest,
 		CarriedReportSHA256:         record.AggregateReport.SHA256,
@@ -319,6 +337,10 @@ func executePlannedCommand(
 	return outcome
 }
 
+// cleanTreeCommandEnvironment removes every inherited variable that could
+// redirect a proof command's evidence, policy inputs, scan target, or resource
+// policy away from the synthetic tree. Anything that can change what a planned
+// command proves must be scrubbed here, not merely documented.
 func cleanTreeCommandEnvironment(tempRoot string) []string {
 	environment := os.Environ()
 	environment = replaceEnvironmentVariable(environment, "GOLANGCI_LINT_CACHE", filepath.Join(tempRoot, "golangci-lint-cache"))
@@ -331,6 +353,19 @@ func cleanTreeCommandEnvironment(tempRoot string) []string {
 		soundnessevidence.EnvEvidenceDir,
 		soundnessgate.EnvReportPath,
 		soundnessgate.EnvSubgateReportPath,
+		"GOPLINT_BENCH_THRESHOLDS",
+		"GOPLINT_BENCH_SMOKE_POLICY",
+		"GOPLINT_BENCH_RUNNER_CLASS",
+		"GOPLINT_SCAN_ROOT",
+		"GOPLINT_SCAN_BASELINE",
+		"GOPLINT_SCAN_EXCEPTIONS",
+		"GOPLINT_SCAN_PACKAGES",
+		"GOPLINT_SOUNDNESS_CPU_UNITS",
+		"GOPLINT_SOUNDNESS_MEMORY_BYTES",
+		"GOPLINT_SOUNDNESS_MAX_WORKERS",
+		"GOPLINT_SOUNDNESS_EXECUTOR",
+		"GOPLINT_RACE_REPEAT_WORKERS",
+		"GOPLINT_FUZZ_TIME",
 	} {
 		environment = removeEnvironmentVariable(environment, key)
 	}

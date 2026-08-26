@@ -283,39 +283,104 @@ That default re-executes the semantic profile even when the caller just ran
 `make check-goplint-soundness-semantic` over byte-identical content. The
 opt-in `-reuse-aggregate-report` flag, wired as
 `make generate-goplint-clean-tree-evidence-reusing`, instead admits an
-aggregate report the caller already retained. It is admitted only after the
-same admission check the default path applies to a report it just produced,
-against the freshly materialized synthetic worktree:
+aggregate report the caller already retained. Reuse is a **local iteration
+aid**: the record it writes carries `provenance.kind: "reused-aggregate"`, and
+the freshness verifier refuses that kind unless the caller passes
+`-allow-reused-aggregate`. A completion or release claim therefore always rests
+on fresh aggregate execution, because the `clean-tree-freshness` subgate in the
+`complete` profile never passes that opt-in.
 
-- the file parses and validates as an aggregate run report against the
-  manifest and registry read from the synthetic tree;
+Admission requires all of the following, and fails closed on any one of them.
+Tree-content binding, through the same admission check the default path applies
+to a report it just produced:
+
+- the file parses and validates as an aggregate run report against the manifest
+  and registry read from the synthetic tree, including exact-census validation
+  of every registration, producer, and population;
 - its `profile` equals the plan's `aggregate_report.profile`;
-- its `manifest_digest` is byte-equal to the digest of the manifest as read
-  from the synthetic tree, and the registry digest is bound the same way;
-- its `workspace_digest` is byte-equal to the workspace digest recomputed
-  from the synthetic worktree.
+- its `manifest_digest` is byte-equal to the digest of the manifest as read from
+  the synthetic tree;
+- its `workspace_digest` is byte-equal to the workspace digest recomputed from
+  the synthetic worktree, which covers the tracked registry file along with
+  every other tracked and untracked path.
+
+Producing-run binding, through the companion `<report>.binding.json` that
+`cmd/soundness-gate` writes beside any retained report:
+
+- the binding's `report_sha256` equals the canonical digest of the reused
+  report bytes, so post-production tampering with any report member — including
+  a per-subgate `report_digest` — is rejected;
+- its `profile`, `workspace_digest`, and `manifest_digest` equal the values
+  independently recomputed above;
+- its `registry_digest` is byte-equal to the digest of the registry file as read
+  from the synthetic tree;
+- its `toolchain` (Go version, GOOS, GOARCH, and their digest) equals the
+  toolchain identity of the generating process, which rejects replaying a
+  report produced under a different toolchain.
+
+Every check that does not depend on the synthetic tree — report and binding
+parsing, the report-to-binding digest linkage, the binding profile, and the
+producing toolchain — runs *before* the plan starts, so a selection mistake
+fails in seconds instead of after the ten earlier planned commands have burned
+their runtime. The tree-bound comparisons run at the aggregate command's
+position in plan order, which is where a real execution would have observed the
+tree.
 
 Every other planned command still executes inside the synthetic worktree, and
 the recorded outcome for the aggregate command states reuse — its retained log
-opens with `reused caller-provided aggregate report <sha256>` — instead of
-claiming an execution that did not happen. The record stays v4-shaped and
-carries exactly the same digest bindings a re-executed run would have
-produced, because the admitted report satisfied the same equalities by
-construction.
+opens with `reused caller-provided aggregate report <sha256>` and names the
+producing plan and toolchain — instead of claiming an execution that did not
+happen. The record stays v4-shaped: `provenance.kind` is an existing member and
+`"reused-aggregate"` is a new value of it, so every previously retained record
+verifies exactly as before, and an older verifier reading a newer reused record
+rejects it as an unknown kind.
 
-Reuse fails closed. A missing file, a parse failure, a profile mismatch, or any
-digest mismatch aborts generation with the exact mismatch named and leaves the
-retained record untouched; there is no fallback to re-execution, which would
-hide a caller mistake behind the full aggregate cost. The report must be an
-absolute path outside the repository, so it can never become part of the tree
-it is evidence about. Reuse is also refused for `-rebind`, which executes
-nothing.
+### What reuse does not establish
+
+A retained `RunReport` is a self-attested census. Reuse keeps its bytes and
+drops its writer, so the following remain unbound and are the reason
+verification refuses reused records by default:
+
+- **Per-subgate execution status.** The report carries no status per subgate;
+  `ValidateRunReport` synthesizes the passed status while cross-checking
+  populations, so a census that was never executed is structurally
+  indistinguishable from one that was.
+- **Per-subgate `report_digest` artifacts.** They are not recomputable from any
+  retained artifact. The companion binding pins the whole report's bytes, which
+  catches tampering after production but not a value fabricated during it.
+- **Fabrication by the producer.** The companion binding is written by the same
+  process that writes the report, so it detects replay across trees, manifests,
+  registries, profiles, and toolchains — not a forged pair.
+- **Plan identity and resource budget.** The binding carries `plan_id` and the
+  resource budget and they are recorded in the command log, but they are not
+  recomputed: the plan digest covers the machine-dependent resource budget, so
+  it is deliberately not reproducible across runs.
+- **Wall-clock plausibility.** Nothing constrains a retained `duration_ms`, for
+  reused or executed outcomes; a reviewed floor would be a policy decision
+  about runner classes and is deliberately not invented here. The distinct
+  provenance kind, not the duration, is what marks an outcome as not executed.
+- **Timestamps.** The report has none, so "recently produced" cannot be
+  asserted; only content equality with the tree can be.
+
+### Reuse preconditions and non-retryability
 
 Because the workspace digest is recomputed byte-for-byte, reuse only succeeds
 while the caller's worktree content still matches the synthetic tree: an
-uncommitted path outside the reviewed selection, a reviewed diff exclusion, or
-a record rewritten since the semantic run all make the digests differ, and the
+uncommitted path outside the reviewed selection, a reviewed diff exclusion, or a
+record rewritten since the semantic run all make the digests differ, and the
 mismatch is reported instead of silently absorbed.
+
+This makes reuse single-shot per report. Generation rewrites the on-disk record,
+which is a tracked file, so the caller's workspace digest diverges from the
+synthetic tree the moment generation succeeds. Re-running reuse with the same
+report then fails on the workspace-digest comparison until the record is
+committed. Retry with a fresh semantic run, or commit first.
+
+The reused report must be an absolute path outside the repository, so it can
+never become part of the tree it is evidence about. Reuse is also refused for
+`-rebind`: re-binding carries the retained report forward under
+`kind: "re-bound"`, and carrying a reused record forward would present a
+never-executed aggregate as one that verification accepts by default.
 
 ## Completion proof
 
@@ -330,23 +395,22 @@ make check-goplint-clean-tree-evidence
 make check-goplint-soundness-complete
 ```
 
-To pay for the semantic profile once, persist the semantic run's report
-through the existing `GOPLINT_SOUNDNESS_REPORT_PATH` (an absolute path outside
-the workspace) and generate with reuse:
+This sequence is the only one that supports a completion claim. Reuse belongs to
+the iteration loop before it, where the record is regenerated repeatedly while
+the tree is still moving:
 
 ```bash
-export GOPLINT_SOUNDNESS_REPORT_PATH="$(mktemp -d)/aggregate-report.json"
-make check-goplint-soundness-semantic
-make generate-goplint-clean-tree-evidence-reusing
-make check-goplint-clean-tree-evidence
-make check-goplint-soundness-complete
+report="$(mktemp -d)/aggregate-report.json"
+GOPLINT_SOUNDNESS_REPORT_PATH="$report" make check-goplint-soundness-semantic
+make generate-goplint-clean-tree-evidence-reusing GOPLINT_CLEAN_TREE_REUSE_REPORT="$report"
+make check-goplint-clean-tree-evidence-allowing-reuse
 ```
 
-The reusing target defaults its report selection to
-`GOPLINT_SOUNDNESS_REPORT_PATH` and can be pointed elsewhere with
-`GOPLINT_CLEAN_TREE_REUSE_REPORT`. It is a separate target so an exported
-report path can never silently change what
-`make generate-goplint-clean-tree-evidence` does.
+Assign `GOPLINT_SOUNDNESS_REPORT_PATH` per command as shown; never `export` it.
+The report writer is exclusive, so a still-exported value makes every later
+aggregate run — including `make check-goplint-soundness-complete` — fail on the
+existing file *after* burning its full runtime. The reusing target refuses to
+run while the variable is exported for exactly that reason.
 
 Any subsequent semantic-content change makes the retained proof stale and
 requires regeneration; prose-only drift only requires re-binding.

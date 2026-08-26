@@ -52,6 +52,18 @@ func Rebind(ctx context.Context, options CaptureOptions) (record Record, resultE
 	if err := validateRecordHeader(retained); err != nil {
 		return Record{}, err
 	}
+	// Re-binding carries the retained aggregate report forward under the
+	// "re-bound" kind. Carrying a reused record forward would launder a
+	// never-executed aggregate into a kind that verification accepts by
+	// default, so it is refused outright.
+	if retained.Provenance.Kind == ProvenanceReused {
+		return Record{}, fmt.Errorf(
+			"retained record provenance kind %q: a reused aggregate report may not be re-bound, because re-binding "+
+				"would present a never-executed aggregate as %q; regenerate with fresh gate execution",
+			ProvenanceReused,
+			ProvenanceRebound,
+		)
+	}
 	if err := requireRetainedBaseAncestor(ctx, root, retained.Repository.BaseCommit); err != nil {
 		return Record{}, err
 	}

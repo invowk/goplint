@@ -17,12 +17,16 @@ import (
 )
 
 // VerifyOptions selects the repository, reviewed paths, plan, and retained
-// record checked by Verify.
+// record checked by Verify. AllowReusedAggregate is an explicit local-iteration
+// opt-in: without it, a record whose aggregate command was reused instead of
+// executed is refused, so completion and release claims always rest on fresh
+// aggregate execution.
 type VerifyOptions struct {
-	Root         string
-	PathsPath    string
-	PlanPath     string
-	EvidencePath string
+	Root                 string
+	PathsPath            string
+	PlanPath             string
+	EvidencePath         string
+	AllowReusedAggregate bool
 }
 
 // Verify recomputes every freshness identity without modifying the caller's
@@ -72,6 +76,9 @@ func Verify(ctx context.Context, options VerifyOptions) (resultErr error) {
 		return err
 	}
 	if err := validateRecordHeader(record); err != nil {
+		return err
+	}
+	if err := requireFreshAggregateExecution(record, options.AllowReusedAggregate); err != nil {
 		return err
 	}
 	if err := requireRetainedBaseAncestor(ctx, root, record.Repository.BaseCommit); err != nil {
@@ -185,9 +192,28 @@ func Verify(ctx context.Context, options VerifyOptions) (resultErr error) {
 // attribution chain is: the report binds the workspace that produced it, the
 // provenance binds that workspace to a semantic-content digest, and the
 // verified repository identity must carry the same semantic digest.
+// requireFreshAggregateExecution refuses a reused-aggregate record unless the
+// caller explicitly opted in. The refusal is deliberately early and independent
+// of every content identity: a reused record can be perfectly fresh with
+// respect to the tree and still not be a completion claim, because its
+// aggregate populations were never re-executed under this verifier's eyes.
+func requireFreshAggregateExecution(record Record, allowReused bool) error {
+	if record.Provenance.Kind != ProvenanceReused || allowReused {
+		return nil
+	}
+	return fmt.Errorf(
+		"clean-tree record provenance kind %q: its aggregate command was reused from a caller-provided report "+
+			"instead of executed, so it cannot support a completion or release claim; regenerate with "+
+			"'make generate-goplint-clean-tree-evidence', or pass -allow-reused-aggregate to accept it for local "+
+			"iteration only",
+		record.Provenance.Kind,
+	)
+}
+
 func validateProvenance(record Record) error {
 	provenance := record.Provenance
-	if provenance.Kind != ProvenanceGenerated && provenance.Kind != ProvenanceRebound {
+	if provenance.Kind != ProvenanceGenerated && provenance.Kind != ProvenanceRebound &&
+		provenance.Kind != ProvenanceReused {
 		return fmt.Errorf("clean-tree provenance kind %q is unknown", provenance.Kind)
 	}
 	digests := []struct {
@@ -218,9 +244,9 @@ func validateProvenance(record Record) error {
 		return errors.New("clean-tree provenance report digest does not match the retained aggregate report")
 	}
 	switch provenance.Kind {
-	case ProvenanceGenerated:
+	case ProvenanceGenerated, ProvenanceReused:
 		if provenance.PreviousProseDigest != "" {
-			return errors.New("generated clean-tree provenance must not carry a previous prose digest")
+			return fmt.Errorf("%s clean-tree provenance must not carry a previous prose digest", provenance.Kind)
 		}
 	case ProvenanceRebound:
 		if err := soundnessevidence.ValidateDigest(

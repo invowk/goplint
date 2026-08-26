@@ -27,6 +27,7 @@ Replaces the manual full-codebase scan that agents performed via `/improve-type-
 | **Generate retained proof, reusing a verified aggregate report** | **`make generate-goplint-clean-tree-evidence-reusing`** |
 | **Re-bind retained proof after prose-only drift** | **`make rebind-goplint-clean-tree-evidence`** |
 | **Verify retained exact-tree proof (v4)** | **`make check-goplint-clean-tree-evidence`** |
+| **Verify accepting a reused aggregate (local iteration only)** | **`make check-goplint-clean-tree-evidence-allowing-reuse`** |
 | **Check mutation-kernel coverage** | **`make check-goplint-mutation-kernel-coverage`** |
 | **Check production integration** | **`make check-goplint-production-integration`** |
 | **Check historical counterexamples** | **`make check-goplint-counterexamples`** |
@@ -94,14 +95,23 @@ Generation consumes the reviewed `clean-tree-v5.paths` and
 `clean-tree-v5.json` inputs, invokes the `semantic` profile to avoid recursive
 freshness verification, and writes only the retained `clean-tree-run.v5.json`
 dual-digest record (a retained v3 record is rejected with an explicit
-migration notice). To pay for the semantic profile once, export
-`GOPLINT_SOUNDNESS_REPORT_PATH` (absolute, outside the workspace) before the
-semantic run and generate with
-`make generate-goplint-clean-tree-evidence-reusing`: that opt-in target admits
-the already-retained aggregate report instead of re-executing it, but only
-after byte-equal profile, manifest, registry, and recomputed synthetic-tree
-workspace digests; any mismatch fails closed with the mismatch named and never
-falls back to re-execution. When only documentation-class prose drifted since a
+migration notice). During the iteration loop, and never for a completion claim,
+`make generate-goplint-clean-tree-evidence-reusing` admits an aggregate report
+the caller already retained instead of re-executing it. Admission requires the
+report to bind the synthetic tree (profile, byte-equal manifest digest, exact
+registration census, and recomputed workspace digest, which itself covers the
+tracked registry file) and requires the companion `<report>.binding.json` that
+`cmd/soundness-gate` writes to pin the report bytes, the registry byte digest,
+and the producing Go toolchain, which must equal the generating process's
+toolchain. Any mismatch fails closed with the mismatch named and never falls
+back to re-execution. Such a record carries
+`provenance.kind: "reused-aggregate"`, which the freshness verifier refuses
+without `-allow-reused-aggregate` and which may never be re-bound, so the
+`complete` profile still requires fresh aggregate execution. Assign
+`GOPLINT_SOUNDNESS_REPORT_PATH` per command, never `export` it: the report
+writer is exclusive, so a still-exported value makes every later aggregate run
+fail on the existing file after burning its full runtime. When only
+documentation-class prose drifted since a
 valid record, `make rebind-goplint-clean-tree-evidence` re-binds it in seconds:
 both tree digests are recomputed, task ledgers and the diff census are
 revalidated, and the aggregate report is carried forward with re-bound
@@ -834,8 +844,13 @@ semantic profile (or re-bind it after prose-only drift with
 the complete profile: that would recurse into the record's own freshness
 check. `make generate-goplint-clean-tree-evidence-reusing` may consume an
 aggregate report the caller already retained for the same content instead of
-re-executing the semantic profile, but only under byte-equal profile, manifest,
-registry, and recomputed synthetic-tree workspace digests.
+re-executing the semantic profile, but only under tree binding plus the
+companion `<report>.binding.json` that pins the report bytes, the registry byte
+digest, and the producing toolchain. The record it writes carries
+`provenance.kind: "reused-aggregate"`: the freshness verifier refuses that kind
+unless `-allow-reused-aggregate` is passed, re-binding refuses to carry it
+forward, and the `clean-tree-freshness` subgate never opts in — so reuse is a
+local iteration aid and never a completion or release claim.
 
 ## Gotchas
 

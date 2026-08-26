@@ -15,6 +15,22 @@ if [[ "$POLICY_FILE" != /* ]]; then
   POLICY_FILE="$ROOT_DIR/$POLICY_FILE"
 fi
 
+if [[ ! -f "$POLICY_FILE" ]]; then
+  echo "smoke policy file not found: $POLICY_FILE" >&2
+  exit 1
+fi
+
+# The smoke policy is reviewed repository content. Unlike the scan target, it
+# may never be redirected out of the tree: an out-of-tree manifest would let an
+# inherited environment variable weaken the policy this gate smokes against
+# without appearing in any tree digest.
+ROOT_DIR_REAL="$(cd "$ROOT_DIR" && pwd -P)"
+POLICY_FILE="$(cd "$(dirname "$POLICY_FILE")" && pwd -P)/$(basename "$POLICY_FILE")"
+if [[ "$POLICY_FILE" != "$ROOT_DIR_REAL/"* ]]; then
+  echo "smoke policy file must be inside the repository: $POLICY_FILE (root: $ROOT_DIR_REAL)" >&2
+  exit 2
+fi
+
 (
   cd "$ROOT_DIR"
   go run ./cmd/benchmark-policy -manifest "$POLICY_FILE" -policy consumer-smoke

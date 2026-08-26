@@ -38,9 +38,10 @@ The main commands are:
 | `make check-goplint-soundness-semantic` | Force the full semantic soundness profile |
 | `make check-goplint-soundness-complete` | Run the completion profile, including retained exact-tree freshness |
 | `make generate-goplint-clean-tree-evidence` | Generate the retained v4 dual-digest run record from the reviewed paths and plan |
-| `make generate-goplint-clean-tree-evidence-reusing` | Generate the retained record from an aggregate report already retained for this exact tree instead of re-executing it |
+| `make generate-goplint-clean-tree-evidence-reusing` | Generate the retained record from an aggregate report already retained for this exact tree instead of re-executing it (local iteration only) |
 | `make rebind-goplint-clean-tree-evidence` | Re-bind the retained record after prose-only drift, carrying the aggregate report forward |
 | `make check-goplint-clean-tree-evidence` | Verify the retained exact-tree proof without changing the caller's index or worktree |
+| `make check-goplint-clean-tree-evidence-allowing-reuse` | Verify while accepting a reused-aggregate record; local iteration only, never a completion claim |
 | `make check-goplint-mutation-kernel-coverage` | Verify causal mutant coverage for every mutation-required semantic category |
 | `make check-goplint-production-integration` | Exercise the canonical domain and uncertainty reasons through real analyzer paths |
 | `make check-goplint-counterexamples` | Run historical soundness counterexamples against the real analyzer |
@@ -73,13 +74,17 @@ make check-goplint-soundness-complete
 Generation consumes the reviewed v4 path selection and command plan, invokes
 the `semantic` profile rather than `complete` to avoid recursive freshness
 verification, and writes only the retained `clean-tree-run.v5.json`
-dual-digest record. To pay for the semantic profile once, export
-`GOPLINT_SOUNDNESS_REPORT_PATH` (absolute, outside the workspace) before the
-semantic run and replace generation with
-`make generate-goplint-clean-tree-evidence-reusing`; the already-retained
-aggregate report is admitted only under byte-equal profile, manifest,
-registry, and recomputed synthetic-tree workspace digests, and any mismatch
-fails closed instead of re-executing. When only documentation-class prose
+dual-digest record. During the iteration loop only,
+`make generate-goplint-clean-tree-evidence-reusing` admits an aggregate report
+the caller already retained: it must bind the synthetic tree (profile,
+byte-equal manifest digest, exact registration census, and the recomputed
+workspace digest covering the tracked registry file) and must come with the
+companion `<report>.binding.json` that pins the report bytes, the registry byte
+digest, and the producing Go toolchain. Any mismatch fails closed instead of
+re-executing. The resulting record carries
+`provenance.kind: "reused-aggregate"`, which the freshness verifier refuses
+without `-allow-reused-aggregate`, so a completion claim still needs fresh
+aggregate execution. When only documentation-class prose
 drifted since a valid record, `make rebind-goplint-clean-tree-evidence`
 re-binds it in seconds; semantic-content drift makes re-binding fail closed
 naming the drifted paths. Missing or stale retained evidence cannot be

@@ -29,6 +29,17 @@ if [[ ! -f "$THRESHOLDS_FILE" ]]; then
   exit 1
 fi
 
+# The certification policy is reviewed repository content. Unlike the scan
+# target, it may never be redirected out of the tree: an out-of-tree manifest
+# would let an inherited environment variable weaken the thresholds this gate
+# certifies against without appearing in any tree digest.
+ROOT_DIR_REAL="$(cd "$ROOT_DIR" && pwd -P)"
+THRESHOLDS_FILE="$(cd "$(dirname "$THRESHOLDS_FILE")" && pwd -P)/$(basename "$THRESHOLDS_FILE")"
+if [[ "$THRESHOLDS_FILE" != "$ROOT_DIR_REAL/"* ]]; then
+  echo "threshold file must be inside the repository: $THRESHOLDS_FILE (root: $ROOT_DIR_REAL)" >&2
+  exit 2
+fi
+
 (
   cd "$ROOT_DIR"
   go run ./cmd/benchmark-policy -manifest "$THRESHOLDS_FILE" -policy certification

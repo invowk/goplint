@@ -27,16 +27,23 @@ func main() {
 		"testdata/gates/clean-tree-run.v5.json",
 		"retained format-v4 evidence file",
 	)
+	allowReusedAggregate := flag.Bool(
+		"allow-reused-aggregate",
+		false,
+		"accept a record whose aggregate command was reused from a caller-provided report instead of executed; "+
+			"local iteration only, never a completion or release claim",
+	)
 	flag.Parse()
 	if *pathsPath == "" {
 		fail(errors.New("-paths is required; implicit dirty-worktree verification is forbidden"))
 	}
 	ctx := context.Background()
 	if err := cleantreeevidence.Verify(ctx, cleantreeevidence.VerifyOptions{
-		Root:         *root,
-		PathsPath:    *pathsPath,
-		PlanPath:     *planPath,
-		EvidencePath: *evidencePath,
+		Root:                 *root,
+		PathsPath:            *pathsPath,
+		PlanPath:             *planPath,
+		EvidencePath:         *evidencePath,
+		AllowReusedAggregate: *allowReusedAggregate,
 	}); err != nil {
 		fail(verificationError(*evidencePath, err))
 	}

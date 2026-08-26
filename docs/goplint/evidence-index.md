@@ -132,10 +132,15 @@ adds the freshness verifier, so using it during generation would make the proof
 depend recursively on the record it is creating.
 `make generate-goplint-clean-tree-evidence-reusing` may replace only the
 aggregate execution inside step 2 with an aggregate report the caller already
-retained; it is admitted solely under byte-equal profile, manifest, registry,
-and recomputed synthetic-tree workspace digests, the recorded outcome states
-reuse instead of execution, and any mismatch fails closed rather than falling
-back to re-execution. Verification replays the
+retained. It is admitted solely under tree binding (profile, byte-equal
+manifest digest, exact registration census, and the recomputed workspace digest
+that covers the tracked registry file) plus the companion
+`<report>.binding.json`, which pins the report bytes, the registry byte digest,
+and the producing Go toolchain. The recorded outcome states reuse instead of
+execution and the record carries `provenance.kind: "reused-aggregate"`, which
+step 4 refuses without `-allow-reused-aggregate`; step 5 therefore still
+requires fresh aggregate execution. Any mismatch fails closed rather than
+falling back to re-execution. Verification replays the
 retained base with the current reviewed paths and rejects any changed input or
 task state while leaving the caller's real index and worktree unchanged. The
 synthetic `git diff --check` excludes only the retained

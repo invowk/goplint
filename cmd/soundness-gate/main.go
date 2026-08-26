@@ -281,6 +281,9 @@ func execute(ctx context.Context, options executeOptions) (soundnessgate.Result,
 			if err != nil {
 				return soundnessgate.Result{}, fmt.Errorf("run serial soundness plan: %w", err)
 			}
+			if err := retainReportBinding(ctx, plan, result); err != nil {
+				return soundnessgate.Result{}, err
+			}
 			return result, nil
 		}
 		result, err := soundnessgate.RunPlanParallel(ctx, plan, soundnessgate.PlanParallelOptions{
@@ -290,10 +293,32 @@ func execute(ctx context.Context, options executeOptions) (soundnessgate.Result,
 		if err != nil {
 			return soundnessgate.Result{}, fmt.Errorf("run parallel soundness plan: %w", err)
 		}
+		if err := retainReportBinding(ctx, plan, result); err != nil {
+			return soundnessgate.Result{}, err
+		}
 		return result, nil
 	default:
 		return soundnessgate.Result{}, fmt.Errorf("executor %q is invalid; want plan-serial or parallel", options.executor)
 	}
+}
+
+// retainReportBinding publishes the companion binding for a retained report.
+// A RunReport carries no producing-toolchain or plan identity, so any later
+// consumer of the retained bytes — notably clean-tree evidence generation
+// reusing this report — would otherwise have no way to bind them to the plan
+// and toolchain that produced them.
+func retainReportBinding(ctx context.Context, plan soundnessgate.ExecutionPlan, result soundnessgate.Result) error {
+	if result.ReportPath == "" {
+		return nil
+	}
+	binding, err := soundnessgate.DeriveRunReportBinding(plan, result.Report)
+	if err != nil {
+		return fmt.Errorf("derive retained aggregate report binding: %w", err)
+	}
+	if err := soundnessgate.PublishRunReportBinding(ctx, result.ReportPath, binding); err != nil {
+		return fmt.Errorf("retain aggregate report binding: %w", err)
+	}
+	return nil
 }
 
 func executorDefault() string {

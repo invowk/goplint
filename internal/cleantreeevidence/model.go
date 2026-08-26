@@ -30,6 +30,20 @@ const (
 	// ProvenanceRebound marks a record whose prose identity was re-bound while
 	// the retained aggregate report was carried forward untouched.
 	ProvenanceRebound = "re-bound"
+	// ProvenanceReused marks a record whose aggregate command was not executed:
+	// a caller-produced report was admitted under the exact-tree, manifest,
+	// registry, and producing-toolchain equalities in reuse.go. Verification
+	// refuses these records unless the caller explicitly opts in, so a reused
+	// record is a local iteration aid and never a completion or release claim.
+	//
+	// This is a new value of the existing v4 `provenance.kind` member, not a
+	// structural change, so the record format is not bumped: every previously
+	// retained v4 record verifies exactly as before, and an older verifier
+	// reading a newer reused record rejects it as an unknown kind, which fails
+	// in the safe direction. The v3 rejection precedent applies to structural
+	// meaning changes (single digest to dual digest), where reinterpreting
+	// retained bytes would silently weaken the claim.
+	ProvenanceReused = "reused-aggregate"
 )
 
 var (
