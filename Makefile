@@ -224,3 +224,42 @@ check-windows-build:
 	GOOS=windows GOARCH=amd64 $(GOCMD) build ./...
 	@echo "[2/2] Vetting for windows/amd64..."
 	GOOS=windows GOARCH=amd64 $(GOCMD) vet ./...
+
+# ---------------------------------------------------------------------------
+# Mutation testing (advisory go-mutesting profile; blocking targeted mutation
+# is a soundness subgate, see check-goplint-targeted-mutation)
+# ---------------------------------------------------------------------------
+
+MUTATION_MODULE ?= goplint
+MUTATION_BASE_REF ?= origin/main
+MUTATION_MODE ?= advisory
+MUTATION_REPORT_DIR ?= artifacts/mutation
+
+.PHONY: mutation-dry-run mutation-pr mutation-full mutation-baseline-update mutation-rerun
+mutation-dry-run:
+	@./scripts/mutation.sh dry-run --module "$(MUTATION_MODULE)" --report-dir "$(MUTATION_REPORT_DIR)"
+
+mutation-pr:
+	@./scripts/mutation.sh pr --module "$(MUTATION_MODULE)" --base "$(MUTATION_BASE_REF)" --mode "$(MUTATION_MODE)" --report-dir "$(MUTATION_REPORT_DIR)"
+
+mutation-full:
+	@./scripts/mutation.sh full --module "$(MUTATION_MODULE)" --mode "$(MUTATION_MODE)" --report-dir "$(MUTATION_REPORT_DIR)"
+
+mutation-baseline-update:
+	@./scripts/mutation.sh baseline-update --module "$(MUTATION_MODULE)" --report-dir "$(MUTATION_REPORT_DIR)"
+
+mutation-rerun:
+	@test -n "$(MUTATION_MUTANT_ID)" || { echo "MUTATION_MUTANT_ID is required"; exit 2; }
+	@MUTATION_MUTANT_ID="$(MUTATION_MUTANT_ID)" ./scripts/mutation.sh rerun --module "$(MUTATION_MODULE)" --mutant-id "$(MUTATION_MUTANT_ID)" --report-dir "$(MUTATION_REPORT_DIR)"
+
+# Lint shell scripts with shellcheck (optional tool)
+SHELLCHECK := $(shell command -v shellcheck 2>/dev/null)
+
+.PHONY: lint-scripts
+lint-scripts:
+	@echo "Linting shell scripts..."
+ifdef SHELLCHECK
+	shellcheck scripts/*.sh
+else
+	@echo "  (shellcheck not found, skipping shell script linting)"
+endif

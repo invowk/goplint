@@ -1,0 +1,54 @@
+name: Mutation Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Mutation module profile to run"
+        type: choice
+        default: goplint
+        options:
+          - goplint
+
+concurrency:
+  group: mutation-testing-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOPROXY: "https://proxy.golang.org|direct"
+  MUTATION_WORKERS: "2"
+
+jobs:
+  manual-full:
+    name: Manual full advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Run full mutation profile
+        env:
+          SELECTED_MODULE: ${{ github.event.inputs.module }}
+        run: make mutation-full MUTATION_MODULE="$SELECTED_MODULE" MUTATION_MODE=advisory
+
+      - name: Upload mutation reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-full-${{ github.event.inputs.module }}
+          path: artifacts/mutation/full/
+          if-no-files-found: warn

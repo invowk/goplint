@@ -69,10 +69,12 @@ type (
 var executableInputFamilies = []string{
 	".github/workflows",
 	"bench",
+	"docs/ledgers",
 	"scripts",
 	"spec",
 	"spec/evidence",
 	"testdata",
+	"tools/mutation",
 }
 
 // executableInputExactPaths enumerates single gate-input files outside the

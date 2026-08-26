@@ -1,7 +1,7 @@
 # goplint Current Semantics
 
 This document is the implementation-current semantic reference for Invowk's
-`tools/goplint` analyzer. The executable catalog and tests remain authoritative
+analyzer. The executable catalog and tests remain authoritative
 when prose and code disagree.
 
 ## Analysis families

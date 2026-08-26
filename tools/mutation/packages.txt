@@ -1,0 +1,22 @@
+# Curated analyzer source files. The full package also contains
+# support types, baseline helpers, caches, and CFA internals whose mutation run
+# time is too high for the initial advisory rollout profile.
+goplint/analyzer.go
+goplint/analyzer_boundary_request_validation.go
+goplint/analyzer_cast_validation.go
+goplint/analyzer_constructor_usage.go
+goplint/analyzer_constructor_validates.go
+goplint/semantic_production_routes.go
+goplint/analyzer_cross_platform_path.go
+goplint/analyzer_enum_sync.go
+goplint/analyzer_nonzero.go
+goplint/analyzer_path_domain.go
+goplint/analyzer_pathmatrix_divergent.go
+goplint/analyzer_redundant_conversion.go
+goplint/analyzer_run.go
+goplint/analyzer_structural.go
+goplint/analyzer_test_home_env.go
+goplint/analyzer_validate_delegation.go
+goplint/analyzer_validate_delegation_modes.go
+goplint/analyzer_validate_usage.go
+goplint/analyzer_windows_pitfalls.go

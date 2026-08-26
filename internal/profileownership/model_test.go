@@ -100,6 +100,7 @@ func TestRealManifestRoutesEveryGovernedFamily(t *testing.T) {
 		{path: "cmd/soundness-profile/main.go", want: soundnessgate.ProfileSemantic},
 		{path: "cmd/soundness-report-compare/main.go", want: soundnessgate.ProfileHarness},
 		{path: "docs/goplint/evidence-index.md", want: soundnessgate.ProfileDocumentation},
+		{path: "docs/ledgers/bootstrap-standalone-goplint/tasks.md", want: soundnessgate.ProfileHarness},
 		{path: "docs/goplint/soundness-gate-performance.md", want: soundnessgate.ProfileDocumentation},
 		{path: "exceptions.toml", want: soundnessgate.ProfileConsumer},
 		{path: "go.mod", want: soundnessgate.ProfileSemantic},
@@ -114,6 +115,7 @@ func TestRealManifestRoutesEveryGovernedFamily(t *testing.T) {
 		{path: "spec/protocol-domain.md", want: soundnessgate.ProfileSemantic},
 		{path: "spec/semantic-rules.v1.json", want: soundnessgate.ProfileSemantic},
 		{path: "testdata/gates/clean-tree-v5.json", want: soundnessgate.ProfileSemantic},
+		{path: "tools/mutation/packages.txt", want: soundnessgate.ProfileHarness},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.path, func(t *testing.T) {

@@ -31,3 +31,4 @@ testdata/gates/soundness-v1.json
 testdata/mutation
 testdata/parity
 testdata/subgates
+tools/mutation

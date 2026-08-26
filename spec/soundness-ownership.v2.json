@@ -16,6 +16,7 @@
     { "pattern": "cmd/soundness-gate/**", "class": "harness" },
     { "pattern": "cmd/soundness-report-compare/**", "class": "harness" },
     { "pattern": "docs/goplint/**", "class": "documentation" },
+    { "pattern": "docs/ledgers/**", "class": "harness" },
     { "pattern": "exceptions.toml", "class": "consumer" },
     { "pattern": "go.mod", "class": "analyzer-semantics" },
     { "pattern": "go.sum", "class": "analyzer-semantics" },
@@ -29,6 +30,7 @@
     { "pattern": "main_test.go", "class": "analyzer-semantics" },
     { "pattern": "scripts/**", "class": "harness" },
     { "pattern": "spec/**", "class": "analyzer-semantics" },
-    { "pattern": "testdata/**", "class": "analyzer-semantics" }
+    { "pattern": "testdata/**", "class": "analyzer-semantics" },
+    { "pattern": "tools/mutation/**", "class": "harness" }
   ]
 }

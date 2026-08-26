@@ -20,3 +20,11 @@ repos:
         files: '^(goplint/|internal/|cmd/|spec/|testdata/|bench/|scripts/|docs/goplint/|main\.go$|AGENTS\.md$|CLAUDE\.md$|README\.md$|Makefile$|baseline\.toml$|exceptions\.toml$|\.golangci\.toml$|\.pre-commit-config\.yaml$|\.github/workflows/.*\.yml$)'
         always_run: true
         verbose: true
+
+      - id: windows-cross-build
+        name: windows cross-compile gate
+        entry: "bash -c 'make check-windows-build 2>&1'"
+        language: system
+        pass_filenames: false
+        files: '^(goplint/|internal/|cmd/|main\.go$|go\.mod$|go\.sum$|Makefile$|\.pre-commit-config\.yaml$)'
+        verbose: true

@@ -1,7 +1,7 @@
 # goplint
 
 `goplint` is Invowk's Go static analyzer for DDD value-type structure and
-value-protocol correctness. It is a separate Go module under `tools/goplint`.
+value-protocol correctness. It is a standalone Go module.
 
 The analyzer combines three families of checks:
 
@@ -270,7 +270,6 @@ profile and cannot recurse into its own freshness check.
 ## Testing
 
 ```bash
-cd tools/goplint
 go test -count=1 ./...
 go test -race -count=1 ./...
 

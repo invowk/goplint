@@ -20,11 +20,13 @@ const testOwnershipManifestPath = "spec/soundness-ownership.v2.json"
 // testOwnershipManifest classifies fixture docs as documentation and leaves
 // every other fixture path ungoverned so it conservatively binds to the
 // semantic-content digest. Rules are strictly sorted by pattern and stay away
-// from the enumerated executable-input families.
+// from the enumerated executable-input families; docs/ledgers gets an
+// explicit harness cover because it is an executable-input family.
 const testOwnershipManifest = `{
   "format_version": 2,
   "rules": [
     {"pattern": "docs/**", "class": "documentation"},
+    {"pattern": "docs/ledgers/**", "class": "harness"},
     {"pattern": "spec/**", "class": "analyzer-semantics"}
   ]
 }

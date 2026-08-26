@@ -133,7 +133,7 @@ and wall-time acceptance were recorded in
 
 ## Testing Parallelism
 
-`tools/goplint` tests now use per-test analyzer instances (`NewAnalyzer()`/`newAnalyzerWithState`) instead of shared process-wide analyzer flag state. Integration suites are parallelized and guarded by a bounded `analysistest` semaphore to avoid process exhaustion on constrained runners.
+analyzer tests now use per-test analyzer instances (`NewAnalyzer()`/`newAnalyzerWithState`) instead of shared process-wide analyzer flag state. Integration suites are parallelized and guarded by a bounded `analysistest` semaphore to avoid process exhaustion on constrained runners.
 
 ## Diagnostic Categories
 

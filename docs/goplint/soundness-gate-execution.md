@@ -117,7 +117,6 @@ portable fallbacks are conservative. Each child receives bounded
 Override discovery with command flags:
 
 ```bash
-cd tools/goplint
 go run ./cmd/soundness-gate -profile semantic \
   -cpu-budget 8 -memory-budget-bytes 34359738368 -max-workers 6
 ```
@@ -192,7 +191,6 @@ blocking.
 The distributed interface is the same contract used by GitHub Actions:
 
 ```bash
-cd tools/goplint
 out="$(mktemp -d)"
 go run ./cmd/soundness-gate -action plan -profile semantic \
   -runner-class github-ubuntu-x64-4cpu -plan "$out/plan.json"
