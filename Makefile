@@ -37,7 +37,11 @@ lint-linters:
 .PHONY: build-goplint
 build-goplint: $(BUILD_DIR)
 	@echo "Building goplint..."
-	$(GOBUILD) -o $(BUILD_DIR)/goplint .
+	# -buildvcs=false -trimpath keep the binary bit-reproducible across
+	# checkouts: VCS stamping differs between full and shallow clones, and
+	# the repository-audit input binding digests this exact binary, so the
+	# distributed plan producer and every worker must build identical bits.
+	$(GOBUILD) -buildvcs=false -trimpath -o $(BUILD_DIR)/goplint .
 
 .PHONY: test
 test:
