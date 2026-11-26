@@ -371,7 +371,9 @@ func auditExceptionsGlobalWithRunner(originalArgs []string, runCommand commandRu
 	}
 
 	for _, pattern := range stalePatterns {
-		fmt.Printf("globally stale exception: pattern %q matched no diagnostics in any package\n", pattern)
+		if _, err := fmt.Fprintf(stderr, "globally stale exception: pattern %q matched no diagnostics in any package\n", pattern); err != nil {
+			return fmt.Errorf("writing global stale exception: %w", err)
+		}
 	}
 
 	if _, err := fmt.Fprintf(stderr, "Global audit: %d/%d stale exception patterns are globally stale (%d packages analyzed)\n",

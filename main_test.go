@@ -340,46 +340,53 @@ func TestBuildGlobalAuditArgs(t *testing.T) {
 	}
 }
 
+func newGloballyStaleAuditRunner(t *testing.T) commandRunner {
+	t.Helper()
+	stream := append(
+		makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
+			"example.com/a": {
+				"goplint": {
+					{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: x)`},
+				},
+			},
+		}),
+		makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
+			"example.com/b": {
+				"goplint": {
+					{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: y)`},
+				},
+			},
+		})...,
+	)
+	return func(cmd *exec.Cmd) error {
+		buf, ok := cmd.Stdout.(*bytes.Buffer)
+		if !ok {
+			t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
+		}
+		if _, err := buf.Write(stream); err != nil {
+			return err
+		}
+		return os.WriteFile(findingsPathFromCommand(t, cmd), []byte(strings.Join([]string{
+			`{"package":"example.com/a","category":"stale-exception","id":"id-a","message":"stale exception: pattern \"shared.pattern\" matched no diagnostics (reason: x)","meta":{"pattern":"shared.pattern"}}`,
+			`{"package":"example.com/b","category":"stale-exception","id":"id-b","message":"stale exception: pattern \"shared.pattern\" matched no diagnostics (reason: y)","meta":{"pattern":"shared.pattern"}}`,
+			"",
+		}, "\n")), 0o644)
+	}
+}
+
 func TestAuditExceptionsGlobalExitBehavior(t *testing.T) {
 	t.Parallel()
 
 	t.Run("fails when globally stale patterns are found", func(t *testing.T) {
 		t.Parallel()
-		stream := append(
-			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
-				"example.com/a": {
-					"goplint": {
-						{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: x)`},
-					},
-				},
-			}),
-			makeAnalysisJSON(t, map[string]map[string][]goplint.AnalysisDiagnostic{
-				"example.com/b": {
-					"goplint": {
-						{Category: goplint.CategoryStaleException, Message: `stale exception: pattern "shared.pattern" matched no diagnostics (reason: y)`},
-					},
-				},
-			})...,
-		)
-
-		runner := func(cmd *exec.Cmd) error {
-			buf, ok := cmd.Stdout.(*bytes.Buffer)
-			if !ok {
-				t.Fatalf("expected *bytes.Buffer stdout, got %T", cmd.Stdout)
-			}
-			if _, err := buf.Write(stream); err != nil {
-				return err
-			}
-			return os.WriteFile(findingsPathFromCommand(t, cmd), []byte(strings.Join([]string{
-				`{"package":"example.com/a","category":"stale-exception","id":"id-a","message":"stale exception: pattern \"shared.pattern\" matched no diagnostics (reason: x)","meta":{"pattern":"shared.pattern"}}`,
-				`{"package":"example.com/b","category":"stale-exception","id":"id-b","message":"stale exception: pattern \"shared.pattern\" matched no diagnostics (reason: y)","meta":{"pattern":"shared.pattern"}}`,
-				"",
-			}, "\n")), 0o644)
-		}
-
-		err := auditExceptionsGlobalWithRunner([]string{"--global", "./..."}, runner, io.Discard)
+		var stderr bytes.Buffer
+		err := auditExceptionsGlobalWithRunner([]string{"--global", "./..."}, newGloballyStaleAuditRunner(t), &stderr)
 		if err == nil {
 			t.Fatal("expected non-nil error when globally stale patterns exist")
+		}
+		const wantLine = `globally stale exception: pattern "shared.pattern" matched no diagnostics in any package`
+		if !strings.Contains(stderr.String(), wantLine) {
+			t.Fatalf("expected stderr to contain %q, got %q", wantLine, stderr.String())
 		}
 	})
 
@@ -424,6 +431,67 @@ func TestAuditExceptionsGlobalExitBehavior(t *testing.T) {
 			t.Fatalf("expected nil error when no globally stale patterns exist, got %v", err)
 		}
 	})
+}
+
+//nolint:paralleltest // Redirects process-wide os.Stdout to verify no stdout output.
+func TestAuditExceptionsGlobalLeavesStdoutEmpty(t *testing.T) {
+	origStdout := os.Stdout
+	readPipe, writePipe, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe() error: %v", err)
+	}
+	os.Stdout = writePipe
+	writeClosed := false
+	readClosed := false
+	t.Cleanup(func() {
+		os.Stdout = origStdout
+		if !writeClosed {
+			if closeErr := writePipe.Close(); closeErr != nil && !errors.Is(closeErr, os.ErrClosed) {
+				t.Errorf("close stdout write pipe in cleanup: %v", closeErr)
+			}
+		}
+		if !readClosed {
+			if closeErr := readPipe.Close(); closeErr != nil && !errors.Is(closeErr, os.ErrClosed) {
+				t.Errorf("close stdout read pipe in cleanup: %v", closeErr)
+			}
+		}
+	})
+
+	type readResult struct {
+		data []byte
+		err  error
+	}
+	done := make(chan readResult, 1)
+	go func() {
+		data, readErr := io.ReadAll(readPipe)
+		done <- readResult{data: data, err: readErr}
+	}()
+
+	var stderr bytes.Buffer
+	auditErr := auditExceptionsGlobalWithRunner([]string{"--global", "./..."}, newGloballyStaleAuditRunner(t), &stderr)
+	writeClosed = true
+	if closeErr := writePipe.Close(); closeErr != nil {
+		t.Fatalf("close stdout write pipe: %v", closeErr)
+	}
+	os.Stdout = origStdout
+	res := <-done
+	readClosed = true
+	if closeErr := readPipe.Close(); closeErr != nil {
+		t.Fatalf("close stdout read pipe: %v", closeErr)
+	}
+	if res.err != nil {
+		t.Fatalf("read captured stdout: %v", res.err)
+	}
+	if auditErr == nil {
+		t.Fatal("expected non-nil error when globally stale patterns exist")
+	}
+	if len(res.data) != 0 {
+		t.Fatalf("expected empty stdout, got %q", string(res.data))
+	}
+	const wantLine = `globally stale exception: pattern "shared.pattern" matched no diagnostics in any package`
+	if !strings.Contains(stderr.String(), wantLine) {
+		t.Fatalf("expected stderr to contain %q, got %q", wantLine, stderr.String())
+	}
 }
 
 func TestFilterAndEnsureFlags(t *testing.T) {

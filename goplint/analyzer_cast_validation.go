@@ -432,8 +432,8 @@ func qualifiedTypeName(t types.Type, currentPkg *types.Package) string {
 		}
 		// Use the last segment of the package path.
 		path := pkg.Path()
-		if i := strings.LastIndex(path, "/"); i >= 0 {
-			return path[i+1:] + "." + named.Obj().Name()
+		if _, after, ok := strings.CutLast(path, "/"); ok {
+			return after + "." + named.Obj().Name()
 		}
 		return pkg.Name() + "." + named.Obj().Name()
 	}

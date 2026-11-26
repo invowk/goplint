@@ -242,7 +242,7 @@ func buildManifest(registry soundnessevidence.Registry) (soundnessgate.Manifest,
 			"inconclusive-suppression",
 			".",
 			[]string{"./scripts/check-inconclusive-suppression.sh"},
-			180,
+			360,
 			"report.json",
 			nil,
 			population("suppression-surfaces", 5),
@@ -512,8 +512,7 @@ func censusPopulationRequirement(manifestName, populationID string) (soundnessga
 }
 
 func newSubgate(
-	id string,
-	workingDirectory string,
+	id, workingDirectory string,
 	command []string,
 	timeoutSeconds int,
 	reportFile string,

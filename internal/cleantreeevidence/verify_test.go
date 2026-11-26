@@ -320,6 +320,11 @@ func TestVerifyRejectsTamperedRetainedEvidenceWithoutMutatingCaller(t *testing.T
 		mutate func(*Record)
 	}{
 		{name: "tool version", mutate: func(record *Record) { record.Toolchain[0].Version = "forged" }},
+		{name: "tool whitespace version", mutate: func(record *Record) { record.Toolchain[0].Version = "   " }},
+		{name: "tool missing", mutate: func(record *Record) { record.Toolchain = record.Toolchain[:0] }},
+		{name: "tool name", mutate: func(record *Record) { record.Toolchain[0].Name = "other" }},
+		{name: "tool command", mutate: func(record *Record) { record.Toolchain[0].Command = []string{"git", "-v"} }},
+		{name: "tool required regex", mutate: func(record *Record) { record.Toolchain[0].RequiredVersionRE = "^git" }},
 		{name: "command vector", mutate: func(record *Record) { record.Commands[0].Args = []string{"true"} }},
 		{name: "command log", mutate: func(record *Record) { record.Commands[0].Log = "forged" }},
 		{name: "failed command", mutate: func(record *Record) { record.Commands[0].Passed = false }},
@@ -878,5 +883,52 @@ func writeTestJSONPath(t *testing.T, path string, value any) {
 	data = append(data, '\n')
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestVerifyAcceptsCompliantCrossHostToolchainVersion(t *testing.T) {
+	t.Parallel()
+
+	fixture := newVerifyFixture(t)
+	record, err := LoadRecord(resolveFromRoot(fixture.root, fixture.options.EvidencePath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(record.Toolchain) == 0 {
+		t.Fatal("test precondition: expected retained toolchain entries")
+	}
+	compliantAltVersion := "git version 2.55.99"
+	if record.Toolchain[0].Version == compliantAltVersion {
+		compliantAltVersion = "git version 2.56.99"
+	}
+	plan, err := LoadPlan(resolveFromRoot(fixture.root, fixture.options.PlanPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan.Toolchain[0].RequiredVersionRE = `^git version 2\.(5[5-9]|[6-9][0-9])\.[0-9]+$`
+	writeTestJSON(t, fixture.root, fixture.options.PlanPath, plan)
+
+	// Re-capture cleanly so input digests bind the updated plan, then swap the
+	// retained tool version string to a distinct regex-compliant value.
+	captured, err := Capture(t.Context(), CaptureOptions{
+		Root:         fixture.root,
+		PathsPath:    fixture.options.PathsPath,
+		PlanPath:     fixture.options.PlanPath,
+		EvidencePath: fixture.options.EvidencePath,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	captured.Toolchain[0].Version = compliantAltVersion
+	writeTestJSON(t, fixture.root, fixture.options.EvidencePath, captured)
+
+	if err := Verify(t.Context(), fixture.options); err != nil {
+		t.Fatalf("Verify() rejected compliant cross-host toolchain version: %v", err)
+	}
+
+	captured.Toolchain[0].Version = "git version 2.54.0"
+	writeTestJSON(t, fixture.root, fixture.options.EvidencePath, captured)
+	if err := Verify(t.Context(), fixture.options); err == nil {
+		t.Fatal("Verify() accepted non-compliant older toolchain version")
 	}
 }

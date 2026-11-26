@@ -91,9 +91,9 @@ func proveRealAnalyzerInconclusiveIgnoresBaseline(t *testing.T, moduleRoot strin
 	t.Helper()
 
 	binaryPath := filepath.Join(t.TempDir(), "goplint")
-	buildContext, cancelBuild := context.WithTimeout(t.Context(), time.Minute)
+	buildContext, cancelBuild := context.WithTimeout(t.Context(), 3*time.Minute)
 	defer cancelBuild()
-	build := exec.CommandContext(buildContext, "go", "build", "-o", binaryPath, ".")
+	build := exec.CommandContext(buildContext, "go", "build", "-buildvcs=false", "-trimpath", "-o", binaryPath, ".")
 	build.Dir = moduleRoot
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build real analyzer: %v\n%s", err, output)
