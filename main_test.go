@@ -377,9 +377,14 @@ func TestAuditExceptionsGlobalExitBehavior(t *testing.T) {
 			}, "\n")), 0o644)
 		}
 
-		err := auditExceptionsGlobalWithRunner([]string{"--global", "./..."}, runner, io.Discard)
+		var stderr bytes.Buffer
+		err := auditExceptionsGlobalWithRunner([]string{"--global", "./..."}, runner, &stderr)
 		if err == nil {
 			t.Fatal("expected non-nil error when globally stale patterns exist")
+		}
+		const wantLine = `globally stale exception: pattern "shared.pattern" matched no diagnostics in any package`
+		if !strings.Contains(stderr.String(), wantLine) {
+			t.Fatalf("expected stderr to contain %q, got %q", wantLine, stderr.String())
 		}
 	})
 

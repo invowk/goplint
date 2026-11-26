@@ -165,6 +165,8 @@ jobs:
     steps:
       - name: Checkout exact tree
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v6
