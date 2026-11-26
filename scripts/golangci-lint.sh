@@ -36,7 +36,19 @@ die() {
 }
 
 golangci_lint_binary() {
-	(cd "$REPO_ROOT" && "$GO_CMD" tool -n "$GOLANGCI_LINT_TOOL")
+	local stderr_file
+	local binary
+	local status=0
+
+	stderr_file="$(mktemp)"
+	binary="$(cd "$REPO_ROOT" && "$GO_CMD" tool -n "$GOLANGCI_LINT_TOOL" 2>"$stderr_file")" || status=$?
+	if [[ "$status" -ne 0 ]]; then
+		cat "$stderr_file" >&2
+		rm -f "$stderr_file"
+		return "$status"
+	fi
+	rm -f "$stderr_file"
+	printf '%s\n' "$binary"
 }
 
 verify_golangci_lint_version() {
