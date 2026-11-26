@@ -392,8 +392,7 @@ func validateRecordHeader(record Record) error {
 func validateProofInputsSelected(
 	root string,
 	selected []string,
-	planPath string,
-	pathsPath string,
+	planPath, pathsPath string,
 	plan Plan,
 ) error {
 	required := []string{planPath, pathsPath, plan.Counterexamples.Path, plan.OwnershipManifestPath}
@@ -481,7 +480,7 @@ func validateRetainedToolchain(retained, current []ToolIdentity) error {
 		if ret.Name != cur.Name || !slices.Equal(ret.Command, cur.Command) || ret.RequiredVersionRE != cur.RequiredVersionRE {
 			return errors.New("retained toolchain identities do not match current tools or constraints")
 		}
-		if strings.TrimSpace(ret.Version) == "" {
+		if ret.Version == "" || ret.Version != strings.TrimSpace(ret.Version) {
 			return errors.New("retained toolchain identities do not match current tools or constraints")
 		}
 		matched, err := regexp.MatchString(cur.RequiredVersionRE, ret.Version)

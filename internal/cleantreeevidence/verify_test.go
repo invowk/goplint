@@ -320,6 +320,8 @@ func TestVerifyRejectsTamperedRetainedEvidenceWithoutMutatingCaller(t *testing.T
 		mutate func(*Record)
 	}{
 		{name: "tool version", mutate: func(record *Record) { record.Toolchain[0].Version = "forged" }},
+		{name: "tool whitespace version", mutate: func(record *Record) { record.Toolchain[0].Version = "   " }},
+		{name: "tool missing", mutate: func(record *Record) { record.Toolchain = record.Toolchain[:0] }},
 		{name: "tool name", mutate: func(record *Record) { record.Toolchain[0].Name = "other" }},
 		{name: "tool command", mutate: func(record *Record) { record.Toolchain[0].Command = []string{"git", "-v"} }},
 		{name: "tool required regex", mutate: func(record *Record) { record.Toolchain[0].RequiredVersionRE = "^git" }},
@@ -903,7 +905,7 @@ func TestVerifyAcceptsCompliantCrossHostToolchainVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan.Toolchain[0].RequiredVersionRE = `^git version `
+	plan.Toolchain[0].RequiredVersionRE = `^git version 2\.(5[5-9]|[6-9][0-9])\.[0-9]+$`
 	writeTestJSON(t, fixture.root, fixture.options.PlanPath, plan)
 
 	// Re-capture cleanly so input digests bind the updated plan, then swap the
@@ -922,5 +924,11 @@ func TestVerifyAcceptsCompliantCrossHostToolchainVersion(t *testing.T) {
 
 	if err := Verify(t.Context(), fixture.options); err != nil {
 		t.Fatalf("Verify() rejected compliant cross-host toolchain version: %v", err)
+	}
+
+	captured.Toolchain[0].Version = "git version 2.54.0"
+	writeTestJSON(t, fixture.root, fixture.options.EvidencePath, captured)
+	if err := Verify(t.Context(), fixture.options); err == nil {
+		t.Fatal("Verify() accepted non-compliant older toolchain version")
 	}
 }

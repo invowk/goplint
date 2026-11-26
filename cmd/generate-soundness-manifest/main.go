@@ -512,8 +512,7 @@ func censusPopulationRequirement(manifestName, populationID string) (soundnessga
 }
 
 func newSubgate(
-	id string,
-	workingDirectory string,
+	id, workingDirectory string,
 	command []string,
 	timeoutSeconds int,
 	reportFile string,

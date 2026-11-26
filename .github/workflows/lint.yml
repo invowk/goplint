@@ -82,6 +82,7 @@ jobs:
           case "$GITHUB_EVENT_NAME" in
             pull_request) base="${{ github.event.pull_request.base.sha }}" ;;
             push) base="${{ github.event.before }}" ;;
+            *) ;;
           esac
           route_args=(-root . -manifest spec/soundness-ownership.v2.json -event "$GITHUB_EVENT_NAME" -format profile)
           if [[ -n "$base" ]]; then
