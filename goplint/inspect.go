@@ -491,8 +491,8 @@ func packageName(pkg *types.Package) string {
 		return ""
 	}
 	path := pkg.Path()
-	if i := strings.LastIndex(path, "/"); i >= 0 {
-		return path[i+1:]
+	if _, after, ok := strings.CutLast(path, "/"); ok {
+		return after
 	}
 	return path
 }

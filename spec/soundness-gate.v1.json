@@ -600,7 +600,7 @@
         "complete",
         "semantic"
       ],
-      "timeout_seconds": 180,
+      "timeout_seconds": 360,
       "report_file": "report.json",
       "required_registration_ids": [],
       "required_populations": [

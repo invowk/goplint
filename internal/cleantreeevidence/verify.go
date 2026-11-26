@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -143,8 +144,8 @@ func Verify(ctx context.Context, options VerifyOptions) (resultErr error) {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(record.Toolchain, toolchain) {
-		return errors.New("retained toolchain identities do not match current tools or constraints")
+	if err := validateRetainedToolchain(record.Toolchain, toolchain); err != nil {
+		return err
 	}
 	taskLedgers, err := collectTaskLedgers(root, plan)
 	if err != nil {
@@ -463,6 +464,29 @@ func verifyMutationProofs(plan Plan, record Record) error {
 		}
 		if !proof.CleanControlPassed || !proof.MutantSelected || !proof.IntendedMismatchSeen || !proof.Restored || !proof.PostControlPassed {
 			return fmt.Errorf("mutation proof %q is not causal and restored", proof.Name)
+		}
+	}
+	return nil
+}
+
+// validateRetainedToolchain verifies that the retained record executed with
+// tools matching the current plan's identity definitions and regex constraints,
+// allowing compliant cross-host patch or distribution banner differences.
+func validateRetainedToolchain(retained, current []ToolIdentity) error {
+	if len(retained) != len(current) {
+		return errors.New("retained toolchain identities do not match current tools or constraints")
+	}
+	for i, cur := range current {
+		ret := retained[i]
+		if ret.Name != cur.Name || !slices.Equal(ret.Command, cur.Command) || ret.RequiredVersionRE != cur.RequiredVersionRE {
+			return errors.New("retained toolchain identities do not match current tools or constraints")
+		}
+		if strings.TrimSpace(ret.Version) == "" {
+			return errors.New("retained toolchain identities do not match current tools or constraints")
+		}
+		matched, err := regexp.MatchString(cur.RequiredVersionRE, ret.Version)
+		if err != nil || !matched {
+			return errors.New("retained toolchain identities do not match current tools or constraints")
 		}
 	}
 	return nil
